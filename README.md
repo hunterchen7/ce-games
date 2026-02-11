@@ -4,9 +4,9 @@ A collection of games for the TI-84 Plus CE, built with the [CE C/C++ Toolchain]
 
 ## Games
 
-| Game | Description              | Status      |
+| Game | Description              | Demo      |
 | ---- | ------------------------ | ----------- |
-| Pong | Pong vs AI with 6 levels | In progress |
+| Pong | Pong vs AI with 5 levels, and an "infinite" level | ![pong](https://github.com/user-attachments/assets/0fdd6ba5-6432-4df9-9a56-f2642f49f33e) |
 
 ## Prerequisites
 
