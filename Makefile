@@ -3,7 +3,7 @@
 # Builds all games or individual targets
 # ----------------------------
 
-GAMES = pong sudoku
+GAMES = pong sudoku chess
 
 .PHONY: all clean $(GAMES)
 
