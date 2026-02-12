@@ -75,6 +75,11 @@ typedef struct {
     uint8_t row, col;
     uint8_t old_value;
     uint16_t old_marks;
+    /* auto-erase restore info */
+    uint8_t erase_digit;    /* 0=none, 1-9=digit erased from peers */
+    uint16_t erase_row;     /* bitmask: which cols in row had mark erased */
+    uint16_t erase_col;     /* bitmask: which rows in col had mark erased */
+    uint16_t erase_box;     /* bitmask: which box positions had mark erased */
 } undo_entry_t;
 
 typedef struct {
@@ -462,63 +467,63 @@ static int solvable_by_singles(const uint8_t *puzzle)
             }
         }
 
-        /* hidden singles */
-        for (i = 0; i < 81; i++)
+        /* hidden singles — check rows, columns, and boxes */
+        /* For each house, find digits that can only go in one cell */
+        for (j = 0; j < 27; j++)
         {
-            if (work[i]) continue;
-            r = i / 9; c = i % 9;
+            /* enumerate cells in house j: rows 0-8, cols 9-17, boxes 18-26 */
+            int hi, hcells[9];
+            if (j < 9)
+            {
+                for (hi = 0; hi < 9; hi++) hcells[hi] = j * 9 + hi;
+            }
+            else if (j < 18)
+            {
+                for (hi = 0; hi < 9; hi++) hcells[hi] = hi * 9 + (j - 9);
+            }
+            else
+            {
+                int bx = ((j - 18) % 3) * 3;
+                int by = ((j - 18) / 3) * 3;
+                for (dr = 0; dr < 3; dr++)
+                    for (dc = 0; dc < 3; dc++)
+                        hcells[dr * 3 + dc] = (by + dr) * 9 + (bx + dc);
+            }
 
-            /* check row: is there a digit that can only go here? */
-            used = 0;
-            for (j = 0; j < 9; j++)
-                if (work[r * 9 + j]) used |= (1 << work[r * 9 + j]);
             for (d = 1; d <= 9; d++)
             {
-                if (used & (1 << d)) continue;
-                /* can d go in any other empty cell in this row? */
-                int only_here = 1;
-                for (j = 0; j < 9; j++)
+                int count = 0, last_pos = -1;
+                for (hi = 0; hi < 9; hi++)
                 {
-                    if (j == c || work[r * 9 + j]) continue;
-                    uint16_t ju = 0;
-                    int k;
-                    for (k = 0; k < 9; k++)
+                    int ci = hcells[hi];
+                    if (work[ci] == (uint8_t)d) { count = 2; break; } /* already placed */
+                    if (work[ci]) continue;
+                    /* check if d is a candidate for this cell */
+                    r = ci / 9; c = ci % 9;
+                    used = 0;
                     {
-                        if (work[r * 9 + k]) ju |= (1 << work[r * 9 + k]);
-                        if (work[k * 9 + j]) ju |= (1 << work[k * 9 + j]);
-                    }
-                    {
-                        int jbr = (r / 3) * 3, jbc = (j / 3) * 3;
-                        int ddr, ddc;
-                        for (ddr = 0; ddr < 3; ddr++)
-                            for (ddc = 0; ddc < 3; ddc++)
-                                if (work[(jbr + ddr) * 9 + (jbc + ddc)])
-                                    ju |= (1 << work[(jbr + ddr) * 9 + (jbc + ddc)]);
-                    }
-                    if (!(ju & (1 << d))) { only_here = 0; break; }
-                }
-                if (only_here)
-                {
-                    /* verify d is actually valid in this cell */
-                    uint16_t cu = 0;
-                    for (j = 0; j < 9; j++)
-                    {
-                        if (work[r * 9 + j]) cu |= (1 << work[r * 9 + j]);
-                        if (work[j * 9 + c]) cu |= (1 << work[j * 9 + c]);
-                    }
-                    {
-                        int cbr = (r / 3) * 3, cbc = (c / 3) * 3;
+                        int k;
+                        for (k = 0; k < 9; k++)
+                        {
+                            if (work[r * 9 + k]) used |= (1 << work[r * 9 + k]);
+                            if (work[k * 9 + c]) used |= (1 << work[k * 9 + c]);
+                        }
+                        br = (r / 3) * 3; bc = (c / 3) * 3;
                         for (dr = 0; dr < 3; dr++)
                             for (dc = 0; dc < 3; dc++)
-                                if (work[(cbr + dr) * 9 + (cbc + dc)])
-                                    cu |= (1 << work[(cbr + dr) * 9 + (cbc + dc)]);
+                                if (work[(br + dr) * 9 + (bc + dc)])
+                                    used |= (1 << work[(br + dr) * 9 + (bc + dc)]);
                     }
-                    if (!(cu & (1 << d)))
+                    if (!(used & (1 << d)))
                     {
-                        work[i] = (uint8_t)d;
-                        progress = 1;
-                        break;
+                        count++;
+                        last_pos = ci;
                     }
+                }
+                if (count == 1 && last_pos >= 0)
+                {
+                    work[last_pos] = (uint8_t)d;
+                    progress = 1;
                 }
             }
         }
@@ -544,6 +549,9 @@ static void generate_puzzle(uint8_t diff)
         case 1: target_min = 28; break; /* medium */
         default: target_min = 22; break; /* hard */
     }
+
+    /* re-seed RNG with current clock for better entropy (user has been navigating menus) */
+    srand(clock());
 
     attempts = 0;
 retry:
@@ -764,21 +772,42 @@ static void check_errors(void)
     }
 }
 
+/* Erase pencil marks from peers and record what was erased into the undo entry.
+   Call AFTER push_undo so undo_stack[undo_top-1] is the current entry. */
 static void auto_erase_pencils(int row, int col, uint8_t digit)
 {
     int j, br, bc, dr, dc;
-    uint16_t mask;
+    uint16_t bit;
+    undo_entry_t *e;
 
     if (!settings.auto_erase) return;
-    mask = ~(1 << digit);
+    bit = (uint16_t)(1 << digit);
 
-    for (j = 0; j < 9; j++) cells[row * 9 + j].marks &= mask;
-    for (j = 0; j < 9; j++) cells[j * 9 + col].marks &= mask;
+    e = &undo_stack[undo_top - 1];
+    e->erase_digit = digit;
+    e->erase_row = 0;
+    e->erase_col = 0;
+    e->erase_box = 0;
 
+    for (j = 0; j < 9; j++)
+    {
+        if (cells[row * 9 + j].marks & bit) e->erase_row |= (uint16_t)(1 << j);
+        cells[row * 9 + j].marks &= ~bit;
+    }
+    for (j = 0; j < 9; j++)
+    {
+        if (cells[j * 9 + col].marks & bit) e->erase_col |= (uint16_t)(1 << j);
+        cells[j * 9 + col].marks &= ~bit;
+    }
     br = (row / 3) * 3; bc = (col / 3) * 3;
     for (dr = 0; dr < 3; dr++)
         for (dc = 0; dc < 3; dc++)
-            cells[(br + dr) * 9 + (bc + dc)].marks &= mask;
+        {
+            int bi = dr * 3 + dc;
+            if (cells[(br + dr) * 9 + (bc + dc)].marks & bit)
+                e->erase_box |= (uint16_t)(1 << bi);
+            cells[(br + dr) * 9 + (bc + dc)].marks &= ~bit;
+        }
 }
 
 static int check_complete(void)
@@ -800,6 +829,10 @@ static void push_undo(uint8_t row, uint8_t col)
         undo_stack[undo_top].col = col;
         undo_stack[undo_top].old_value = cells[idx].value;
         undo_stack[undo_top].old_marks = cells[idx].marks;
+        undo_stack[undo_top].erase_digit = 0;
+        undo_stack[undo_top].erase_row = 0;
+        undo_stack[undo_top].erase_col = 0;
+        undo_stack[undo_top].erase_box = 0;
         undo_top++;
     }
 }
@@ -807,11 +840,36 @@ static void push_undo(uint8_t row, uint8_t col)
 static void perform_undo(void)
 {
     int idx;
+    undo_entry_t *e;
+
     if (undo_top == 0) return;
     undo_top--;
-    idx = undo_stack[undo_top].row * 9 + undo_stack[undo_top].col;
-    cells[idx].value = undo_stack[undo_top].old_value;
-    cells[idx].marks = undo_stack[undo_top].old_marks;
+    e = &undo_stack[undo_top];
+
+    /* restore the cell itself */
+    idx = e->row * 9 + e->col;
+    cells[idx].value = e->old_value;
+    cells[idx].marks = e->old_marks;
+
+    /* restore auto-erased pencil marks in peers */
+    if (e->erase_digit)
+    {
+        uint16_t bit = (uint16_t)(1 << e->erase_digit);
+        int j, br, bc, dr, dc;
+
+        for (j = 0; j < 9; j++)
+            if (e->erase_row & (1 << j))
+                cells[e->row * 9 + j].marks |= bit;
+        for (j = 0; j < 9; j++)
+            if (e->erase_col & (1 << j))
+                cells[j * 9 + e->col].marks |= bit;
+        br = (e->row / 3) * 3; bc = (e->col / 3) * 3;
+        for (dr = 0; dr < 3; dr++)
+            for (dc = 0; dc < 3; dc++)
+                if (e->erase_box & (1 << (dr * 3 + dc)))
+                    cells[(br + dr) * 9 + (bc + dc)].marks |= bit;
+    }
+
     check_errors();
     update_digit_counts();
 }
@@ -925,7 +983,7 @@ static void draw_grid(void)
                     {
                         mc = (d - 1) % 3;
                         mr = (d - 1) / 3;
-                        gfx_SetTextXY(px + 2 + mc * 7, py + 1 + mr * 8);
+                        gfx_SetTextXY(px + 2 + mc * 7, py + 1 + mr * 7);
                         gfx_PrintChar('0' + d);
                     }
                 }
@@ -1493,10 +1551,40 @@ static void update_difficulty(void)
 
 /* ========== State: Settings ========== */
 
+static uint8_t get_setting(int idx)
+{
+    switch (idx)
+    {
+        case 0: return settings.auto_error;
+        case 1: return settings.auto_erase;
+        case 2: return settings.hl_same;
+        case 3: return settings.hl_house;
+        case 4: return settings.show_remaining;
+        case 5: return settings.hide_completed;
+        case 6: return settings.show_timer;
+        case 7: return settings.dark_mode;
+        default: return 0;
+    }
+}
+
+static void toggle_setting(int idx)
+{
+    switch (idx)
+    {
+        case 0: settings.auto_error      = !settings.auto_error; break;
+        case 1: settings.auto_erase      = !settings.auto_erase; break;
+        case 2: settings.hl_same         = !settings.hl_same; break;
+        case 3: settings.hl_house        = !settings.hl_house; break;
+        case 4: settings.show_remaining  = !settings.show_remaining; break;
+        case 5: settings.hide_completed  = !settings.hide_completed; break;
+        case 6: settings.show_timer      = !settings.show_timer; break;
+        case 7: settings.dark_mode       = !settings.dark_mode; break;
+    }
+}
+
 static void draw_settings(void)
 {
     int i, y;
-    uint8_t *vals = &settings.auto_error;
 
     gfx_FillScreen(PAL_BG);
 
@@ -1521,7 +1609,7 @@ static void draw_settings(void)
         }
 
         gfx_SetTextXY(14, y);
-        gfx_PrintString(vals[i] ? "[X] " : "[ ] ");
+        gfx_PrintString(get_setting(i) ? "[X] " : "[ ] ");
         gfx_PrintString(setting_names[i]);
     }
 
@@ -1536,14 +1624,13 @@ static void update_settings(void)
     uint8_t new_g7 = cur_g7 & ~prev_g7;
     uint8_t new_g6 = cur_g6 & ~prev_g6;
     uint8_t new_g1 = cur_g1 & ~prev_g1;
-    uint8_t *vals = &settings.auto_error;
 
     if ((new_g7 & kb_Down) && settings_cursor < NUM_SETTINGS - 1) settings_cursor++;
     if ((new_g7 & kb_Up) && settings_cursor > 0) settings_cursor--;
 
     if ((new_g6 & kb_Enter) || (new_g1 & kb_2nd))
     {
-        vals[settings_cursor] = !vals[settings_cursor];
+        toggle_setting(settings_cursor);
 
         /* if dark mode toggled, re-apply theme immediately */
         if (settings_cursor == 7)
