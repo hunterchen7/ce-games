@@ -1067,7 +1067,7 @@ static void draw_sidebar(void)
     gfx_HorizLine_NoClip(SIDEBAR_X + 2, 120, SIDEBAR_W - 4);
 
     /* controls help */
-    gfx_SetTextFGColor(PAL_GRID_THIN);
+    gfx_SetTextFGColor(PAL_SIDEBAR_TXT);
     gfx_PrintStringXY("1-9:Digit", SIDEBAR_X + 2, 126);
     gfx_PrintStringXY("2nd:Pencl", SIDEBAR_X + 2, 138);
     gfx_PrintStringXY("Del:Erase", SIDEBAR_X + 2, 150);
@@ -1218,7 +1218,7 @@ static void draw_paused(void)
     gfx_PrintStringXY("PAUSED", 104, 70);
 
     gfx_SetTextScale(1, 1);
-    gfx_SetTextFGColor(PAL_GRID_THIN);
+    gfx_SetTextFGColor(PAL_SIDEBAR_TXT);
     gfx_PrintStringXY("Enter: Resume", 104, 110);
     gfx_PrintStringXY("Clear: Save & Quit", 88, 130);
     gfx_SwapDraw();
@@ -1277,7 +1277,7 @@ static void draw_complete(void)
         gfx_PrintStringXY("New Best!", 120, 125);
     }
 
-    gfx_SetTextFGColor(PAL_GRID_THIN);
+    gfx_SetTextFGColor(PAL_SIDEBAR_TXT);
     gfx_PrintStringXY("Enter: Return to menu", 72, 180);
     gfx_SwapDraw();
 }
@@ -1305,7 +1305,7 @@ static void update_generating(void)
     gfx_SetTextFGColor(PAL_MENU_TXT);
     gfx_PrintStringXY("Generating", 64, 90);
     gfx_SetTextScale(1, 1);
-    gfx_SetTextFGColor(PAL_GRID_THIN);
+    gfx_SetTextFGColor(PAL_SIDEBAR_TXT);
     gfx_PrintStringXY(diff_names[difficulty], 136, 120);
     gfx_PrintStringXY("Please wait...", 104, 140);
     gfx_SwapDraw();
@@ -1355,6 +1355,20 @@ static void draw_menu_item(int idx, int y, const char *text, int cursor, int tot
     gfx_PrintStringXY(text, text_x, y);
 }
 
+/* decorative puzzle for menu background */
+// source is NYT 2025-07-07 hard
+static const uint8_t menu_bg_digits[81] = {
+    3,0,0,0,0,9,6,5,0,
+    0,0,0,2,0,0,0,0,8,
+    0,0,4,5,0,0,0,0,2,
+    4,7,0,0,0,0,0,0,0,
+    0,2,0,0,0,0,7,8,0,
+    0,0,5,0,0,2,0,0,1,
+    6,0,7,0,0,1,0,0,0,
+    0,0,0,0,8,3,0,4,0,
+    0,0,0,0,0,0,3,0,0
+};
+
 static void draw_menu_grid_bg(void)
 {
     /* decorative faint 9x9 grid centered on screen */
@@ -1362,7 +1376,7 @@ static void draw_menu_grid_bg(void)
     int cs = gs / 9; /* cell size = 20 */
     int ox = (SCREEN_W - gs) / 2; /* origin x */
     int oy = (SCREEN_H - gs) / 2; /* origin y */
-    int i;
+    int i, r, c;
 
     gfx_SetColor(PAL_GRID_THIN);
 
@@ -1381,6 +1395,22 @@ static void draw_menu_grid_bg(void)
         gfx_FillRectangle_NoClip(ox + p, oy, 2, gs);
         gfx_FillRectangle_NoClip(ox, oy + p, gs, 2);
     }
+
+    /* scattered digits for flavour */
+    gfx_SetTextFGColor(PAL_GRID_THICK);
+    gfx_SetTextScale(1, 1);
+    for (r = 0; r < 9; r++)
+    {
+        for (c = 0; c < 9; c++)
+        {
+            uint8_t d = menu_bg_digits[r * 9 + c];
+            if (d)
+            {
+                gfx_SetTextXY(ox + c * cs + 6, oy + r * cs + 6);
+                gfx_PrintChar('0' + d);
+            }
+        }
+    }
 }
 
 static void draw_menu(void)
@@ -1397,11 +1427,7 @@ static void draw_menu(void)
     /* title */
     gfx_SetTextScale(3, 3);
     gfx_SetTextFGColor(PAL_HIGHLIGHT);
-    gfx_PrintStringXY("SUDOKU", 64, 30);
-
-    /* decorative line */
-    gfx_SetColor(PAL_GRID_THIN);
-    gfx_HorizLine_NoClip(60, 62, 200);
+    gfx_PrintStringXY("SUDOKU", 88, 28);
 
     gfx_SetTextScale(2, 2);
 
@@ -1417,7 +1443,7 @@ static void draw_menu(void)
     draw_menu_item(i, y_start + i * 32, "Scores", menu_cursor, items);
 
     gfx_SetTextScale(1, 1);
-    gfx_SetTextFGColor(PAL_GRID_THIN);
+    gfx_SetTextFGColor(PAL_SIDEBAR_TXT);
     gfx_PrintStringXY("arrows: move  enter: select  clear: quit", 12, 226);
 
     gfx_SwapDraw();
@@ -1511,14 +1537,14 @@ static void draw_difficulty(void)
         if (i == diff_cursor)
             gfx_SetTextFGColor(PAL_BG);
         else
-            gfx_SetTextFGColor(PAL_GRID_THIN);
+            gfx_SetTextFGColor(PAL_SIDEBAR_TXT);
         gfx_PrintStringXY(descs[i],
             (SCREEN_W - (int)strlen(descs[i]) * 8) / 2, y + 22);
         gfx_SetTextScale(2, 2);
     }
 
     gfx_SetTextScale(1, 1);
-    gfx_SetTextFGColor(PAL_GRID_THIN);
+    gfx_SetTextFGColor(PAL_SIDEBAR_TXT);
     gfx_PrintStringXY("enter: select  clear: back", 68, 226);
 
     gfx_SwapDraw();
@@ -1613,7 +1639,7 @@ static void draw_settings(void)
         gfx_PrintString(setting_names[i]);
     }
 
-    gfx_SetTextFGColor(PAL_GRID_THIN);
+    gfx_SetTextFGColor(PAL_SIDEBAR_TXT);
     gfx_PrintStringXY("enter: toggle  clear: back", 68, 226);
 
     gfx_SwapDraw();
@@ -1691,7 +1717,7 @@ static void draw_scores(void)
         }
     }
 
-    gfx_SetTextFGColor(PAL_GRID_THIN);
+    gfx_SetTextFGColor(PAL_SIDEBAR_TXT);
     gfx_PrintStringXY("clear: back", 112, 226);
 
     gfx_SwapDraw();
