@@ -1,4 +1,5 @@
 #include "board.h"
+#include "eval.h"
 #include "zobrist.h"
 #include <string.h>
 
@@ -112,17 +113,27 @@ void board_init(board_t *b)
     b->king_sq[BLACK] = SQ_NONE;
 }
 
-/* Add a piece to the board (squares array + piece list).
+/* Add a piece to the board (squares array + piece list + eval).
    Does NOT update hash — caller must handle that. */
 static void board_add_piece(board_t *b, uint8_t sq, uint8_t piece)
 {
     uint8_t side = IS_BLACK(piece) ? BLACK : WHITE;
+    uint8_t type = PIECE_TYPE(piece);
+    uint8_t idx = EVAL_INDEX(type);
+    uint8_t sq64 = SQ_TO_SQ64(sq);
+    uint8_t pst_sq = (side == WHITE) ? sq64 : PST_FLIP(sq64);
+
     b->squares[sq] = piece;
-    if (PIECE_TYPE(piece) == PIECE_KING) {
+    if (type == PIECE_KING) {
         b->king_sq[side] = sq;
     }
     b->piece_list[side][b->piece_count[side]] = sq;
     b->piece_count[side]++;
+
+    /* Incremental eval */
+    b->mg[side] += mg_table[idx][pst_sq];
+    b->eg[side] += eg_table[idx][pst_sq];
+    b->phase += phase_weight[idx];
 }
 
 /* Remove a piece from the piece list (swap with last).
@@ -218,6 +229,9 @@ void board_make(board_t *b, move_t m, undo_t *u)
     uint8_t from64 = SQ_TO_SQ64(from);
     uint8_t to64   = SQ_TO_SQ64(to);
     uint8_t pidx   = zobrist_piece_index(piece);
+    uint8_t eidx   = EVAL_INDEX(type);
+    uint8_t pst_from = (side == WHITE) ? from64 : PST_FLIP(from64);
+    uint8_t pst_to   = (side == WHITE) ? to64 : PST_FLIP(to64);
 
     /* Save undo state */
     u->captured = captured;
@@ -230,15 +244,17 @@ void board_make(board_t *b, move_t m, undo_t *u)
     u->moved_piece = piece;
     u->flags = flags;
 
-    /* Update halfmove clock */
+    /* Update halfmove clock (saturate at 255 to prevent uint8_t wrap) */
     if (type == PIECE_PAWN || (flags & FLAG_CAPTURE))
         b->halfmove = 0;
-    else
+    else if (b->halfmove < 255)
         b->halfmove++;
 
-    /* Remove piece from origin (hash) */
+    /* Remove piece from origin (hash + eval) */
     b->hash ^= zobrist_piece[pidx][from64];
     b->lock ^= lock_piece[pidx][from64];
+    b->mg[side] -= mg_table[eidx][pst_from];
+    b->eg[side] -= eg_table[eidx][pst_from];
 
     /* Handle capture */
     if (flags & FLAG_EN_PASSANT) {
@@ -249,9 +265,14 @@ void board_make(board_t *b, move_t m, undo_t *u)
         if (cap_piece != PIECE_NONE) {
             uint8_t cap64 = SQ_TO_SQ64(cap_sq);
             uint8_t cap_pidx = zobrist_piece_index(cap_piece);
+            uint8_t cap_eidx = EVAL_INDEX(PIECE_TYPE(cap_piece));
+            uint8_t cap_pst = (opp == WHITE) ? cap64 : PST_FLIP(cap64);
 
             b->hash ^= zobrist_piece[cap_pidx][cap64];
             b->lock ^= lock_piece[cap_pidx][cap64];
+            b->mg[opp] -= mg_table[cap_eidx][cap_pst];
+            b->eg[opp] -= eg_table[cap_eidx][cap_pst];
+            b->phase -= phase_weight[cap_eidx];
 
             b->squares[cap_sq] = PIECE_NONE;
             plist_remove(b, opp, cap_sq);
@@ -263,9 +284,14 @@ void board_make(board_t *b, move_t m, undo_t *u)
     } else if (captured != PIECE_NONE) {
         /* Normal capture */
         uint8_t cap_pidx = zobrist_piece_index(captured);
+        uint8_t cap_eidx = EVAL_INDEX(PIECE_TYPE(captured));
+        uint8_t cap_pst = (opp == WHITE) ? to64 : PST_FLIP(to64);
 
         b->hash ^= zobrist_piece[cap_pidx][to64];
         b->lock ^= lock_piece[cap_pidx][to64];
+        b->mg[opp] -= mg_table[cap_eidx][cap_pst];
+        b->eg[opp] -= eg_table[cap_eidx][cap_pst];
+        b->phase -= phase_weight[cap_eidx];
 
         plist_remove(b, opp, to);
     }
@@ -277,15 +303,18 @@ void board_make(board_t *b, move_t m, undo_t *u)
     /* Update piece list */
     plist_move(b, side, from, to);
 
-    /* Place piece at destination (hash) */
+    /* Place piece at destination (hash + eval) */
     b->hash ^= zobrist_piece[pidx][to64];
     b->lock ^= lock_piece[pidx][to64];
+    b->mg[side] += mg_table[eidx][pst_to];
+    b->eg[side] += eg_table[eidx][pst_to];
 
     /* Handle promotion */
     if (flags & FLAG_PROMOTION) {
         uint8_t promo_type;
         uint8_t promo_piece;
         uint8_t promo_pidx;
+        uint8_t promo_eidx;
 
         switch (flags & FLAG_PROMO_MASK) {
             case FLAG_PROMO_R: promo_type = PIECE_ROOK;   break;
@@ -295,12 +324,20 @@ void board_make(board_t *b, move_t m, undo_t *u)
         }
         promo_piece = MAKE_PIECE(side == WHITE ? COLOR_WHITE : COLOR_BLACK, promo_type);
         promo_pidx = zobrist_piece_index(promo_piece);
+        promo_eidx = EVAL_INDEX(promo_type);
 
         /* Remove pawn hash at destination, add promoted piece hash */
         b->hash ^= zobrist_piece[pidx][to64];
         b->lock ^= lock_piece[pidx][to64];
         b->hash ^= zobrist_piece[promo_pidx][to64];
         b->lock ^= lock_piece[promo_pidx][to64];
+
+        /* Swap pawn eval for promoted piece eval at destination */
+        b->mg[side] -= mg_table[eidx][pst_to];
+        b->eg[side] -= eg_table[eidx][pst_to];
+        b->mg[side] += mg_table[promo_eidx][pst_to];
+        b->eg[side] += eg_table[promo_eidx][pst_to];
+        b->phase += phase_weight[promo_eidx];
 
         b->squares[to] = promo_piece;
     }
@@ -309,6 +346,7 @@ void board_make(board_t *b, move_t m, undo_t *u)
     if (flags & FLAG_CASTLE) {
         uint8_t rook_from, rook_to;
         uint8_t rook, rook_pidx, rf64, rt64;
+        uint8_t rook_pst_from, rook_pst_to;
 
         if (to > from) {
             /* Kingside */
@@ -324,11 +362,19 @@ void board_make(board_t *b, move_t m, undo_t *u)
         rook_pidx = zobrist_piece_index(rook);
         rf64 = SQ_TO_SQ64(rook_from);
         rt64 = SQ_TO_SQ64(rook_to);
+        rook_pst_from = (side == WHITE) ? rf64 : PST_FLIP(rf64);
+        rook_pst_to   = (side == WHITE) ? rt64 : PST_FLIP(rt64);
 
         b->hash ^= zobrist_piece[rook_pidx][rf64];
         b->hash ^= zobrist_piece[rook_pidx][rt64];
         b->lock ^= lock_piece[rook_pidx][rf64];
         b->lock ^= lock_piece[rook_pidx][rt64];
+
+        /* Rook eval update */
+        b->mg[side] -= mg_table[EVAL_INDEX(PIECE_ROOK)][rook_pst_from];
+        b->eg[side] -= eg_table[EVAL_INDEX(PIECE_ROOK)][rook_pst_from];
+        b->mg[side] += mg_table[EVAL_INDEX(PIECE_ROOK)][rook_pst_to];
+        b->eg[side] += eg_table[EVAL_INDEX(PIECE_ROOK)][rook_pst_to];
 
         b->squares[rook_from] = PIECE_NONE;
         b->squares[rook_to] = rook;
@@ -391,29 +437,62 @@ void board_unmake(board_t *b, move_t m, const undo_t *u)
     uint8_t flags = u->flags;
     uint8_t piece = u->moved_piece;
     uint8_t side;
+    uint8_t type, eidx;
+    uint8_t from64, to64, pst_from, pst_to;
 
     /* Flip side back */
     b->side ^= 1;
     side = b->side;
 
-    /* Handle promotion: restore pawn on destination before moving back */
+    type = PIECE_TYPE(piece);
+    eidx = EVAL_INDEX(type);
+    from64 = SQ_TO_SQ64(from);
+    to64 = SQ_TO_SQ64(to);
+    pst_from = (side == WHITE) ? from64 : PST_FLIP(from64);
+    pst_to = (side == WHITE) ? to64 : PST_FLIP(to64);
+
+    /* Handle promotion: undo eval swap, then restore pawn */
     if (flags & FLAG_PROMOTION) {
+        uint8_t promo_type;
+        uint8_t promo_eidx;
+
+        switch (flags & FLAG_PROMO_MASK) {
+            case FLAG_PROMO_R: promo_type = PIECE_ROOK;   break;
+            case FLAG_PROMO_B: promo_type = PIECE_BISHOP; break;
+            case FLAG_PROMO_N: promo_type = PIECE_KNIGHT; break;
+            default:           promo_type = PIECE_QUEEN;  break;
+        }
+        promo_eidx = EVAL_INDEX(promo_type);
+
+        /* Remove promoted piece eval, restore pawn eval at destination */
+        b->mg[side] -= mg_table[promo_eidx][pst_to];
+        b->eg[side] -= eg_table[promo_eidx][pst_to];
+        b->mg[side] += mg_table[eidx][pst_to];
+        b->eg[side] += eg_table[eidx][pst_to];
+        b->phase -= phase_weight[promo_eidx];
+
         b->squares[to] = piece;  /* put the pawn back */
     }
 
-    /* Move piece back */
+    /* Move piece back: undo eval move */
+    b->mg[side] -= mg_table[eidx][pst_to];
+    b->eg[side] -= eg_table[eidx][pst_to];
+    b->mg[side] += mg_table[eidx][pst_from];
+    b->eg[side] += eg_table[eidx][pst_from];
+
     b->squares[from] = piece;
     b->squares[to] = PIECE_NONE;
     plist_move(b, side, to, from);
 
     /* Restore king square */
-    if (PIECE_TYPE(piece) == PIECE_KING) {
+    if (type == PIECE_KING) {
         b->king_sq[side] = from;
     }
 
-    /* Handle castling (move the rook back) */
+    /* Handle castling (move the rook back + undo eval) */
     if (flags & FLAG_CASTLE) {
         uint8_t rook_from, rook_to;
+        uint8_t rf64, rt64, rook_pst_from, rook_pst_to;
 
         if (to > from) {
             /* Kingside */
@@ -425,20 +504,49 @@ void board_unmake(board_t *b, move_t m, const undo_t *u)
             rook_to   = from - 1;
         }
 
+        rf64 = SQ_TO_SQ64(rook_from);
+        rt64 = SQ_TO_SQ64(rook_to);
+        rook_pst_from = (side == WHITE) ? rf64 : PST_FLIP(rf64);
+        rook_pst_to   = (side == WHITE) ? rt64 : PST_FLIP(rt64);
+
+        /* Undo rook eval: remove at rook_to, restore at rook_from */
+        b->mg[side] -= mg_table[EVAL_INDEX(PIECE_ROOK)][rook_pst_to];
+        b->eg[side] -= eg_table[EVAL_INDEX(PIECE_ROOK)][rook_pst_to];
+        b->mg[side] += mg_table[EVAL_INDEX(PIECE_ROOK)][rook_pst_from];
+        b->eg[side] += eg_table[EVAL_INDEX(PIECE_ROOK)][rook_pst_from];
+
         b->squares[rook_from] = b->squares[rook_to];
         b->squares[rook_to] = PIECE_NONE;
         plist_move(b, side, rook_to, rook_from);
     }
 
-    /* Restore captured piece */
+    /* Restore captured piece + eval */
     if (flags & FLAG_EN_PASSANT) {
         uint8_t cap_sq = (side == WHITE) ? (to + 16) : (to - 16);
         uint8_t opp = side ^ 1;
+
+        if (u->captured != PIECE_NONE) {
+            uint8_t cap_eidx = EVAL_INDEX(PIECE_TYPE(u->captured));
+            uint8_t cap64 = SQ_TO_SQ64(cap_sq);
+            uint8_t cap_pst = (opp == WHITE) ? cap64 : PST_FLIP(cap64);
+
+            b->mg[opp] += mg_table[cap_eidx][cap_pst];
+            b->eg[opp] += eg_table[cap_eidx][cap_pst];
+            b->phase += phase_weight[cap_eidx];
+        }
+
         b->squares[cap_sq] = u->captured;
         b->piece_list[opp][b->piece_count[opp]] = cap_sq;
         b->piece_count[opp]++;
     } else if (u->captured != PIECE_NONE) {
         uint8_t opp = side ^ 1;
+        uint8_t cap_eidx = EVAL_INDEX(PIECE_TYPE(u->captured));
+        uint8_t cap_pst = (opp == WHITE) ? to64 : PST_FLIP(to64);
+
+        b->mg[opp] += mg_table[cap_eidx][cap_pst];
+        b->eg[opp] += eg_table[cap_eidx][cap_pst];
+        b->phase += phase_weight[cap_eidx];
+
         b->squares[to] = u->captured;
         b->piece_list[opp][b->piece_count[opp]] = to;
         b->piece_count[opp]++;

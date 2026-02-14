@@ -17,11 +17,10 @@ typedef struct {
     uint16_t fullmove;           /* fullmove counter */
     uint32_t hash;               /* Zobrist hash */
     uint16_t lock;               /* independent TT lock key */
-    /* incremental eval scores */
-    int16_t  material[2];        /* material score per side (mg) */
-    int16_t  pst_mg[2];          /* piece-square table score per side (mg) */
-    int16_t  pst_eg[2];          /* piece-square table score per side (eg) */
-    int16_t  phase_material;     /* total non-pawn material (both sides) */
+    /* incremental eval (material + PST combined) */
+    int16_t  mg[2];              /* middlegame score per side */
+    int16_t  eg[2];              /* endgame score per side */
+    int16_t  phase;              /* game phase (24=opening, 0=endgame) */
 } board_t;
 
 /* ========== Undo State ========== */
