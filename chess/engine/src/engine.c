@@ -234,6 +234,35 @@ uint8_t engine_is_legal_move(engine_move_t em)
     return 0;
 }
 
+/* ========== Move Side Effects ========== */
+
+void engine_get_move_effects(engine_move_t em, engine_move_effects_t *fx)
+{
+    fx->has_rook_move = 0;
+    fx->has_ep_capture = 0;
+
+    if (em.flags & ENGINE_FLAG_CASTLE) {
+        fx->has_rook_move = 1;
+        fx->rook_from_row = em.from_row;
+        fx->rook_to_row = em.from_row;
+        if (em.to_col > em.from_col) {
+            /* Kingside: rook h-file to f-file */
+            fx->rook_from_col = 7;
+            fx->rook_to_col = 5;
+        } else {
+            /* Queenside: rook a-file to d-file */
+            fx->rook_from_col = 0;
+            fx->rook_to_col = 3;
+        }
+    }
+
+    if (em.flags & ENGINE_FLAG_EN_PASSANT) {
+        fx->has_ep_capture = 1;
+        fx->ep_capture_row = em.from_row;
+        fx->ep_capture_col = em.to_col;
+    }
+}
+
 /* ========== Making Moves ========== */
 
 uint8_t engine_make_move(engine_move_t em)

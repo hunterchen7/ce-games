@@ -74,6 +74,20 @@ uint8_t engine_get_moves_from(uint8_t row, uint8_t col,
 uint8_t engine_get_all_moves(engine_move_t *out, uint8_t max);
 uint8_t engine_is_legal_move(engine_move_t move);
 
+/* ---- Move Side Effects ---- */
+
+typedef struct {
+    uint8_t has_rook_move;  /* castling: rook also moves */
+    uint8_t rook_from_row, rook_from_col;
+    uint8_t rook_to_row, rook_to_col;
+    uint8_t has_ep_capture; /* en passant: captured pawn not on destination */
+    uint8_t ep_capture_row, ep_capture_col;
+} engine_move_effects_t;
+
+/* Compute side effects of a move from the CURRENT position.
+   Call BEFORE engine_make_move() so the UI can animate properly. */
+void engine_get_move_effects(engine_move_t move, engine_move_effects_t *fx);
+
 /* ---- Making Moves ---- */
 
 uint8_t engine_make_move(engine_move_t move);

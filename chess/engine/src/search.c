@@ -48,6 +48,15 @@ static move_t   search_best_root_move;
 /* Quiescence search depth limit */
 #define QS_MAX_DEPTH 8
 
+/* Global move pool — avoids ~2KB stack per ply.
+   Search is depth-first, so plies share this pool via a stack pointer. */
+static scored_move_t move_pool[MOVE_POOL_SIZE];
+static uint16_t move_sp;
+
+/* Temp buffer for raw move generation (overwritten at each ply, but
+   results are copied into the pool before recursing) */
+static move_t raw_moves_buf[MAX_MOVES];
+
 /* ========== Position History ========== */
 
 void search_history_push(uint32_t hash)
@@ -105,6 +114,7 @@ void search_init(void)
     int i, j;
     tt_clear();
     search_history_clear();
+    move_sp = 0;
     for (i = 0; i < MAX_PLY; i++) {
         killers[i][0] = MOVE_NONE;
         killers[i][1] = MOVE_NONE;
@@ -220,9 +230,9 @@ static int16_t quiescence(board_t *b, int16_t alpha, int16_t beta,
     int16_t stand_pat;
     int16_t score;
     uint8_t in_check;
-    scored_move_t moves[MAX_MOVES];
-    move_t raw_moves[MAX_MOVES];
     uint8_t count, i;
+    uint16_t base;
+    scored_move_t *moves;
     undo_t undo;
 
     if (search_stopped) return 0;
@@ -237,13 +247,17 @@ static int16_t quiescence(board_t *b, int16_t alpha, int16_t beta,
     if (in_check) {
         /* In check: must search all moves (evasions) */
         uint8_t legal_found = 0;
-        count = generate_moves(b, raw_moves, GEN_ALL);
+        count = generate_moves(b, raw_moves_buf, GEN_ALL);
 
-        /* Convert to scored moves */
+        /* Claim pool space */
+        base = move_sp;
+        if (base + count > MOVE_POOL_SIZE) return evaluate(b);
+        moves = &move_pool[base];
         for (i = 0; i < count; i++) {
-            moves[i].move = raw_moves[i];
+            moves[i].move = raw_moves_buf[i];
             moves[i].score = 0;
         }
+        move_sp = base + count;
         score_moves(b, moves, count, ply, MOVE_NONE);
 
         /* Keep caller's alpha bound (do NOT reset to -SCORE_INF) */
@@ -258,12 +272,14 @@ static int16_t quiescence(board_t *b, int16_t alpha, int16_t beta,
             score = -quiescence(b, -beta, -alpha, ply + 1, qs_depth + 1);
             board_unmake(b, moves[i].move, &undo);
 
-            if (search_stopped) return 0;
+            if (search_stopped) { move_sp = base; return 0; }
             if (score > alpha) {
                 alpha = score;
-                if (alpha >= beta) return beta;
+                if (alpha >= beta) { move_sp = base; return beta; }
             }
         }
+
+        move_sp = base;
 
         /* No legal moves while in check = checkmate */
         if (!legal_found) return -SCORE_MATE + ply;
@@ -280,11 +296,17 @@ static int16_t quiescence(board_t *b, int16_t alpha, int16_t beta,
     if (stand_pat + 1100 < alpha) return alpha;
 
     /* Generate captures only */
-    count = generate_moves(b, raw_moves, GEN_CAPTURES);
+    count = generate_moves(b, raw_moves_buf, GEN_CAPTURES);
+
+    /* Claim pool space */
+    base = move_sp;
+    if (base + count > MOVE_POOL_SIZE) return alpha;
+    moves = &move_pool[base];
     for (i = 0; i < count; i++) {
-        moves[i].move = raw_moves[i];
+        moves[i].move = raw_moves_buf[i];
         moves[i].score = 0;
     }
+    move_sp = base + count;
     score_moves(b, moves, count, ply, MOVE_NONE);
 
     for (i = 0; i < count; i++) {
@@ -297,13 +319,14 @@ static int16_t quiescence(board_t *b, int16_t alpha, int16_t beta,
         score = -quiescence(b, -beta, -alpha, ply + 1, qs_depth + 1);
         board_unmake(b, moves[i].move, &undo);
 
-        if (search_stopped) return 0;
+        if (search_stopped) { move_sp = base; return 0; }
         if (score > alpha) {
             alpha = score;
-            if (alpha >= beta) return beta;
+            if (alpha >= beta) { move_sp = base; return beta; }
         }
     }
 
+    move_sp = base;
     return alpha;
 }
 
@@ -320,8 +343,8 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
     int16_t tt_score;
     int8_t tt_depth;
     uint8_t tt_flag;
-    scored_move_t moves[MAX_MOVES];
-    move_t raw_moves[MAX_MOVES];
+    uint16_t base;
+    scored_move_t *moves;
     uint8_t count, i;
     undo_t undo;
     uint8_t best_flag;
@@ -407,12 +430,16 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
         }
     }
 
-    /* Generate all moves */
-    count = generate_moves(b, raw_moves, GEN_ALL);
+    /* Generate all moves into pool */
+    count = generate_moves(b, raw_moves_buf, GEN_ALL);
+    base = move_sp;
+    if (base + count > MOVE_POOL_SIZE) return evaluate(b);
+    moves = &move_pool[base];
     for (i = 0; i < count; i++) {
-        moves[i].move = raw_moves[i];
+        moves[i].move = raw_moves_buf[i];
         moves[i].score = 0;
     }
+    move_sp = base + count;
     score_moves(b, moves, count, ply, tt_move);
 
     best_score = -SCORE_INF;
@@ -452,7 +479,7 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
         search_history_pop();
         board_unmake(b, m, &undo);
 
-        if (search_stopped) return 0;
+        if (search_stopped) { move_sp = base; return 0; }
 
         if (score > best_score) {
             best_score = score;
@@ -478,6 +505,8 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
             }
         }
     }
+
+    move_sp = base;
 
     /* Checkmate or stalemate */
     if (legal_moves == 0) {
@@ -516,6 +545,7 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
     search_nodes = 0;
     search_stopped = 0;
     search_best_root_move = MOVE_NONE;
+    move_sp = 0;
 
     /* Time management */
     search_time_fn = limits->time_fn;
