@@ -1,0 +1,166 @@
+Section          Base   Top    High   Length
+---------------- ------ ------ ------ -------
+.icon            D1A882 D1A9A0           11Eh
+.init.libs       D1A9A0 D1A9A0             0h
+.libs            D1A9A0 D1A9A0             0h
+.init.clock      D1A9A0 D1A9A0             0h
+.init.reruncheck D1A9A0 D1A9A0             0h
+.init            D1A9A0 D1A9CC            2Ch
+.fini            D1A9CC D1AA00            34h
+.text            D1AA00 D1F296          4896h
+.data            D1F296 D1F296             0h
+.rodata          D1F296 D1F6B7           421h
+.init_array      000000 000000             0h
+.ctors           000000 000000             0h
+.dtors           000000 000000             0h
+.fini_array      000000 000000             0h
+.bss             D052C6 D06561 D13FD8   129Bh
+.header          D1A87F D1A882             3h
+
+Label                        Value
+--------------------------   ------
+___low_bss                 = D052C6
+___len_bss                 = 00129B
+___heaptop                 = D13FD8
+___heapbot                 = D06561
+___libs                    = D1A9A0
+___init_array_count        = 000000
+___ctors_count             = 000000
+___dtors_count             = 000000
+___fini_array_count        = 000000
+__stack                    = D1A87E
+__land                     = D1AA00
+__iand                     = D1AA04
+__bshl                     = D1AA1B
+__bshru                    = D1AA24
+__frameset                 = D1AA2E
+__frameset0                = D1AA3C
+__imulu                    = D1AA47
+__indcallhl                = D1AA77
+__ineg                     = D1AA78
+__ishl                     = D1AA81
+__ishru                    = D1AAA7
+__ladd                     = D1AAE8
+__lcmpu                    = D1AAEE
+__lcmpzero                 = D1AAF6
+__ldivu                    = D1AB01
+__ldvrmu                   = D1AB0B
+__lladd                    = D1AB33
+__lland                    = D1AB57
+__llcmpu                   = D1AB94
+__llcmpzero                = D1ABBE
+__llctlz                   = D1ABD3
+__lldivs                   = D1ABEB
+__lldivu                   = D1AC3B
+__lldvrmu                  = D1AC4F
+__lldvrmu.hijack           = D1AC56
+__llmulu                   = D1ACAD
+__llneg                    = D1AD02
+__llshl                    = D1AD1B
+__llshrs.hijack_llshru     = D1AD49
+__llshrs.finish            = D1AD68
+__llshru                   = D1AD6C
+__llsub                    = D1AD86
+__lshl                     = D1ADA8
+__lshrs.hijack_lshru       = D1ADC1
+__lshru                    = D1ADD0
+__ior                      = D1ADE0
+__fcmp                     = 000274
+__ftol                     = 00027C
+__ftoul                    = 00027C
+__ltof                     = 000284
+__setflag                  = 000218
+__ultof                    = 000280
+__sand                     = D1ADF7
+__smulu                    = D1AE00
+__sxor                     = D1AE13
+__lxor                     = D1AE1C
+__ixor                     = D1AE20
+_atomic_load_increasing_32 = D1AE37
+_os_DisableHomeTextBuffer  = D1AE5C
+_os_EnableHomeTextBuffer   = D1AE6E
+_npf_vpprintf              = D1AE80
+JTI0_0                     = D1F296
+JTI0_1                     = D1F2B4
+JTI0_2                     = D1F2F9
+JTI0_3                     = D1F31A
+JTI0_4                     = D1F332
+JTI0_5                     = D1F34A
+_npf_utoa_rev              = D1C5EA
+__printf_c                 = D1C6B2
+__vsnprintf_c              = D1C6D1
+_npf_bufputc               = D1C757
+_npf_bufputc_nop           = D1C77C
+__snprintf_c               = D1C783
+__vsprintf_c               = D1C7AB
+__vprintf_c                = D1C7CA
+_npf_putc_std              = D1C7EA
+__sprintf_c                = D1C7FA
+_.str                      = D1F362
+_.str.1                    = D1F366
+_.str.2                    = D1F36A
+_outchar                   = D1C823
+_sprintf                   = D1C7FA
+_vprintf                   = D1C7CA
+_vsnprintf                 = D1C6D1
+__start                    = D1A9A0
+___exithl                  = D1A9CC
+skip._exit                 = D1A9CC
+skip.__Exit                = D1A9CC
+skip._abort                = D1A9CC
+_exit.sp                   = D1A9CD
+_exit.flash_wait_states    = D1A9D7
+_board_init                = D1C839
+_board_set_from_ui         = D1C881
+_board_startpos            = D1CBD5
+_board_make                = D1CBFE
+_plist_remove              = D1D574
+_plist_move                = D1D605
+_board_unmake              = D1D654
+_main                      = D1D82E
+JTI9_0                     = D1F36E
+JTI9_1                     = D1F386
+_perft                     = D1E37E
+_generate_moves            = D1E578
+_gen_piece_moves           = D1E61D
+JTI12_0                    = D1F39E
+_gen_sliding_moves         = D1ED9E
+_is_square_attacked        = D1EE83
+_zobrist_init              = D1F035
+_prng_next                 = D1F227
+_prng_next16               = D1F286
+_board_startpos.start      = D1F3B0
+_castling_mask             = D1F3F0
+_.str                      = D1F470
+_.str.1                    = D1F494
+_.str.2                    = D1F4A4
+_.str.3                    = D1F4C1
+_.str.4                    = D1F4DE
+_.str.5                    = D1F4FB
+_.str.6                    = D1F518
+_.str.7                    = D1F550
+_.str.8                    = D1F552
+_.str.9                    = D1F55E
+_.str.10                   = D1F589
+_.str.11                   = D1F594
+_.str.12                   = D1F597
+_.str.13                   = D1F5B9
+_.str.14                   = D1F5DF
+_.str.15                   = D1F616
+_.str.16                   = D1F640
+_.str.17                   = D1F65D
+_.str.18                   = D1F666
+_knight_offsets            = D1F69F
+_king_offsets              = D1F6A7
+_bishop_offsets            = D1F6AF
+_rook_offsets              = D1F6B3
+_zobrist_initialized       = D052C6
+_prng_state                = D052C7
+_zobrist_piece             = D052CB
+_zobrist_castle            = D05ECB
+_zobrist_ep_file           = D05F0B
+_zobrist_side              = D05F2B
+_lock_piece                = D05F2F
+_lock_castle               = D0652F
+_lock_ep_file              = D0654F
+_lock_side                 = D0655F
