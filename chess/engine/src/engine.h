@@ -94,11 +94,25 @@ uint8_t engine_make_move(engine_move_t move);
 
 /* ---- AI ---- */
 
+void engine_set_max_nodes(uint32_t n);
 engine_move_t engine_think(uint8_t max_depth, uint32_t max_time_ms);
+
+/* ---- Benchmark ---- */
+
+typedef struct {
+    uint32_t nodes;
+    uint8_t depth;
+} engine_bench_result_t;
+
+engine_bench_result_t engine_bench(uint8_t max_depth, uint32_t max_time_ms);
 
 /* ---- Query ---- */
 
 uint8_t engine_get_status(void);
 uint8_t engine_in_check(void);
+
+/* ---- Cleanup ---- */
+
+void engine_cleanup(void);
 
 #endif /* ENGINE_H */

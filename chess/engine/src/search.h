@@ -18,6 +18,7 @@ typedef struct {
 typedef struct {
     uint8_t  max_depth;   /* 0 = no limit */
     uint32_t max_time_ms; /* 0 = no limit */
+    uint32_t max_nodes;   /* 0 = no limit */
     time_ms_fn time_fn;   /* NULL = no time checks */
 } search_limits_t;
 

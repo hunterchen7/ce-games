@@ -42,6 +42,7 @@ static uint16_t pos_history_irreversible;
 static uint32_t search_nodes;
 static uint8_t  search_stopped;
 static uint32_t search_deadline;
+static uint32_t search_max_nodes;
 static time_ms_fn search_time_fn;
 static move_t   search_best_root_move;
 
@@ -99,6 +100,10 @@ static uint8_t is_repetition(uint32_t hash)
 
 static void check_time(void)
 {
+    if (search_max_nodes && search_nodes >= search_max_nodes) {
+        search_stopped = 1;
+        return;
+    }
     if (search_time_fn && search_deadline) {
         if ((search_nodes & 1023) == 0) {
             if (search_time_fn() >= search_deadline)
@@ -554,6 +559,7 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
     } else {
         search_deadline = 0;
     }
+    search_max_nodes = limits->max_nodes;
 
     max_depth = limits->max_depth;
     if (max_depth == 0 && limits->max_time_ms == 0) max_depth = 1;

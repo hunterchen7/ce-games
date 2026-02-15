@@ -42,6 +42,8 @@
 #define PAL_PROMO_BG    14
 #define PAL_SIDEBAR     15
 #define PAL_LEGAL       16
+#define PAL_CUR_LEGAL   17
+#define PAL_CUR_ILLEGAL 18
 
 /* ========== Piece Constants ========== */
 
@@ -174,6 +176,8 @@ static void setup_palette(void)
     gfx_palette[PAL_PROMO_BG]  = gfx_RGBTo1555(50, 50, 60);
     gfx_palette[PAL_SIDEBAR]   = gfx_RGBTo1555(44, 44, 44);
     gfx_palette[PAL_LEGAL]     = gfx_RGBTo1555(100, 180, 100);
+    gfx_palette[PAL_CUR_LEGAL]  = gfx_RGBTo1555(80, 200, 80);
+    gfx_palette[PAL_CUR_ILLEGAL]= gfx_RGBTo1555(220, 60, 60);
 }
 
 /* ========== Board Init ========== */
@@ -433,11 +437,14 @@ static void draw_board(void)
         }
     }
 
-    /* cursor — 2px border */
+    /* cursor — 2px border, color depends on legality */
     {
         int cx = BOARD_X + cur_c * SQ_SIZE;
         int cy = BOARD_Y + cur_r * SQ_SIZE;
-        gfx_SetColor(PAL_CURSOR);
+        uint8_t cur_color = PAL_CURSOR;
+        if (sel_r >= 0 && !(cur_r == sel_r && cur_c == sel_c))
+            cur_color = is_legal_target(cur_r, cur_c) ? PAL_CUR_LEGAL : PAL_CUR_ILLEGAL;
+        gfx_SetColor(cur_color);
         /* top */
         gfx_FillRectangle_NoClip(cx, cy, SQ_SIZE, 2);
         /* bottom */
@@ -1051,15 +1058,9 @@ static void update_playing(void)
 
         /* second frame: compute AI move (blocking) */
         {
-            static const uint8_t depth_table[10] =
-                { 1, 1, 2, 2, 3, 3, 4, 4, 5, 5 };
-            static const uint32_t time_table[10] =
-                { 1000, 2000, 3000, 5000, 8000, 10000, 15000, 20000, 25000, 30000 };
-            uint8_t depth = depth_table[ai_difficulty - 1];
-            uint32_t time_ms = time_table[ai_difficulty - 1];
             engine_move_t ai_move;
 
-            ai_move = engine_think(depth, time_ms);
+            ai_move = engine_think(0, 5000);
 
             if (ai_move.from_row == ENGINE_SQ_NONE)
             {
@@ -1298,6 +1299,7 @@ int main(void)
 
     } while (running);
 
+    engine_cleanup();
     gfx_End();
     return 0;
 }

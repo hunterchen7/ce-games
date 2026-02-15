@@ -4,6 +4,7 @@
 #include "search.h"
 #include "eval.h"
 #include "zobrist.h"
+#include "book.h"
 
 /* ========== Internal State ========== */
 
@@ -127,6 +128,7 @@ void engine_init(const engine_hooks_t *hooks)
 
     search_init();
     board_init(&engine_board);
+    book_init();
 }
 
 void engine_new_game(void)
@@ -306,14 +308,28 @@ uint8_t engine_make_move(engine_move_t em)
 
 /* ========== AI ========== */
 
+static uint32_t engine_max_nodes = 0;
+
+void engine_set_max_nodes(uint32_t n)
+{
+    engine_max_nodes = n;
+}
+
 engine_move_t engine_think(uint8_t max_depth, uint32_t max_time_ms)
 {
     search_limits_t limits;
     search_result_t result;
     engine_move_t em;
+    move_t book_move;
+
+    /* Try the opening book first — instant response */
+    if (book_probe(&engine_board, &book_move)) {
+        return internal_to_engine_move(book_move);
+    }
 
     limits.max_depth = max_depth;
     limits.max_time_ms = max_time_ms;
+    limits.max_nodes = engine_max_nodes;
     limits.time_fn = engine_hooks.time_ms;
 
     result = search_go(&engine_board, &limits);
@@ -330,6 +346,23 @@ engine_move_t engine_think(uint8_t max_depth, uint32_t max_time_ms)
     return internal_to_engine_move(result.best_move);
 }
 
+engine_bench_result_t engine_bench(uint8_t max_depth, uint32_t max_time_ms)
+{
+    search_limits_t limits;
+    search_result_t result;
+    engine_bench_result_t br;
+
+    limits.max_depth = max_depth;
+    limits.max_time_ms = max_time_ms;
+    limits.max_nodes = 0; /* no node limit for benchmarking */
+    limits.time_fn = engine_hooks.time_ms;
+
+    result = search_go(&engine_board, &limits);
+    br.nodes = result.nodes;
+    br.depth = result.depth;
+    return br;
+}
+
 /* ========== Query ========== */
 
 uint8_t engine_get_status(void)
@@ -342,4 +375,11 @@ uint8_t engine_in_check(void)
     return is_square_attacked(&engine_board,
                               engine_board.king_sq[engine_board.side],
                               engine_board.side ^ 1);
+}
+
+/* ========== Cleanup ========== */
+
+void engine_cleanup(void)
+{
+    book_close();
 }
