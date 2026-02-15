@@ -1,0 +1,39 @@
+#ifndef SEARCH_H
+#define SEARCH_H
+
+#include "board.h"
+
+/* Time management callback */
+typedef uint32_t (*time_ms_fn)(void);
+
+/* Search result */
+typedef struct {
+    move_t best_move;
+    int16_t score;
+    uint8_t depth;       /* depth of last completed iteration */
+    uint32_t nodes;      /* total nodes searched */
+} search_result_t;
+
+/* Search limits */
+typedef struct {
+    uint8_t  max_depth;   /* 0 = no limit */
+    uint32_t max_time_ms; /* 0 = no limit */
+    time_ms_fn time_fn;   /* NULL = no time checks */
+} search_limits_t;
+
+/* Initialize search state (call once at startup or new game) */
+void search_init(void);
+
+/* Run iterative deepening search.
+   Returns the best move and associated info.
+   The board position is restored after search. */
+search_result_t search_go(board_t *b, const search_limits_t *limits);
+
+/* Position history for repetition detection.
+   Must be maintained by the caller across moves. */
+void search_history_push(uint32_t hash);
+void search_history_pop(void);
+void search_history_clear(void);
+void search_history_set_irreversible(void);
+
+#endif /* SEARCH_H */

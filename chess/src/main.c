@@ -4,6 +4,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include "engine.h"
 
 /* ========== Screen & Layout ========== */
 
@@ -40,6 +41,7 @@
 #define PAL_MENU_BG     13
 #define PAL_PROMO_BG    14
 #define PAL_SIDEBAR     15
+#define PAL_LEGAL       16
 
 /* ========== Piece Constants ========== */
 
@@ -91,7 +93,7 @@ static int current_turn;       /* WHITE_TURN or BLACK_TURN */
 
 /* game mode */
 static int game_mode;
-static int ai_difficulty;      /* 1-10, stored for future engine */
+static int ai_difficulty;      /* 1-10 */
 
 /* last move highlight */
 static int last_from_r, last_from_c;
@@ -103,6 +105,9 @@ static int promo_r, promo_c;
 static int promo_cursor;       /* 0=Queen, 1=Rook, 2=Bishop, 3=Knight */
 static int promo_from_r, promo_from_c; /* origin square for undo */
 static int8_t promo_captured;          /* piece that was on dest square */
+static int promo_saved_has_last;       /* saved last-move state for cancel */
+static int promo_saved_from_r, promo_saved_from_c;
+static int promo_saved_to_r, promo_saved_to_c;
 
 /* animation */
 #define ANIM_MS_PER_SQ  50
@@ -116,7 +121,8 @@ static clock_t anim_start;
 static clock_t anim_duration;  /* precomputed ticks for this move */
 
 /* game over */
-static int winner; /* WHITE_TURN, BLACK_TURN, or 0 for draw/resign */
+static int winner; /* WHITE_TURN, BLACK_TURN, or 0 for draw */
+static uint8_t game_over_reason; /* ENGINE_STATUS_* value */
 
 /* menu state */
 static int menu_cursor;
@@ -125,6 +131,27 @@ static int diff_cursor;
 /* keyboard */
 static uint8_t cur_g1, cur_g6, cur_g7;
 static uint8_t prev_g1, prev_g6, prev_g7;
+
+/* legal move targets (engine integration) */
+static engine_move_t legal_targets[64];
+static uint8_t legal_target_count;
+
+/* pending move being animated */
+static engine_move_t pending_move;
+static engine_move_effects_t pending_effects;
+
+/* AI state: 0=idle, 1=draw thinking screen, 2=compute */
+static int ai_thinking;
+
+/* ========== Engine Time Function ========== */
+
+static uint32_t ce_time_ms(void)
+{
+    clock_t t = clock();
+    /* Split to avoid overflow: clock() * 1000 overflows uint32 after ~22 min */
+    return (uint32_t)(t / CLOCKS_PER_SEC) * 1000u +
+           (uint32_t)(t % CLOCKS_PER_SEC) * 1000u / CLOCKS_PER_SEC;
+}
 
 /* ========== Palette Setup ========== */
 
@@ -146,6 +173,7 @@ static void setup_palette(void)
     gfx_palette[PAL_MENU_BG]   = gfx_RGBTo1555(20, 20, 30);
     gfx_palette[PAL_PROMO_BG]  = gfx_RGBTo1555(50, 50, 60);
     gfx_palette[PAL_SIDEBAR]   = gfx_RGBTo1555(44, 44, 44);
+    gfx_palette[PAL_LEGAL]     = gfx_RGBTo1555(100, 180, 100);
 }
 
 /* ========== Board Init ========== */
@@ -323,6 +351,24 @@ static void draw_piece(int8_t piece, int sx, int sy)
 
 /* ========== Board Drawing ========== */
 
+/* Check if a square is a legal move target.
+   Returns 0 = not a target, 1 = quiet move, 2 = capture */
+static uint8_t is_legal_target(int r, int c)
+{
+    uint8_t i;
+    for (i = 0; i < legal_target_count; i++)
+    {
+        if (legal_targets[i].to_row == r && legal_targets[i].to_col == c)
+        {
+            if ((legal_targets[i].flags & ENGINE_FLAG_CAPTURE) ||
+                (legal_targets[i].flags & ENGINE_FLAG_EN_PASSANT))
+                return 2;
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static uint8_t square_bg_color(int r, int c)
 {
     int is_light = (r + c) % 2 == 0;
@@ -357,6 +403,29 @@ static void draw_board(void)
             /* square background */
             gfx_SetColor(square_bg_color(r, c));
             gfx_FillRectangle_NoClip(sx, sy, SQ_SIZE, SQ_SIZE);
+
+            /* legal move indicators */
+            if (sel_r >= 0)
+            {
+                uint8_t lt = is_legal_target(r, c);
+                if (lt)
+                {
+                    gfx_SetColor(PAL_LEGAL);
+                    if (lt == 1 && board[r][c] == EMPTY)
+                    {
+                        /* quiet move: small dot in center */
+                        gfx_FillCircle_NoClip(sx + SQ_SIZE / 2, sy + SQ_SIZE / 2, 4);
+                    }
+                    else
+                    {
+                        /* capture (including EP): corner markers */
+                        gfx_FillRectangle_NoClip(sx, sy, 4, 4);
+                        gfx_FillRectangle_NoClip(sx + SQ_SIZE - 4, sy, 4, 4);
+                        gfx_FillRectangle_NoClip(sx, sy + SQ_SIZE - 4, 4, 4);
+                        gfx_FillRectangle_NoClip(sx + SQ_SIZE - 4, sy + SQ_SIZE - 4, 4, 4);
+                    }
+                }
+            }
 
             /* piece */
             if (board[r][c] != EMPTY)
@@ -422,7 +491,22 @@ static void draw_sidebar(void)
     gfx_SetTextScale(1, 1);
     gfx_SetTextFGColor(current_turn == WHITE_TURN ? PAL_WHITE_PC : PAL_TEXT);
     gfx_PrintStringXY(current_turn == WHITE_TURN ? "White" : "Black", SIDEBAR_X + 4, 38);
-    gfx_PrintStringXY("to move", SIDEBAR_X + 4, 50);
+
+    /* show check or thinking status */
+    if (ai_thinking)
+    {
+        gfx_SetTextFGColor(PAL_MENU_HL);
+        gfx_PrintStringXY("Thinking", SIDEBAR_X + 4, 50);
+    }
+    else if (engine_in_check())
+    {
+        gfx_SetTextFGColor(PAL_CURSOR);
+        gfx_PrintStringXY("CHECK!", SIDEBAR_X + 4, 50);
+    }
+    else
+    {
+        gfx_PrintStringXY("to move", SIDEBAR_X + 4, 50);
+    }
 
     /* selection indicator */
     if (sel_r >= 0)
@@ -531,6 +615,7 @@ static void draw_promotion(void)
 static void draw_gameover(void)
 {
     const char *msg;
+    const char *reason = "";
 
     gfx_FillScreen(PAL_BG);
 
@@ -544,10 +629,24 @@ static void draw_gameover(void)
     else
         msg = "Draw";
 
-    gfx_PrintStringXY(msg, (SCREEN_W - (int)strlen(msg) * 24) / 2, 70);
+    gfx_PrintStringXY(msg, (SCREEN_W - (int)strlen(msg) * 24) / 2, 60);
 
+    /* show reason */
     gfx_SetTextScale(1, 1);
     gfx_SetTextFGColor(PAL_TEXT);
+
+    switch (game_over_reason)
+    {
+        case ENGINE_STATUS_CHECKMATE: reason = "Checkmate"; break;
+        case ENGINE_STATUS_STALEMATE: reason = "Stalemate"; break;
+        case ENGINE_STATUS_DRAW_50:   reason = "50-move rule"; break;
+        case ENGINE_STATUS_DRAW_REP:  reason = "Repetition"; break;
+        case ENGINE_STATUS_DRAW_MAT:  reason = "Insufficient material"; break;
+        default:                      reason = "Resignation"; break;
+    }
+    gfx_PrintStringXY(reason,
+        (SCREEN_W - (int)strlen(reason) * 8) / 2, 100);
+
     gfx_PrintStringXY("Enter: Return to menu", 72, 160);
 
     gfx_SwapDraw();
@@ -616,13 +715,66 @@ static void draw_menu(void)
     gfx_SwapDraw();
 }
 
+/* ========== Engine Helpers ========== */
+
+/* Apply a completed move to the engine and check game status.
+   Updates current_turn. Returns 1 if game is over, 0 otherwise. */
+static uint8_t apply_engine_move(engine_move_t move)
+{
+    uint8_t status = engine_make_move(move);
+
+    if (status == ENGINE_STATUS_CHECKMATE)
+    {
+        /* The side that just moved wins */
+        winner = current_turn;
+        game_over_reason = status;
+        current_turn = -current_turn;
+        sel_r = -1; sel_c = -1;
+        legal_target_count = 0;
+        state = STATE_GAMEOVER;
+        return 1;
+    }
+
+    if (status >= ENGINE_STATUS_STALEMATE)
+    {
+        winner = 0;
+        game_over_reason = status;
+        current_turn = -current_turn;
+        sel_r = -1; sel_c = -1;
+        legal_target_count = 0;
+        state = STATE_GAMEOVER;
+        return 1;
+    }
+
+    /* switch turn */
+    current_turn = -current_turn;
+    sel_r = -1; sel_c = -1;
+    legal_target_count = 0;
+
+    /* trigger AI if needed */
+    if (game_mode == MODE_COMPUTER && current_turn == BLACK_TURN)
+        ai_thinking = 1;
+
+    return 0;
+}
+
 static void start_game(void)
 {
+    engine_hooks_t hooks;
+
+    hooks.time_ms = ce_time_ms;
+    engine_init(&hooks);
+    engine_new_game();
+
     init_board();
     cur_r = 7; cur_c = 4;
     sel_r = -1; sel_c = -1;
     current_turn = WHITE_TURN;
     has_last_move = 0;
+    legal_target_count = 0;
+    ai_thinking = 0;
+    anim_active = 0;
+    game_over_reason = 0;
     state = STATE_PLAYING;
 }
 
@@ -744,6 +896,7 @@ static void start_move_anim(int from_r, int from_c, int to_r, int to_c)
     dist = (dr > dc) ? dr : dc; /* Chebyshev distance */
     ms = dist * ANIM_MS_PER_SQ;
     if (ms > ANIM_MAX_MS) ms = ANIM_MAX_MS;
+    if (ms < 1) ms = 1; /* guard against zero duration */
 
     anim_piece = board[from_r][from_c];
     anim_captured = board[to_r][to_c];
@@ -757,32 +910,64 @@ static void start_move_anim(int from_r, int from_c, int to_r, int to_c)
     board[from_r][from_c] = EMPTY;
     /* remove captured piece so it doesn't draw under the sliding piece */
     board[to_r][to_c] = EMPTY;
+
+    /* for EP, also remove the captured pawn */
+    if (pending_effects.has_ep_capture)
+        board[pending_effects.ep_capture_row][pending_effects.ep_capture_col] = EMPTY;
+
+    /* for castling, move the rook immediately (so it appears in new position during king slide) */
+    if (pending_effects.has_rook_move)
+    {
+        int8_t rook = board[pending_effects.rook_from_row][pending_effects.rook_from_col];
+        board[pending_effects.rook_from_row][pending_effects.rook_from_col] = EMPTY;
+        board[pending_effects.rook_to_row][pending_effects.rook_to_col] = rook;
+    }
 }
 
 static void finish_move(void)
 {
     int8_t piece = anim_piece;
-    int from_r = anim_from_r, from_c = anim_from_c;
     int to_r = anim_to_r, to_c = anim_to_c;
+    int is_ai_move;
+    int prev_has_last = has_last_move;
+    int prev_from_r = last_from_r, prev_from_c = last_from_c;
+    int prev_to_r = last_to_r, prev_to_c = last_to_c;
 
     anim_active = 0;
     board[to_r][to_c] = piece;
 
     /* record last move for highlighting */
-    last_from_r = from_r; last_from_c = from_c;
+    last_from_r = anim_from_r; last_from_c = anim_from_c;
     last_to_r = to_r; last_to_c = to_c;
     has_last_move = 1;
 
     /* check pawn promotion */
-    if (PIECE_TYPE(piece) == 1)
+    is_ai_move = (game_mode == MODE_COMPUTER && current_turn == BLACK_TURN);
+
+    if (pending_move.flags & ENGINE_FLAG_PROMOTION)
     {
-        if ((PIECE_IS_WHITE(piece) && to_r == 0) ||
-            (!PIECE_IS_WHITE(piece) && to_r == 7))
+        if (is_ai_move)
         {
+            /* AI promotion — apply the piece from engine move flags */
+            uint8_t pt = pending_move.flags & ENGINE_FLAG_PROMO_MASK;
+            if (pt == ENGINE_FLAG_PROMO_Q) board[to_r][to_c] = B_QUEEN;
+            else if (pt == ENGINE_FLAG_PROMO_R) board[to_r][to_c] = B_ROOK;
+            else if (pt == ENGINE_FLAG_PROMO_B) board[to_r][to_c] = B_BISHOP;
+            else board[to_r][to_c] = B_KNIGHT;
+            /* fall through to apply_engine_move */
+        }
+        else
+        {
+            /* Human promotion — show popup, defer engine move */
+            promo_saved_has_last = prev_has_last;
+            promo_saved_from_r = prev_from_r;
+            promo_saved_from_c = prev_from_c;
+            promo_saved_to_r = prev_to_r;
+            promo_saved_to_c = prev_to_c;
             promo_r = to_r;
             promo_c = to_c;
-            promo_from_r = from_r;
-            promo_from_c = from_c;
+            promo_from_r = anim_from_r;
+            promo_from_c = anim_from_c;
             promo_captured = anim_captured;
             promo_cursor = 0;
             state = STATE_PROMOTION;
@@ -790,9 +975,7 @@ static void finish_move(void)
         }
     }
 
-    /* switch turn */
-    current_turn = -current_turn;
-    sel_r = -1; sel_c = -1;
+    apply_engine_move(pending_move);
 }
 
 static void draw_anim_frame(void)
@@ -826,6 +1009,21 @@ static void draw_anim_frame(void)
     gfx_SwapDraw();
 }
 
+/* Find a matching engine move from legal_targets for a target square */
+static int find_legal_target(int to_r, int to_c, engine_move_t *out)
+{
+    uint8_t i;
+    for (i = 0; i < legal_target_count; i++)
+    {
+        if (legal_targets[i].to_row == to_r && legal_targets[i].to_col == to_c)
+        {
+            *out = legal_targets[i];
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static void update_playing(void)
 {
     uint8_t new7 = cur_g7 & ~prev_g7;
@@ -837,6 +1035,53 @@ static void update_playing(void)
     if (anim_active)
     {
         draw_anim_frame();
+        return;
+    }
+
+    /* AI thinking phase */
+    if (ai_thinking)
+    {
+        if (ai_thinking == 1)
+        {
+            /* first frame: draw "Thinking..." on sidebar and return */
+            ai_thinking = 2;
+            draw_playing();
+            return;
+        }
+
+        /* second frame: compute AI move (blocking) */
+        {
+            static const uint8_t depth_table[10] =
+                { 1, 1, 2, 2, 3, 3, 4, 4, 5, 5 };
+            static const uint32_t time_table[10] =
+                { 1000, 2000, 3000, 5000, 8000, 10000, 15000, 20000, 25000, 30000 };
+            uint8_t depth = depth_table[ai_difficulty - 1];
+            uint32_t time_ms = time_table[ai_difficulty - 1];
+            engine_move_t ai_move;
+
+            ai_move = engine_think(depth, time_ms);
+
+            if (ai_move.from_row == ENGINE_SQ_NONE)
+            {
+                /* no legal move — game should be over */
+                uint8_t status = engine_get_status();
+                if (status == ENGINE_STATUS_CHECKMATE)
+                    winner = WHITE_TURN;
+                else
+                    winner = 0;
+                game_over_reason = status ? status : ENGINE_STATUS_STALEMATE;
+                state = STATE_GAMEOVER;
+                ai_thinking = 0;
+                return;
+            }
+
+            /* prepare and animate the AI move */
+            pending_move = ai_move;
+            engine_get_move_effects(ai_move, &pending_effects);
+            start_move_anim(ai_move.from_row, ai_move.from_col,
+                            ai_move.to_row, ai_move.to_col);
+            ai_thinking = 0;
+        }
         return;
     }
 
@@ -861,6 +1106,9 @@ static void update_playing(void)
                 {
                     sel_r = cur_r;
                     sel_c = cur_c;
+                    /* compute legal moves for this piece */
+                    legal_target_count = engine_get_moves_from(
+                        (uint8_t)cur_r, (uint8_t)cur_c, legal_targets, 64);
                 }
             }
         }
@@ -871,6 +1119,7 @@ static void update_playing(void)
             {
                 /* deselect if clicking same square */
                 sel_r = -1; sel_c = -1;
+                legal_target_count = 0;
             }
             else
             {
@@ -882,11 +1131,22 @@ static void update_playing(void)
                 {
                     sel_r = cur_r;
                     sel_c = cur_c;
+                    /* recompute legal moves for new piece */
+                    legal_target_count = engine_get_moves_from(
+                        (uint8_t)cur_r, (uint8_t)cur_c, legal_targets, 64);
                 }
                 else
                 {
-                    /* animate the move */
-                    start_move_anim(sel_r, sel_c, cur_r, cur_c);
+                    /* try to move to this square */
+                    engine_move_t move;
+                    if (find_legal_target(cur_r, cur_c, &move))
+                    {
+                        /* legal move — prepare and animate */
+                        pending_move = move;
+                        engine_get_move_effects(move, &pending_effects);
+                        start_move_anim(sel_r, sel_c, cur_r, cur_c);
+                    }
+                    /* if not legal, do nothing (ignore the click) */
                 }
             }
         }
@@ -898,11 +1158,13 @@ static void update_playing(void)
         if (sel_r >= 0)
         {
             sel_r = -1; sel_c = -1;
+            legal_target_count = 0;
         }
         else
         {
             /* no selection — resign */
             winner = -current_turn;
+            game_over_reason = 0; /* resignation */
             state = STATE_GAMEOVER;
             return;
         }
@@ -912,6 +1174,7 @@ static void update_playing(void)
     if (new1 & kb_Mode)
     {
         winner = -current_turn;
+        game_over_reason = 0; /* resignation */
         state = STATE_GAMEOVER;
         return;
     }
@@ -929,6 +1192,11 @@ static void update_promotion(void)
     uint8_t new1 = cur_g1 & ~prev_g1;
     const int8_t *pieces;
 
+    static const uint8_t promo_flags[4] = {
+        ENGINE_FLAG_PROMO_Q, ENGINE_FLAG_PROMO_R,
+        ENGINE_FLAG_PROMO_B, ENGINE_FLAG_PROMO_N
+    };
+
     if ((new7 & kb_Right) && promo_cursor < 3) promo_cursor++;
     if ((new7 & kb_Left) && promo_cursor > 0) promo_cursor--;
 
@@ -937,9 +1205,14 @@ static void update_promotion(void)
         pieces = (current_turn == WHITE_TURN) ? promo_pieces_white : promo_pieces_black;
         board[promo_r][promo_c] = pieces[promo_cursor];
 
-        /* switch turn */
-        current_turn = -current_turn;
-        sel_r = -1; sel_c = -1;
+        /* preserve capture flag from original move, set promotion type */
+        pending_move.flags = (pending_move.flags & ENGINE_FLAG_CAPTURE)
+                           | ENGINE_FLAG_PROMOTION | promo_flags[promo_cursor];
+
+        /* apply the move to the engine and check status */
+        if (apply_engine_move(pending_move))
+            return; /* game over */
+
         state = STATE_PLAYING;
         return;
     }
@@ -948,12 +1221,16 @@ static void update_promotion(void)
     if (new6 & kb_Clear)
     {
         int8_t pawn = (current_turn == WHITE_TURN) ? W_PAWN : B_PAWN;
-        board[promo_r][promo_c] = EMPTY;
         board[promo_from_r][promo_from_c] = pawn;
-        /* restore any captured piece */
-        board[last_to_r][last_to_c] = promo_captured;
-        has_last_move = 0;
+        board[promo_r][promo_c] = promo_captured;
+        /* restore previous last-move highlight */
+        has_last_move = promo_saved_has_last;
+        last_from_r = promo_saved_from_r;
+        last_from_c = promo_saved_from_c;
+        last_to_r = promo_saved_to_r;
+        last_to_c = promo_saved_to_c;
         sel_r = -1; sel_c = -1;
+        legal_target_count = 0;
         state = STATE_PLAYING;
         return;
     }
