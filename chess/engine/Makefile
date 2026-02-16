@@ -9,7 +9,9 @@ SRCS = $(SRCDIR)/board.c $(SRCDIR)/movegen.c $(SRCDIR)/zobrist.c \
        $(SRCDIR)/eval.c $(SRCDIR)/tt.c $(SRCDIR)/search.c $(SRCDIR)/engine.c
 OBJS = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SRCS))
 
-.PHONY: all clean perft uci test-search test-integration
+ABLATION_FEATURES = TEMPO PAWNS PASSED ROOK_FILES MOBILITY SHIELD
+
+.PHONY: all clean perft uci test-search test-integration ablation
 
 all: perft uci test-search test-integration
 
@@ -34,6 +36,16 @@ test-search: $(OBJS) $(TESTDIR)/test_search.c | $(BUILDDIR)
 # Integration test binary
 test-integration: $(OBJS) $(TESTDIR)/test_integration.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) $(OBJS) $(TESTDIR)/test_integration.c -o $(BUILDDIR)/test_integration
+
+# Ablation: build full + all NO_* variants
+ablation: uci
+	@cp $(BUILDDIR)/uci $(BUILDDIR)/uci_full
+	@for feat in $(ABLATION_FEATURES); do \
+		echo "Building uci_no_$$(echo $$feat | tr 'A-Z' 'a-z')..."; \
+		$(CC) $(CFLAGS) -DNO_$$feat \
+			$(patsubst $(SRCDIR)/%.c,$(SRCDIR)/%.c,$(SRCS)) \
+			$(UCIDIR)/uci.c -o $(BUILDDIR)/uci_no_$$(echo $$feat | tr 'A-Z' 'a-z'); \
+	done
 
 clean:
 	rm -rf $(BUILDDIR)

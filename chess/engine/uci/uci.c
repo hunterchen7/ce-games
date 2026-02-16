@@ -250,7 +250,7 @@ int main(void)
     hooks.time_ms = uci_time_ms;
     engine_init(&hooks);
 
-    /* engine_set_max_nodes(2000); — disabled for full-strength test */
+    engine_set_max_nodes(2000);
 
     while (fgets(line, sizeof(line), stdin)) {
         line[strcspn(line, "\n")] = '\0';

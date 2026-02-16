@@ -1,4 +1,5 @@
 #include "eval.h"
+#include "movegen.h"
 
 /* ========== Phase Weights ========== */
 
@@ -150,34 +151,404 @@ const int16_t eg_table[6][64] = {
     },
 };
 
-/* ========== Evaluation ========== */
+/* ========== Feature Constants ========== */
 
 #define BISHOP_PAIR_MG  30
 #define BISHOP_PAIR_EG  50
+
+/* Tempo bonus (Stockfish-tuned) */
+#define TEMPO_MG  24
+#define TEMPO_EG  11
+
+/* Pawn structure penalties/bonuses */
+#define DOUBLED_MG   11
+#define DOUBLED_EG   56
+#define ISOLATED_MG  15
+#define ISOLATED_EG  20
+
+/* Connected pawn bonus by relative rank (2nd..7th) */
+static const int16_t connected_bonus[] = { 0, 7, 8, 12, 29, 48, 86 };
+
+/* Passed pawn bonus: mg = 20*rr, eg = 10*(rr+r+1) where r=relrank-2, rr=r*(r-1) */
+/* Precomputed for relative ranks 2..7 (index 0..5) */
+static const int16_t passed_mg[] = { 0,  0,  0, 20, 120, 240 };
+static const int16_t passed_eg[] = { 10, 20, 30, 50, 100, 170 };
+
+/* Rook file bonuses */
+#define ROOK_OPEN_MG      43
+#define ROOK_OPEN_EG      21
+#define ROOK_SEMIOPEN_MG  19
+#define ROOK_SEMIOPEN_EG  10
+
+/* Pawn shield bonus per pawn in front of king */
+#define SHIELD_MG  15
+#define SHIELD_EG   0
+
+/* Knight mobility bonus table (0..8 safe squares) — from Stockfish classical */
+static const int16_t knight_mob_mg[] = { -38, -25, -12, 0, 12, 25, 31, 33, 38 };
+static const int16_t knight_mob_eg[] = { -33, -23, -13, -1, 7, 14, 22, 24, 27 };
+
+/* Bishop mobility bonus table (0..13 safe squares) */
+static const int16_t bishop_mob_mg[] = { -25, -11, 3, 17, 22, 34, 37, 44, 51, 56, 59, 62, 66, 78 };
+static const int16_t bishop_mob_eg[] = { -30, -16, -2, 12, 22, 32, 43, 51, 59, 64, 68, 72, 75, 73 };
+
+/* Knight move offsets (0x88) */
+static const int8_t knight_offsets[] = { -33, -31, -18, -14, 14, 18, 31, 33 };
+
+/* Bishop (diagonal) ray offsets */
+static const int8_t bishop_offsets[] = { -17, -15, 15, 17 };
+
+/* ========== Evaluation Helpers ========== */
+
+/* Build per-file pawn presence: pawns[file] = bitmask of ranks with pawns.
+   Bit 0 = rank 0 (row 0 = rank 8), bit 7 = rank 7 (row 7 = rank 1). */
+static void build_pawn_files(const board_t *b, uint8_t side,
+                             uint8_t pawn_files[8])
+{
+    uint8_t i, sq, row, col, piece;
+    for (i = 0; i < 8; i++) pawn_files[i] = 0;
+    for (i = 0; i < b->piece_count[side]; i++) {
+        sq = b->piece_list[side][i];
+        piece = b->squares[sq];
+        if (PIECE_TYPE(piece) == PIECE_PAWN) {
+            row = SQ_TO_ROW(sq);
+            col = SQ_TO_COL(sq);
+            pawn_files[col] |= (uint8_t)(1u << row);
+        }
+    }
+}
+
+/* Check if square is attacked by an enemy pawn */
+static uint8_t pawn_attacks_sq(const board_t *b, uint8_t sq, uint8_t by_side)
+{
+    uint8_t piece;
+    if (by_side == WHITE) {
+        /* White pawns attack upward-diagonally; they'd be on row+1 */
+        uint8_t s1 = sq + 17; /* down-left from sq = white pawn attacking up-right */
+        uint8_t s2 = sq + 15; /* down-right from sq = white pawn attacking up-left */
+        if (SQ_VALID(s1)) { piece = b->squares[s1]; if (piece == MAKE_PIECE(COLOR_WHITE, PIECE_PAWN)) return 1; }
+        if (SQ_VALID(s2)) { piece = b->squares[s2]; if (piece == MAKE_PIECE(COLOR_WHITE, PIECE_PAWN)) return 1; }
+    } else {
+        /* Black pawns attack downward-diagonally; they'd be on row-1 */
+        uint8_t s1 = sq - 17;
+        uint8_t s2 = sq - 15;
+        if (SQ_VALID(s1)) { piece = b->squares[s1]; if (piece == MAKE_PIECE(COLOR_BLACK, PIECE_PAWN)) return 1; }
+        if (SQ_VALID(s2)) { piece = b->squares[s2]; if (piece == MAKE_PIECE(COLOR_BLACK, PIECE_PAWN)) return 1; }
+    }
+    return 0;
+}
+
+/* ========== Main Evaluation ========== */
 
 int16_t evaluate(const board_t *b)
 {
     int16_t mg, eg, phase;
     int32_t score;
-    uint8_t i, wb, bb;
+    uint8_t i, sq, row, col, type;
+    uint8_t wb, bb;
+    uint8_t w_pawns[8], b_pawns[8];
 
     /* Material + PST from white's perspective (maintained incrementally) */
     mg = b->mg[WHITE] - b->mg[BLACK];
     eg = b->eg[WHITE] - b->eg[BLACK];
 
     /* Bishop pair bonus */
-    wb = 0;
-    bb = 0;
+    wb = 0; bb = 0;
     for (i = 0; i < b->piece_count[WHITE]; i++) {
-        if (PIECE_TYPE(b->squares[b->piece_list[WHITE][i]]) == PIECE_BISHOP)
-            wb++;
+        if (PIECE_TYPE(b->squares[b->piece_list[WHITE][i]]) == PIECE_BISHOP) wb++;
     }
     for (i = 0; i < b->piece_count[BLACK]; i++) {
-        if (PIECE_TYPE(b->squares[b->piece_list[BLACK][i]]) == PIECE_BISHOP)
-            bb++;
+        if (PIECE_TYPE(b->squares[b->piece_list[BLACK][i]]) == PIECE_BISHOP) bb++;
     }
     if (wb >= 2) { mg += BISHOP_PAIR_MG; eg += BISHOP_PAIR_EG; }
     if (bb >= 2) { mg -= BISHOP_PAIR_MG; eg -= BISHOP_PAIR_EG; }
+
+    /* ---- Tempo ---- */
+#ifndef NO_TEMPO
+    if (b->side == WHITE) { mg += TEMPO_MG; eg += TEMPO_EG; }
+    else                   { mg -= TEMPO_MG; eg -= TEMPO_EG; }
+#endif
+
+    /* ---- Build pawn file arrays ---- */
+    build_pawn_files(b, WHITE, w_pawns);
+    build_pawn_files(b, BLACK, b_pawns);
+
+    /* ---- Pawn structure + Rook files + Pawn shield ---- */
+    {
+        /* Iterate white pieces */
+        for (i = 0; i < b->piece_count[WHITE]; i++) {
+            sq = b->piece_list[WHITE][i];
+            type = PIECE_TYPE(b->squares[sq]);
+            row = SQ_TO_ROW(sq);
+            col = SQ_TO_COL(sq);
+
+            if (type == PIECE_PAWN) {
+                uint8_t rel_rank = 7 - row; /* white pawn: row 6=rank2, row 1=rank7 */
+                uint8_t ri; /* index into passed/connected arrays */
+
+#ifndef NO_PAWNS
+                /* Doubled: another white pawn on same file (any other rank) */
+                if (w_pawns[col] & ~(1u << row))
+                    { mg -= DOUBLED_MG; eg -= DOUBLED_EG; }
+
+                /* Isolated: no friendly pawns on adjacent files */
+                {
+                    uint8_t adj = 0;
+                    if (col > 0) adj |= w_pawns[col - 1];
+                    if (col < 7) adj |= w_pawns[col + 1];
+                    if (!adj) { mg -= ISOLATED_MG; eg -= ISOLATED_EG; }
+                }
+
+                /* Connected: supported by a friendly pawn diagonally behind */
+                {
+                    uint8_t supported = 0;
+                    uint8_t s1 = sq + 17; /* row+1, col+1 */
+                    uint8_t s2 = sq + 15; /* row+1, col-1 */
+                    if (SQ_VALID(s1) && b->squares[s1] == MAKE_PIECE(COLOR_WHITE, PIECE_PAWN)) supported = 1;
+                    if (SQ_VALID(s2) && b->squares[s2] == MAKE_PIECE(COLOR_WHITE, PIECE_PAWN)) supported = 1;
+                    if (supported && rel_rank >= 2 && rel_rank <= 7) {
+                        ri = rel_rank - 2;
+                        if (ri < 7) { mg += connected_bonus[ri]; eg += connected_bonus[ri]; }
+                    }
+                }
+#endif /* NO_PAWNS */
+
+#ifndef NO_PASSED
+                /* Passed pawn: no enemy pawns on same or adjacent files ahead */
+                {
+                    uint8_t passed = 1;
+                    int8_t f;
+                    for (f = (int8_t)col - 1; f <= (int8_t)col + 1; f++) {
+                        if (f < 0 || f > 7) continue;
+                        /* Check if any black pawn is on rank ahead (lower row for white) */
+                        uint8_t mask = b_pawns[f];
+                        uint8_t r;
+                        for (r = 0; r < row; r++) {
+                            if (mask & (1u << r)) { passed = 0; break; }
+                        }
+                        if (!passed) break;
+                    }
+                    if (passed && rel_rank >= 2) {
+                        ri = rel_rank - 2;
+                        if (ri < 6) { mg += passed_mg[ri]; eg += passed_eg[ri]; }
+                    }
+                }
+#endif /* NO_PASSED */
+            }
+
+#ifndef NO_ROOK_FILES
+            else if (type == PIECE_ROOK) {
+                /* Open file: no pawns of either color */
+                if (!w_pawns[col] && !b_pawns[col]) {
+                    mg += ROOK_OPEN_MG; eg += ROOK_OPEN_EG;
+                }
+                /* Semi-open: no friendly pawns but enemy pawns present */
+                else if (!w_pawns[col] && b_pawns[col]) {
+                    mg += ROOK_SEMIOPEN_MG; eg += ROOK_SEMIOPEN_EG;
+                }
+            }
+#endif /* NO_ROOK_FILES */
+        }
+
+        /* Iterate black pieces */
+        for (i = 0; i < b->piece_count[BLACK]; i++) {
+            sq = b->piece_list[BLACK][i];
+            type = PIECE_TYPE(b->squares[sq]);
+            row = SQ_TO_ROW(sq);
+            col = SQ_TO_COL(sq);
+
+            if (type == PIECE_PAWN) {
+                uint8_t rel_rank = row; /* black pawn: row 1=rank7 (their 2nd), row 6=rank2 (their 7th) */
+                uint8_t ri;
+
+#ifndef NO_PAWNS
+                /* Doubled */
+                if (b_pawns[col] & ~(1u << row))
+                    { mg += DOUBLED_MG; eg += DOUBLED_EG; }
+
+                /* Isolated */
+                {
+                    uint8_t adj = 0;
+                    if (col > 0) adj |= b_pawns[col - 1];
+                    if (col < 7) adj |= b_pawns[col + 1];
+                    if (!adj) { mg += ISOLATED_MG; eg += ISOLATED_EG; }
+                }
+
+                /* Connected */
+                {
+                    uint8_t supported = 0;
+                    uint8_t s1 = sq - 17; /* row-1, col-1 */
+                    uint8_t s2 = sq - 15; /* row-1, col+1 */
+                    if (SQ_VALID(s1) && b->squares[s1] == MAKE_PIECE(COLOR_BLACK, PIECE_PAWN)) supported = 1;
+                    if (SQ_VALID(s2) && b->squares[s2] == MAKE_PIECE(COLOR_BLACK, PIECE_PAWN)) supported = 1;
+                    if (supported && rel_rank >= 2 && rel_rank <= 7) {
+                        ri = rel_rank - 2;
+                        if (ri < 7) { mg -= connected_bonus[ri]; eg -= connected_bonus[ri]; }
+                    }
+                }
+#endif /* NO_PAWNS */
+
+#ifndef NO_PASSED
+                /* Passed pawn for black: no white pawns ahead (higher rows) */
+                {
+                    uint8_t passed = 1;
+                    int8_t f;
+                    for (f = (int8_t)col - 1; f <= (int8_t)col + 1; f++) {
+                        if (f < 0 || f > 7) continue;
+                        uint8_t mask = w_pawns[f];
+                        uint8_t r;
+                        for (r = row + 1; r < 8; r++) {
+                            if (mask & (1u << r)) { passed = 0; break; }
+                        }
+                        if (!passed) break;
+                    }
+                    if (passed && rel_rank >= 2) {
+                        ri = rel_rank - 2;
+                        if (ri < 6) { mg -= passed_mg[ri]; eg -= passed_eg[ri]; }
+                    }
+                }
+#endif /* NO_PASSED */
+            }
+
+#ifndef NO_ROOK_FILES
+            else if (type == PIECE_ROOK) {
+                if (!b_pawns[col] && !w_pawns[col]) {
+                    mg -= ROOK_OPEN_MG; eg -= ROOK_OPEN_EG;
+                }
+                else if (!b_pawns[col] && w_pawns[col]) {
+                    mg -= ROOK_SEMIOPEN_MG; eg -= ROOK_SEMIOPEN_EG;
+                }
+            }
+#endif /* NO_ROOK_FILES */
+        }
+    }
+
+    /* ---- Mobility (knights and bishops) ---- */
+#ifndef NO_MOBILITY
+    {
+        uint8_t enemy_side;
+        /* White pieces */
+        enemy_side = BLACK;
+        for (i = 0; i < b->piece_count[WHITE]; i++) {
+            sq = b->piece_list[WHITE][i];
+            type = PIECE_TYPE(b->squares[sq]);
+
+            if (type == PIECE_KNIGHT) {
+                uint8_t mob = 0, j;
+                for (j = 0; j < 8; j++) {
+                    uint8_t dest = sq + knight_offsets[j];
+                    if (!SQ_VALID(dest)) continue;
+                    uint8_t occ = b->squares[dest];
+                    /* Skip squares with friendly pieces */
+                    if (occ != PIECE_NONE && IS_WHITE(occ)) continue;
+                    /* Skip squares attacked by enemy pawns */
+                    if (pawn_attacks_sq(b, dest, enemy_side)) continue;
+                    mob++;
+                }
+                if (mob > 8) mob = 8;
+                mg += knight_mob_mg[mob];
+                eg += knight_mob_eg[mob];
+            }
+            else if (type == PIECE_BISHOP) {
+                uint8_t mob = 0, j;
+                for (j = 0; j < 4; j++) {
+                    uint8_t dest = sq + bishop_offsets[j];
+                    while (SQ_VALID(dest)) {
+                        uint8_t occ = b->squares[dest];
+                        if (occ != PIECE_NONE && IS_WHITE(occ)) break;
+                        if (!pawn_attacks_sq(b, dest, enemy_side)) mob++;
+                        if (occ != PIECE_NONE) break; /* stop at any piece */
+                        dest += bishop_offsets[j];
+                    }
+                }
+                if (mob > 13) mob = 13;
+                mg += bishop_mob_mg[mob];
+                eg += bishop_mob_eg[mob];
+            }
+        }
+
+        /* Black pieces */
+        enemy_side = WHITE;
+        for (i = 0; i < b->piece_count[BLACK]; i++) {
+            sq = b->piece_list[BLACK][i];
+            type = PIECE_TYPE(b->squares[sq]);
+
+            if (type == PIECE_KNIGHT) {
+                uint8_t mob = 0, j;
+                for (j = 0; j < 8; j++) {
+                    uint8_t dest = sq + knight_offsets[j];
+                    if (!SQ_VALID(dest)) continue;
+                    uint8_t occ = b->squares[dest];
+                    if (occ != PIECE_NONE && IS_BLACK(occ)) continue;
+                    if (pawn_attacks_sq(b, dest, enemy_side)) continue;
+                    mob++;
+                }
+                if (mob > 8) mob = 8;
+                mg -= knight_mob_mg[mob];
+                eg -= knight_mob_eg[mob];
+            }
+            else if (type == PIECE_BISHOP) {
+                uint8_t mob = 0, j;
+                for (j = 0; j < 4; j++) {
+                    uint8_t dest = sq + bishop_offsets[j];
+                    while (SQ_VALID(dest)) {
+                        uint8_t occ = b->squares[dest];
+                        if (occ != PIECE_NONE && IS_BLACK(occ)) break;
+                        if (!pawn_attacks_sq(b, dest, enemy_side)) mob++;
+                        if (occ != PIECE_NONE) break;
+                        dest += bishop_offsets[j];
+                    }
+                }
+                if (mob > 13) mob = 13;
+                mg -= bishop_mob_mg[mob];
+                eg -= bishop_mob_eg[mob];
+            }
+        }
+    }
+#endif /* NO_MOBILITY */
+
+    /* ---- Pawn shield (simplified king safety) ---- */
+#ifndef NO_SHIELD
+    {
+        uint8_t ksq, krow, kcol;
+        uint8_t shield;
+
+        /* White king */
+        ksq = b->king_sq[WHITE];
+        krow = SQ_TO_ROW(ksq);
+        kcol = SQ_TO_COL(ksq);
+        shield = 0;
+        /* Check 3 squares directly in front of king (row-1) */
+        if (krow > 0) {
+            int8_t c;
+            for (c = (int8_t)kcol - 1; c <= (int8_t)kcol + 1; c++) {
+                if (c < 0 || c > 7) continue;
+                uint8_t fsq = RC_TO_SQ(krow - 1, c);
+                if (b->squares[fsq] == MAKE_PIECE(COLOR_WHITE, PIECE_PAWN))
+                    shield++;
+            }
+        }
+        mg += shield * SHIELD_MG;
+        eg += shield * SHIELD_EG;
+
+        /* Black king */
+        ksq = b->king_sq[BLACK];
+        krow = SQ_TO_ROW(ksq);
+        kcol = SQ_TO_COL(ksq);
+        shield = 0;
+        if (krow < 7) {
+            int8_t c;
+            for (c = (int8_t)kcol - 1; c <= (int8_t)kcol + 1; c++) {
+                if (c < 0 || c > 7) continue;
+                uint8_t fsq = RC_TO_SQ(krow + 1, c);
+                if (b->squares[fsq] == MAKE_PIECE(COLOR_BLACK, PIECE_PAWN))
+                    shield++;
+            }
+        }
+        mg -= shield * SHIELD_MG;
+        eg -= shield * SHIELD_EG;
+    }
+#endif /* NO_SHIELD */
 
     /* Tapered eval */
     phase = b->phase;
