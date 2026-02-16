@@ -8,7 +8,7 @@ DESCRIPTION = "Chess for TI-84 Plus CE"
 COMPRESSED = NO
 
 # Opening book: none, small, medium, large, xl, xxl
-BOOK ?= none
+BOOK ?= medium
 
 # Map BOOK tier to BOOK_TIER define (0 = disabled)
 ifeq ($(BOOK),small)

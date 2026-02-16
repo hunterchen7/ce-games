@@ -72,6 +72,7 @@
 
 typedef enum {
     STATE_MENU,
+    STATE_DIFFICULTY_SELECT,
     STATE_COLOR_SELECT,
     STATE_PLAYING,
     STATE_PROMOTION,
@@ -130,6 +131,8 @@ static uint8_t game_over_reason; /* ENGINE_STATUS_* value */
 
 /* menu state */
 static int menu_cursor;
+static int difficulty_cursor;  /* 0=Medium, 1=Hard, 2=Expert, 3=Grandmaster */
+static uint32_t think_time_ms; /* AI think time based on difficulty */
 static int color_cursor;       /* 0=White, 1=Black, 2=Random */
 
 /* keyboard */
@@ -746,8 +749,8 @@ static void update_menu(void)
         else
         {
             game_mode = MODE_COMPUTER;
-            color_cursor = 2; /* default to Random */
-            state = STATE_COLOR_SELECT;
+            difficulty_cursor = 0; /* default to Medium */
+            state = STATE_DIFFICULTY_SELECT;
         }
         return;
     }
@@ -759,6 +762,110 @@ static void update_menu(void)
     }
 
     draw_menu();
+}
+
+/* ========== State: Difficulty Select ========== */
+
+#define DIFFICULTY_ITEMS 4
+
+static const char *difficulty_labels[DIFFICULTY_ITEMS] = {
+    "Medium", "Hard", "Expert", "Grandmaster"
+};
+static const char *difficulty_subtexts[DIFFICULTY_ITEMS] = {
+    "5 seconds", "10 seconds", "15 seconds", "30 seconds"
+};
+static const uint32_t difficulty_times[DIFFICULTY_ITEMS] = {
+    5000, 10000, 15000, 30000
+};
+
+static void draw_difficulty_select(void)
+{
+    int i, y, text_w, bar_x, bar_w;
+
+    gfx_FillScreen(PAL_MENU_BG);
+
+    gfx_SetTextScale(2, 2);
+    gfx_SetTextFGColor(PAL_WHITE_PC);
+    text_w = gfx_GetStringWidth("Difficulty");
+    gfx_PrintStringXY("Difficulty", (SCREEN_W - text_w) / 2, 24);
+
+    /* decorative line */
+    gfx_SetColor(PAL_PIECE_OL);
+    gfx_HorizLine_NoClip(80, 48, 160);
+
+    gfx_SetTextScale(2, 2);
+
+    {
+        int max_w = 0;
+        int item_x;
+        for (i = 0; i < DIFFICULTY_ITEMS; i++)
+        {
+            text_w = gfx_GetStringWidth(difficulty_labels[i]);
+            if (text_w > max_w) max_w = text_w;
+        }
+        item_x = (SCREEN_W - max_w) / 2;
+
+        for (i = 0; i < DIFFICULTY_ITEMS; i++)
+        {
+            y = 62 + i * 38;
+            bar_w = max_w + 12;
+            bar_x = item_x - 6;
+
+            if (difficulty_cursor == i)
+            {
+                gfx_SetColor(PAL_MENU_HL);
+                gfx_FillRectangle_NoClip(bar_x, y - 2, bar_w, 32);
+                gfx_SetTextScale(2, 2);
+                gfx_SetTextFGColor(PAL_MENU_BG);
+            }
+            else
+            {
+                gfx_SetTextScale(2, 2);
+                gfx_SetTextFGColor(PAL_TEXT);
+            }
+            gfx_PrintStringXY(difficulty_labels[i], item_x, y);
+
+            /* subtext: think time */
+            gfx_SetTextScale(1, 1);
+            if (difficulty_cursor == i)
+                gfx_SetTextFGColor(PAL_MENU_BG);
+            else
+                gfx_SetTextFGColor(PAL_PIECE_OL);
+            gfx_PrintStringXY(difficulty_subtexts[i], item_x, y + 18);
+        }
+    }
+
+    gfx_SetTextScale(1, 1);
+    gfx_SetTextFGColor(PAL_PIECE_OL);
+    gfx_PrintStringXY("arrows: move  enter: select  clear: back", 12, 222);
+
+    gfx_SwapDraw();
+}
+
+static void update_difficulty_select(void)
+{
+    uint8_t new7 = cur_g7 & ~prev_g7;
+    uint8_t new6 = cur_g6 & ~prev_g6;
+    uint8_t new1 = cur_g1 & ~prev_g1;
+
+    if ((new7 & kb_Down) && difficulty_cursor < DIFFICULTY_ITEMS - 1) difficulty_cursor++;
+    if ((new7 & kb_Up) && difficulty_cursor > 0) difficulty_cursor--;
+
+    if ((new6 & kb_Enter) || (new1 & kb_2nd))
+    {
+        think_time_ms = difficulty_times[difficulty_cursor];
+        color_cursor = 2; /* default to Random */
+        state = STATE_COLOR_SELECT;
+        return;
+    }
+
+    if (new6 & kb_Clear)
+    {
+        state = STATE_MENU;
+        return;
+    }
+
+    draw_difficulty_select();
 }
 
 /* ========== State: Color Select ========== */
@@ -837,7 +944,7 @@ static void update_color_select(void)
 
     if (new6 & kb_Clear)
     {
-        state = STATE_MENU;
+        state = STATE_DIFFICULTY_SELECT;
         return;
     }
 
@@ -1020,7 +1127,7 @@ static void update_playing(void)
         {
             engine_move_t ai_move;
 
-            ai_move = engine_think(0, 5000);
+            ai_move = engine_think(0, think_time_ms);
 
             if (ai_move.from_row == ENGINE_SQ_NONE)
             {
@@ -1253,11 +1360,12 @@ int main(void)
 
         switch (state)
         {
-            case STATE_MENU:         update_menu();          break;
-            case STATE_COLOR_SELECT: update_color_select();  break;
-            case STATE_PLAYING:      update_playing();       break;
-            case STATE_PROMOTION:    update_promotion();     break;
-            case STATE_GAMEOVER:     update_gameover();      break;
+            case STATE_MENU:              update_menu();              break;
+            case STATE_DIFFICULTY_SELECT: update_difficulty_select(); break;
+            case STATE_COLOR_SELECT:      update_color_select();     break;
+            case STATE_PLAYING:           update_playing();          break;
+            case STATE_PROMOTION:         update_promotion();        break;
+            case STATE_GAMEOVER:          update_gameover();         break;
         }
 
         prev_g1 = cur_g1;

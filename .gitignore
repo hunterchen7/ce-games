@@ -10,3 +10,6 @@ chess/engine/build/
 
 # Tournament PGN output
 *.pgn
+
+chess/piece_variants
+chess/references
