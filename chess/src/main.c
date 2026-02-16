@@ -131,13 +131,16 @@ static uint8_t game_over_reason; /* ENGINE_STATUS_* value */
 
 /* menu state */
 static int menu_cursor;
-static int difficulty_cursor;  /* 0=Medium, 1=Hard, 2=Expert, 3=Grandmaster */
+static int difficulty_cursor;  /* 0=Medium, 1=Hard, 2=Expert */
 static uint32_t think_time_ms; /* AI think time based on difficulty */
 static int color_cursor;       /* 0=White, 1=Black, 2=Random */
 
 /* keyboard */
 static uint8_t cur_g1, cur_g6, cur_g7;
 static uint8_t prev_g1, prev_g6, prev_g7;
+
+/* dirty flag — skip redraw when nothing changed */
+static int screen_dirty;
 
 /* legal move targets (engine integration) */
 static engine_move_t legal_targets[64];
@@ -212,61 +215,58 @@ static void init_board(void)
 
 /* ========== Piece Drawing ========== */
 
-static void draw_piece_sprite(int type, int sx, int sy, uint8_t fill_color)
+/* Pre-rendered piece sprites: 6 types x 2 colors (white, black) = 12 */
+static uint8_t piece_spr_data[12][2 + PIECE_SPR_W * PIECE_SPR_H];
+
+static void prerender_pieces(void)
 {
-    int row, col;
-    int px = sx + PIECE_SPR_XOFF;
-    int py = sy + PIECE_SPR_YOFF;
-    const uint8_t (*sprite)[PIECE_SPR_W];
+    int type, color, row, col, idx;
+    uint8_t fill;
+    gfx_sprite_t *spr;
 
-    if (type < 1 || type > 6) return;
-    sprite = piece_sprites[type - 1];
-
-    gfx_SetColor(PAL_PIECE_OL);
-    for (row = 0; row < PIECE_SPR_H; row++)
+    for (type = 0; type < 6; type++)
     {
-        for (col = 0; col < PIECE_SPR_W; col++)
+        for (color = 0; color < 2; color++)
         {
-            if (sprite[row][col] == 2)
-                gfx_SetPixel(px + col, py + row);
-        }
-    }
+            idx = type * 2 + color;
+            fill = color ? PAL_BLACK_PC : PAL_WHITE_PC;
+            spr = (gfx_sprite_t *)piece_spr_data[idx];
+            spr->width = PIECE_SPR_W;
+            spr->height = PIECE_SPR_H;
 
-    gfx_SetColor(fill_color);
-    for (row = 0; row < PIECE_SPR_H; row++)
-    {
-        for (col = 0; col < PIECE_SPR_W; col++)
-        {
-            if (sprite[row][col] == 1)
-                gfx_SetPixel(px + col, py + row);
-        }
-    }
-
-    /* Reinforce contour after fill so piece edges (especially bases) stay crisp. */
-    gfx_SetColor(PAL_PIECE_OL);
-    for (row = 0; row < PIECE_SPR_H; row++)
-    {
-        for (col = 0; col < PIECE_SPR_W; col++)
-        {
-            int up_open;
-            int down_open;
-
-            if (sprite[row][col] != 1) continue;
-
-            up_open = (row == 0) || (sprite[row - 1][col] == 0);
-            down_open = (row + 1 >= PIECE_SPR_H) || (sprite[row + 1][col] == 0);
-
-            if (up_open || down_open)
+            /* base pass: fill + outline */
+            for (row = 0; row < PIECE_SPR_H; row++)
             {
-                /* Inner contour stroke for strong top/bottom borders. */
-                gfx_SetPixel(px + col, py + row);
+                for (col = 0; col < PIECE_SPR_W; col++)
+                {
+                    uint8_t v = piece_sprites[type][row][col];
+                    uint8_t *px = &spr->data[row * PIECE_SPR_W + col];
+                    if (v == 1)       *px = fill;
+                    else if (v == 2)  *px = PAL_PIECE_OL;
+                    else              *px = 0; /* transparent */
+                }
+            }
 
-                if ((up_open) && (row > 0))
-                    gfx_SetPixel(px + col, py + row - 1);
+            /* contour reinforcement for crisp edges */
+            for (row = 0; row < PIECE_SPR_H; row++)
+            {
+                for (col = 0; col < PIECE_SPR_W; col++)
+                {
+                    int up_open, down_open;
+                    if (piece_sprites[type][row][col] != 1) continue;
 
-                /* Extra outer base stroke when there is empty space below. */
-                if ((down_open) && (row + 1 < PIECE_SPR_H))
-                    gfx_SetPixel(px + col, py + row + 1);
+                    up_open = (row == 0) || (piece_sprites[type][row - 1][col] == 0);
+                    down_open = (row + 1 >= PIECE_SPR_H) || (piece_sprites[type][row + 1][col] == 0);
+
+                    if (up_open || down_open)
+                    {
+                        spr->data[row * PIECE_SPR_W + col] = PAL_PIECE_OL;
+                        if (up_open && row > 0)
+                            spr->data[(row - 1) * PIECE_SPR_W + col] = PAL_PIECE_OL;
+                        if (down_open && row + 1 < PIECE_SPR_H)
+                            spr->data[(row + 1) * PIECE_SPR_W + col] = PAL_PIECE_OL;
+                    }
+                }
             }
         }
     }
@@ -274,14 +274,12 @@ static void draw_piece_sprite(int type, int sx, int sy, uint8_t fill_color)
 
 static void draw_piece(int8_t piece, int sx, int sy)
 {
-    int type;
-    uint8_t fill_color;
-
+    int idx;
     if (piece == EMPTY) return;
 
-    type = PIECE_TYPE(piece);
-    fill_color = PIECE_IS_WHITE(piece) ? PAL_WHITE_PC : PAL_BLACK_PC;
-    draw_piece_sprite(type, sx, sy, fill_color);
+    idx = (PIECE_TYPE(piece) - 1) * 2 + (PIECE_IS_WHITE(piece) ? 0 : 1);
+    gfx_TransparentSprite_NoClip((gfx_sprite_t *)piece_spr_data[idx],
+                                  sx + PIECE_SPR_XOFF, sy + PIECE_SPR_YOFF);
 }
 
 /* ========== Board Drawing ========== */
@@ -323,72 +321,76 @@ static uint8_t square_bg_color(int r, int c)
     return is_light ? PAL_LIGHT_SQ : PAL_DARK_SQ;
 }
 
+/* Draw a single square at logical position (lr, lc) */
+static void draw_square(int lr, int lc)
+{
+    int dr = board_flipped ? 7 - lr : lr;
+    int dc = board_flipped ? 7 - lc : lc;
+    int sx = BOARD_X + dc * SQ_SIZE;
+    int sy = BOARD_Y + dr * SQ_SIZE;
+
+    /* square background */
+    gfx_SetColor(square_bg_color(lr, lc));
+    gfx_FillRectangle_NoClip(sx, sy, SQ_SIZE, SQ_SIZE);
+
+    /* legal move indicators */
+    if (sel_r >= 0)
+    {
+        uint8_t lt = is_legal_target(lr, lc);
+        if (lt)
+        {
+            gfx_SetColor(PAL_LEGAL);
+            if (lt == 1 && board[lr][lc] == EMPTY)
+            {
+                gfx_FillCircle_NoClip(sx + SQ_SIZE / 2, sy + SQ_SIZE / 2, 4);
+            }
+            else
+            {
+                gfx_FillRectangle_NoClip(sx, sy, 4, 4);
+                gfx_FillRectangle_NoClip(sx + SQ_SIZE - 4, sy, 4, 4);
+                gfx_FillRectangle_NoClip(sx, sy + SQ_SIZE - 4, 4, 4);
+                gfx_FillRectangle_NoClip(sx + SQ_SIZE - 4, sy + SQ_SIZE - 4, 4, 4);
+            }
+        }
+    }
+
+    /* piece */
+    if (board[lr][lc] != EMPTY)
+        draw_piece(board[lr][lc], sx, sy);
+}
+
+/* Draw cursor border at current cursor position */
+static void draw_cursor_border(void)
+{
+    int dcr = board_flipped ? 7 - cur_r : cur_r;
+    int dcc = board_flipped ? 7 - cur_c : cur_c;
+    int cx = BOARD_X + dcc * SQ_SIZE;
+    int cy = BOARD_Y + dcr * SQ_SIZE;
+    uint8_t cur_color = PAL_CURSOR;
+    if (sel_r >= 0 && !(cur_r == sel_r && cur_c == sel_c))
+        cur_color = is_legal_target(cur_r, cur_c) ? PAL_CUR_LEGAL : PAL_CUR_ILLEGAL;
+    gfx_SetColor(cur_color);
+    gfx_FillRectangle_NoClip(cx, cy, SQ_SIZE, 2);
+    gfx_FillRectangle_NoClip(cx, cy + SQ_SIZE - 2, SQ_SIZE, 2);
+    gfx_FillRectangle_NoClip(cx, cy, 2, SQ_SIZE);
+    gfx_FillRectangle_NoClip(cx + SQ_SIZE - 2, cy, 2, SQ_SIZE);
+}
+
 static void draw_board(void)
 {
-    int dr, dc, lr, lc, sx, sy;
+    int dr, dc, lr, lc;
 
-    /* draw squares and pieces — iterate display positions, map to logical */
     for (dr = 0; dr < 8; dr++)
     {
         for (dc = 0; dc < 8; dc++)
         {
             lr = board_flipped ? 7 - dr : dr;
             lc = board_flipped ? 7 - dc : dc;
-            sx = BOARD_X + dc * SQ_SIZE;
-            sy = BOARD_Y + dr * SQ_SIZE;
-
-            /* square background */
-            gfx_SetColor(square_bg_color(lr, lc));
-            gfx_FillRectangle_NoClip(sx, sy, SQ_SIZE, SQ_SIZE);
-
-            /* legal move indicators */
-            if (sel_r >= 0)
-            {
-                uint8_t lt = is_legal_target(lr, lc);
-                if (lt)
-                {
-                    gfx_SetColor(PAL_LEGAL);
-                    if (lt == 1 && board[lr][lc] == EMPTY)
-                    {
-                        /* quiet move: small dot in center */
-                        gfx_FillCircle_NoClip(sx + SQ_SIZE / 2, sy + SQ_SIZE / 2, 4);
-                    }
-                    else
-                    {
-                        /* capture (including EP): corner markers */
-                        gfx_FillRectangle_NoClip(sx, sy, 4, 4);
-                        gfx_FillRectangle_NoClip(sx + SQ_SIZE - 4, sy, 4, 4);
-                        gfx_FillRectangle_NoClip(sx, sy + SQ_SIZE - 4, 4, 4);
-                        gfx_FillRectangle_NoClip(sx + SQ_SIZE - 4, sy + SQ_SIZE - 4, 4, 4);
-                    }
-                }
-            }
-
-            /* piece */
-            if (board[lr][lc] != EMPTY)
-                draw_piece(board[lr][lc], sx, sy);
+            draw_square(lr, lc);
         }
     }
 
-    /* cursor — 2px border, color depends on legality */
-    {
-        int dcr = board_flipped ? 7 - cur_r : cur_r;
-        int dcc = board_flipped ? 7 - cur_c : cur_c;
-        int cx = BOARD_X + dcc * SQ_SIZE;
-        int cy = BOARD_Y + dcr * SQ_SIZE;
-        uint8_t cur_color = PAL_CURSOR;
-        if (sel_r >= 0 && !(cur_r == sel_r && cur_c == sel_c))
-            cur_color = is_legal_target(cur_r, cur_c) ? PAL_CUR_LEGAL : PAL_CUR_ILLEGAL;
-        gfx_SetColor(cur_color);
-        /* top */
-        gfx_FillRectangle_NoClip(cx, cy, SQ_SIZE, 2);
-        /* bottom */
-        gfx_FillRectangle_NoClip(cx, cy + SQ_SIZE - 2, SQ_SIZE, 2);
-        /* left */
-        gfx_FillRectangle_NoClip(cx, cy, 2, SQ_SIZE);
-        /* right */
-        gfx_FillRectangle_NoClip(cx + SQ_SIZE - 2, cy, 2, SQ_SIZE);
-    }
+    draw_cursor_border();
 
     /* file labels */
     gfx_SetTextScale(1, 1);
@@ -407,6 +409,24 @@ static void draw_board(void)
         gfx_SetTextXY(BOARD_X - 10, BOARD_Y + dr * SQ_SIZE + 9);
         gfx_PrintChar('8' - lr);
     }
+}
+
+/* Partial redraw: only update old and new cursor squares */
+static void draw_cursor_move(int old_r, int old_c)
+{
+    /* copy front buffer to back buffer so we have the current display */
+    gfx_Blit(gfx_screen);
+
+    /* redraw old cursor square (removes cursor border) */
+    draw_square(old_r, old_c);
+
+    /* redraw new cursor square */
+    draw_square(cur_r, cur_c);
+
+    /* draw cursor at new position */
+    draw_cursor_border();
+
+    gfx_SwapDraw();
 }
 
 static void draw_sidebar(void)
@@ -727,6 +747,7 @@ static void start_game(void)
     if (game_mode == MODE_COMPUTER && player_color == BLACK_TURN)
         ai_thinking = 1;
 
+    screen_dirty = 1;
     state = STATE_PLAYING;
 }
 
@@ -766,16 +787,16 @@ static void update_menu(void)
 
 /* ========== State: Difficulty Select ========== */
 
-#define DIFFICULTY_ITEMS 4
+#define DIFFICULTY_ITEMS 3
 
 static const char *difficulty_labels[DIFFICULTY_ITEMS] = {
-    "Medium", "Hard", "Expert", "Grandmaster"
+    "Medium", "Hard", "Expert"
 };
 static const char *difficulty_subtexts[DIFFICULTY_ITEMS] = {
-    "5s think time", "10s think time", "15s think time", "30s think time"
+    "5s think time", "10s think time", "15s think time"
 };
 static const uint32_t difficulty_times[DIFFICULTY_ITEMS] = {
-    5000, 10000, 15000, 30000
+    5000, 10000, 15000
 };
 
 static void draw_difficulty_select(void)
@@ -830,7 +851,7 @@ static void draw_difficulty_select(void)
             if (difficulty_cursor == i)
                 gfx_SetTextFGColor(PAL_MENU_BG);
             else
-                gfx_SetTextFGColor(PAL_PIECE_OL);
+                gfx_SetTextFGColor(PAL_TEXT);
             gfx_PrintStringXY(difficulty_subtexts[i], item_x, y + 18);
         }
     }
@@ -1001,6 +1022,7 @@ static void finish_move(void)
     int prev_to_r = last_to_r, prev_to_c = last_to_c;
 
     anim_active = 0;
+    screen_dirty = 1;
     board[to_r][to_c] = piece;
 
     /* record last move for highlighting */
@@ -1153,25 +1175,42 @@ static void update_playing(void)
         return;
     }
 
-    /* cursor movement — flip directions when board is flipped */
-    if (board_flipped)
+    /* skip redraw if no input this frame */
+    if (!new7 && !new6 && !new1)
+        return;
+
+    /* cursor movement — save old position for partial redraw */
     {
-        if (new7 & kb_Up)    cur_r = (cur_r < 7) ? cur_r + 1 : 7;
-        if (new7 & kb_Down)  cur_r = (cur_r > 0) ? cur_r - 1 : 0;
-        if (new7 & kb_Left)  cur_c = (cur_c < 7) ? cur_c + 1 : 7;
-        if (new7 & kb_Right) cur_c = (cur_c > 0) ? cur_c - 1 : 0;
-    }
-    else
-    {
-        if (new7 & kb_Up)    cur_r = (cur_r > 0) ? cur_r - 1 : 0;
-        if (new7 & kb_Down)  cur_r = (cur_r < 7) ? cur_r + 1 : 7;
-        if (new7 & kb_Left)  cur_c = (cur_c > 0) ? cur_c - 1 : 0;
-        if (new7 & kb_Right) cur_c = (cur_c < 7) ? cur_c + 1 : 7;
+        int old_r = cur_r, old_c = cur_c;
+
+        if (board_flipped)
+        {
+            if (new7 & kb_Up)    cur_r = (cur_r < 7) ? cur_r + 1 : 7;
+            if (new7 & kb_Down)  cur_r = (cur_r > 0) ? cur_r - 1 : 0;
+            if (new7 & kb_Left)  cur_c = (cur_c < 7) ? cur_c + 1 : 7;
+            if (new7 & kb_Right) cur_c = (cur_c > 0) ? cur_c - 1 : 0;
+        }
+        else
+        {
+            if (new7 & kb_Up)    cur_r = (cur_r > 0) ? cur_r - 1 : 0;
+            if (new7 & kb_Down)  cur_r = (cur_r < 7) ? cur_r + 1 : 7;
+            if (new7 & kb_Left)  cur_c = (cur_c > 0) ? cur_c - 1 : 0;
+            if (new7 & kb_Right) cur_c = (cur_c < 7) ? cur_c + 1 : 7;
+        }
+
+        /* if only the cursor moved (no buttons), do a fast partial redraw */
+        if (new7 && !new6 && !new1 && (cur_r != old_r || cur_c != old_c))
+        {
+            draw_cursor_move(old_r, old_c);
+            return;
+        }
     }
 
-    /* enter/2nd — select or move */
+    /* enter/2nd — select or move (needs full redraw) */
     if ((new6 & kb_Enter) || (new1 & kb_2nd))
     {
+        screen_dirty = 1;
+
         if (sel_r < 0)
         {
             /* nothing selected — try to select a piece */
@@ -1233,6 +1272,7 @@ static void update_playing(void)
     /* clear — deselect */
     if (new6 & kb_Clear)
     {
+        screen_dirty = 1;
         if (sel_r >= 0)
         {
             sel_r = -1; sel_c = -1;
@@ -1257,8 +1297,11 @@ static void update_playing(void)
         return;
     }
 
-    if (state == STATE_PLAYING)
+    if (state == STATE_PLAYING && screen_dirty)
+    {
         draw_playing();
+        screen_dirty = 0;
+    }
 }
 
 /* ========== State: Promotion ========== */
@@ -1343,6 +1386,7 @@ int main(void)
     gfx_Begin();
     gfx_SetDrawBuffer();
     setup_palette();
+    prerender_pieces();
 
     srand(clock());
     state = STATE_MENU;
