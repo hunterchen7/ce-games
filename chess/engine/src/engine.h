@@ -111,6 +111,19 @@ engine_bench_result_t engine_bench(uint8_t max_depth, uint32_t max_time_ms);
 uint8_t engine_get_status(void);
 uint8_t engine_in_check(void);
 
+/* ---- Book Diagnostics ---- */
+
+typedef struct {
+    uint8_t  ready;         /* 1 if book loaded successfully */
+    uint8_t  num_segments;  /* number of AppVar chunks found */
+    uint32_t total_entries; /* total book entries across all segments */
+} engine_book_info_t;
+
+void engine_get_book_info(engine_book_info_t *out);
+
+/* Returns 1 if the last engine_think() returned a book move */
+uint8_t engine_last_move_was_book(void);
+
 /* ---- Cleanup ---- */
 
 void engine_cleanup(void);

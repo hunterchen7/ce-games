@@ -113,10 +113,16 @@ def main():
                         help="PGN output filename (default: tournament_<engine>.pgn)")
     parser.add_argument("--no-book", action="store_true",
                         help="Run without opening book")
+    parser.add_argument("--book", default=None,
+                        help="Path to opening book .bin file (default: books/book_xxl.bin)")
     args = parser.parse_args()
 
     OUR_ENGINE = os.path.join(BUILD_DIR, args.engine)
-    OUR_ENGINE_ARGS = [] if args.no_book else ["-book", os.path.join(BASE_DIR, "..", "books", "book_xxl.bin")]
+    if args.no_book:
+        OUR_ENGINE_ARGS = []
+    else:
+        book_path = args.book or os.path.join(BASE_DIR, "..", "books", "book_xxl.bin")
+        OUR_ENGINE_ARGS = ["-book", book_path]
     elo_min, elo_max = map(int, args.elos.split("-"))
     SF_ELOS = list(range(elo_min, elo_max + 1, args.step))
     pgn_name = args.pgn or f"tournament_{args.engine}.pgn"

@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Texel tuning for chess/engine/src/eval.c feature groups.
 
-This tuner keeps material + PST fixed and tunes scalar multipliers for
-hand-crafted evaluation terms.
+This tuner keeps the search code fixed and tunes evaluation-term scales.
 """
 
 from __future__ import annotations
@@ -20,52 +19,31 @@ import chess
 import numpy as np
 
 
-PARAM_SPECS = [
-    {"name": "bishop_pair_mg", "mg_key": "bishop_pair_mg", "eg_key": None},
-    {"name": "bishop_pair_eg", "mg_key": None, "eg_key": "bishop_pair_eg"},
-    {"name": "tempo_mg", "mg_key": "tempo_mg", "eg_key": None},
-    {"name": "tempo_eg", "mg_key": None, "eg_key": "tempo_eg"},
-    {"name": "doubled_mg", "mg_key": "doubled_mg", "eg_key": None},
-    {"name": "doubled_eg", "mg_key": None, "eg_key": "doubled_eg"},
-    {"name": "isolated_mg", "mg_key": "isolated_mg", "eg_key": None},
-    {"name": "isolated_eg", "mg_key": None, "eg_key": "isolated_eg"},
-    {"name": "connected", "mg_key": "connected", "eg_key": "connected"},
-    {"name": "passed_mg", "mg_key": "passed_mg", "eg_key": None},
-    {"name": "passed_eg", "mg_key": None, "eg_key": "passed_eg"},
-    {"name": "rook_open_mg", "mg_key": "rook_open_mg", "eg_key": None},
-    {"name": "rook_open_eg", "mg_key": None, "eg_key": "rook_open_eg"},
-    {"name": "rook_semiopen_mg", "mg_key": "rook_semiopen_mg", "eg_key": None},
-    {"name": "rook_semiopen_eg", "mg_key": None, "eg_key": "rook_semiopen_eg"},
-    {"name": "shield_mg", "mg_key": "shield_mg", "eg_key": None},
-    {"name": "knight_mob_mg", "mg_key": "knight_mob_mg", "eg_key": None},
-    {"name": "knight_mob_eg", "mg_key": None, "eg_key": "knight_mob_eg"},
-    {"name": "bishop_mob_mg", "mg_key": "bishop_mob_mg", "eg_key": None},
-    {"name": "bishop_mob_eg", "mg_key": None, "eg_key": "bishop_mob_eg"},
+PIECE_NAMES = ["pawn", "knight", "bishop", "rook", "queen", "king"]
+
+SCALAR_PARAMS = [
+    "bishop_pair_mg",
+    "bishop_pair_eg",
+    "tempo_mg",
+    "tempo_eg",
+    "doubled_mg",
+    "doubled_eg",
+    "isolated_mg",
+    "isolated_eg",
+    "rook_open_mg",
+    "rook_open_eg",
+    "rook_semiopen_mg",
+    "rook_semiopen_eg",
+    "shield_mg",
+    "shield_eg",
 ]
 
 
-BASE_VALUE_ATTRS = {
-    "bishop_pair_mg": "bishop_pair_mg",
-    "bishop_pair_eg": "bishop_pair_eg",
-    "tempo_mg": "tempo_mg",
-    "tempo_eg": "tempo_eg",
-    "doubled_mg": "doubled_mg",
-    "doubled_eg": "doubled_eg",
-    "isolated_mg": "isolated_mg",
-    "isolated_eg": "isolated_eg",
-    "connected": "connected_bonus",
-    "passed_mg": "passed_mg",
-    "passed_eg": "passed_eg",
-    "rook_open_mg": "rook_open_mg",
-    "rook_open_eg": "rook_open_eg",
-    "rook_semiopen_mg": "rook_semiopen_mg",
-    "rook_semiopen_eg": "rook_semiopen_eg",
-    "shield_mg": "shield_mg",
-    "knight_mob_mg": "knight_mob_mg",
-    "knight_mob_eg": "knight_mob_eg",
-    "bishop_mob_mg": "bishop_mob_mg",
-    "bishop_mob_eg": "bishop_mob_eg",
-}
+@dataclass(frozen=True)
+class ParamSpec:
+    name: str
+    mg_key: str | None
+    eg_key: str | None
 
 
 @dataclass
@@ -81,7 +59,8 @@ class EvalConstants:
     doubled_eg: int
     isolated_mg: int
     isolated_eg: int
-    connected_bonus: np.ndarray
+    connected_bonus_mg: np.ndarray
+    connected_bonus_eg: np.ndarray
     passed_mg: np.ndarray
     passed_eg: np.ndarray
     rook_open_mg: int
@@ -155,20 +134,120 @@ def parse_eval_constants(eval_c_path: Path) -> EvalConstants:
         doubled_eg=parse_define(text, "DOUBLED_EG"),
         isolated_mg=parse_define(text, "ISOLATED_MG"),
         isolated_eg=parse_define(text, "ISOLATED_EG"),
-        connected_bonus=parse_named_array_1d(text, "connected_bonus", expected_count=7),
-        passed_mg=parse_named_array_1d(text, "passed_mg", expected_count=6),
-        passed_eg=parse_named_array_1d(text, "passed_eg", expected_count=6),
+        connected_bonus_mg=parse_named_array_1d(text, "connected_bonus_mg"),
+        connected_bonus_eg=parse_named_array_1d(text, "connected_bonus_eg"),
+        passed_mg=parse_named_array_1d(text, "passed_mg"),
+        passed_eg=parse_named_array_1d(text, "passed_eg"),
         rook_open_mg=parse_define(text, "ROOK_OPEN_MG"),
         rook_open_eg=parse_define(text, "ROOK_OPEN_EG"),
         rook_semiopen_mg=parse_define(text, "ROOK_SEMIOPEN_MG"),
         rook_semiopen_eg=parse_define(text, "ROOK_SEMIOPEN_EG"),
         shield_mg=parse_define(text, "SHIELD_MG"),
         shield_eg=parse_define(text, "SHIELD_EG"),
-        knight_mob_mg=parse_named_array_1d(text, "knight_mob_mg", expected_count=9),
-        knight_mob_eg=parse_named_array_1d(text, "knight_mob_eg", expected_count=9),
-        bishop_mob_mg=parse_named_array_1d(text, "bishop_mob_mg", expected_count=14),
-        bishop_mob_eg=parse_named_array_1d(text, "bishop_mob_eg", expected_count=14),
+        knight_mob_mg=parse_named_array_1d(text, "knight_mob_mg"),
+        knight_mob_eg=parse_named_array_1d(text, "knight_mob_eg"),
+        bishop_mob_mg=parse_named_array_1d(text, "bishop_mob_mg"),
+        bishop_mob_eg=parse_named_array_1d(text, "bishop_mob_eg"),
     )
+
+
+def build_param_specs(c: EvalConstants) -> list[ParamSpec]:
+    specs: list[ParamSpec] = []
+
+    # Piece-table row scales (mg+eg) per piece type.
+    for piece in PIECE_NAMES:
+        specs.append(ParamSpec(name=f"table_{piece}_mg", mg_key=f"table_{piece}_mg", eg_key=None))
+        specs.append(ParamSpec(name=f"table_{piece}_eg", mg_key=None, eg_key=f"table_{piece}_eg"))
+
+    for name in SCALAR_PARAMS:
+        if name.endswith("_mg"):
+            specs.append(ParamSpec(name=name, mg_key=name, eg_key=None))
+        elif name.endswith("_eg"):
+            specs.append(ParamSpec(name=name, mg_key=None, eg_key=name))
+        else:
+            raise ValueError(f"unexpected scalar param name: {name}")
+
+    for i in range(len(c.connected_bonus_mg)):
+        rank = i + 2
+        specs.append(ParamSpec(name=f"connected_mg_r{rank}", mg_key=f"connected_mg_r{rank}", eg_key=None))
+        specs.append(ParamSpec(name=f"connected_eg_r{rank}", mg_key=None, eg_key=f"connected_eg_r{rank}"))
+
+    for i in range(len(c.passed_mg)):
+        rank = i + 2
+        specs.append(ParamSpec(name=f"passed_mg_r{rank}", mg_key=f"passed_mg_r{rank}", eg_key=None))
+        specs.append(ParamSpec(name=f"passed_eg_r{rank}", mg_key=None, eg_key=f"passed_eg_r{rank}"))
+
+    for i in range(len(c.knight_mob_mg)):
+        specs.append(ParamSpec(name=f"knight_mob_mg_{i}", mg_key=f"knight_mob_mg_{i}", eg_key=None))
+        specs.append(ParamSpec(name=f"knight_mob_eg_{i}", mg_key=None, eg_key=f"knight_mob_eg_{i}"))
+
+    for i in range(len(c.bishop_mob_mg)):
+        specs.append(ParamSpec(name=f"bishop_mob_mg_{i}", mg_key=f"bishop_mob_mg_{i}", eg_key=None))
+        specs.append(ParamSpec(name=f"bishop_mob_eg_{i}", mg_key=None, eg_key=f"bishop_mob_eg_{i}"))
+
+    return specs
+
+
+def build_base_values(c: EvalConstants, param_specs: list[ParamSpec]) -> dict[str, int]:
+    scalar_attr_map = {name: name for name in SCALAR_PARAMS}
+
+    out: dict[str, int] = {}
+    for spec in param_specs:
+        name = spec.name
+
+        if name.startswith("table_"):
+            out[name] = 1
+            continue
+
+        if name in scalar_attr_map:
+            out[name] = int(getattr(c, scalar_attr_map[name]))
+            continue
+
+        m = re.fullmatch(r"connected_(mg|eg)_r(\d+)", name)
+        if m:
+            phase, rank_s = m.groups()
+            idx = int(rank_s) - 2
+            arr = c.connected_bonus_mg if phase == "mg" else c.connected_bonus_eg
+            out[name] = int(arr[idx])
+            continue
+
+        m = re.fullmatch(r"passed_(mg|eg)_r(\d+)", name)
+        if m:
+            phase, rank_s = m.groups()
+            idx = int(rank_s) - 2
+            arr = c.passed_mg if phase == "mg" else c.passed_eg
+            out[name] = int(arr[idx])
+            continue
+
+        m = re.fullmatch(r"knight_mob_(mg|eg)_(\d+)", name)
+        if m:
+            phase, idx_s = m.groups()
+            idx = int(idx_s)
+            arr = c.knight_mob_mg if phase == "mg" else c.knight_mob_eg
+            out[name] = int(arr[idx])
+            continue
+
+        m = re.fullmatch(r"bishop_mob_(mg|eg)_(\d+)", name)
+        if m:
+            phase, idx_s = m.groups()
+            idx = int(idx_s)
+            arr = c.bishop_mob_mg if phase == "mg" else c.bishop_mob_eg
+            out[name] = int(arr[idx])
+            continue
+
+        raise ValueError(f"unknown param for base value: {name}")
+
+    return out
+
+
+def raw_keys_from_specs(param_specs: list[ParamSpec]) -> set[str]:
+    keys: set[str] = set()
+    for spec in param_specs:
+        if spec.mg_key is not None:
+            keys.add(spec.mg_key)
+        if spec.eg_key is not None:
+            keys.add(spec.eg_key)
+    return keys
 
 
 def square_row_col(square: chess.Square) -> tuple[int, int]:
@@ -201,11 +280,7 @@ def pawn_attacks_square(board: chess.Board, square: chess.Square, by_color: ches
     rank = chess.square_rank(square)
     file = chess.square_file(square)
 
-    if by_color == chess.WHITE:
-        attacker_rank = rank - 1
-    else:
-        attacker_rank = rank + 1
-
+    attacker_rank = rank - 1 if by_color == chess.WHITE else rank + 1
     if attacker_rank < 0 or attacker_rank > 7:
         return False
 
@@ -220,48 +295,29 @@ def pawn_attacks_square(board: chess.Board, square: chess.Square, by_color: ches
     return False
 
 
-def extract_position_terms(board: chess.Board, c: EvalConstants) -> dict[str, Any]:
-    mg_base = 0
-    eg_base = 0
+def extract_position_terms(board: chess.Board, c: EvalConstants, raw_keys: set[str]) -> dict[str, Any]:
+    mg_base = 0.0
+    eg_base = 0.0
     phase = 0
 
+    raw = {k: 0 for k in raw_keys}
+
+    # Piece-table contributions are fully tunable; keep them out of mg_base/eg_base.
     for square, piece in board.piece_map().items():
         idx = piece.piece_type - 1
         sq64 = square_to_sq64(square)
         pst_sq = sq64 if piece.color == chess.WHITE else (sq64 ^ 56)
         sgn = piece_sign(piece.color)
 
-        mg_base += sgn * int(c.mg_table[idx, pst_sq])
-        eg_base += sgn * int(c.eg_table[idx, pst_sq])
+        piece_name = PIECE_NAMES[idx]
+        raw[f"table_{piece_name}_mg"] += sgn * int(c.mg_table[idx, pst_sq])
+        raw[f"table_{piece_name}_eg"] += sgn * int(c.eg_table[idx, pst_sq])
         phase += int(c.phase_weight[idx])
 
     if phase < 0:
         phase = 0
     elif phase > 24:
         phase = 24
-
-    raw = {
-        "bishop_pair_mg": 0,
-        "bishop_pair_eg": 0,
-        "tempo_mg": 0,
-        "tempo_eg": 0,
-        "doubled_mg": 0,
-        "doubled_eg": 0,
-        "isolated_mg": 0,
-        "isolated_eg": 0,
-        "connected": 0,
-        "passed_mg": 0,
-        "passed_eg": 0,
-        "rook_open_mg": 0,
-        "rook_open_eg": 0,
-        "rook_semiopen_mg": 0,
-        "rook_semiopen_eg": 0,
-        "shield_mg": 0,
-        "knight_mob_mg": 0,
-        "knight_mob_eg": 0,
-        "bishop_mob_mg": 0,
-        "bishop_mob_eg": 0,
-    }
 
     w_bishops = len(board.pieces(chess.BISHOP, chess.WHITE))
     b_bishops = len(board.pieces(chess.BISHOP, chess.BLACK))
@@ -284,8 +340,7 @@ def extract_position_terms(board: chess.Board, c: EvalConstants) -> dict[str, An
 
     for sq in board.pieces(chess.PAWN, chess.WHITE):
         row, col = square_row_col(sq)
-        rank = chess.square_rank(sq)
-        rel_rank = rank
+        rel_rank = chess.square_rank(sq)
 
         if w_pawns[col] & ~(1 << row):
             raw["doubled_mg"] -= c.doubled_mg
@@ -311,8 +366,10 @@ def extract_position_terms(board: chess.Board, c: EvalConstants) -> dict[str, An
                     break
         if supported and 2 <= rel_rank <= 7:
             ri = rel_rank - 2
-            if ri < len(c.connected_bonus):
-                raw["connected"] += int(c.connected_bonus[ri])
+            if ri < len(c.connected_bonus_mg):
+                rank = ri + 2
+                raw[f"connected_mg_r{rank}"] += int(c.connected_bonus_mg[ri])
+                raw[f"connected_eg_r{rank}"] += int(c.connected_bonus_eg[ri])
 
         passed = True
         for f in range(col - 1, col + 2):
@@ -329,8 +386,9 @@ def extract_position_terms(board: chess.Board, c: EvalConstants) -> dict[str, An
         if passed and rel_rank >= 2:
             ri = rel_rank - 2
             if ri < len(c.passed_mg):
-                raw["passed_mg"] += int(c.passed_mg[ri])
-                raw["passed_eg"] += int(c.passed_eg[ri])
+                rank = ri + 2
+                raw[f"passed_mg_r{rank}"] += int(c.passed_mg[ri])
+                raw[f"passed_eg_r{rank}"] += int(c.passed_eg[ri])
 
     for sq in board.pieces(chess.PAWN, chess.BLACK):
         row, col = square_row_col(sq)
@@ -360,8 +418,10 @@ def extract_position_terms(board: chess.Board, c: EvalConstants) -> dict[str, An
                     break
         if supported and 2 <= rel_rank <= 7:
             ri = rel_rank - 2
-            if ri < len(c.connected_bonus):
-                raw["connected"] -= int(c.connected_bonus[ri])
+            if ri < len(c.connected_bonus_mg):
+                rank = ri + 2
+                raw[f"connected_mg_r{rank}"] -= int(c.connected_bonus_mg[ri])
+                raw[f"connected_eg_r{rank}"] -= int(c.connected_bonus_eg[ri])
 
         passed = True
         for f in range(col - 1, col + 2):
@@ -378,8 +438,9 @@ def extract_position_terms(board: chess.Board, c: EvalConstants) -> dict[str, An
         if passed and rel_rank >= 2:
             ri = rel_rank - 2
             if ri < len(c.passed_mg):
-                raw["passed_mg"] -= int(c.passed_mg[ri])
-                raw["passed_eg"] -= int(c.passed_eg[ri])
+                rank = ri + 2
+                raw[f"passed_mg_r{rank}"] -= int(c.passed_mg[ri])
+                raw[f"passed_eg_r{rank}"] -= int(c.passed_eg[ri])
 
     for sq in board.pieces(chess.ROOK, chess.WHITE):
         col = chess.square_file(sq)
@@ -410,6 +471,8 @@ def extract_position_terms(board: chess.Board, c: EvalConstants) -> dict[str, An
         (2, 1),
     ]
 
+    bishop_dirs = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+
     for color, enemy in ((chess.WHITE, chess.BLACK), (chess.BLACK, chess.WHITE)):
         sgn = 1 if color == chess.WHITE else -1
         for sq in board.pieces(chess.KNIGHT, color):
@@ -428,11 +491,10 @@ def extract_position_terms(board: chess.Board, c: EvalConstants) -> dict[str, An
                 if pawn_attacks_square(board, dst, enemy):
                     continue
                 mob += 1
-            mob = min(mob, 8)
-            raw["knight_mob_mg"] += sgn * int(c.knight_mob_mg[mob])
-            raw["knight_mob_eg"] += sgn * int(c.knight_mob_eg[mob])
+            mob = min(mob, len(c.knight_mob_mg) - 1)
+            raw[f"knight_mob_mg_{mob}"] += sgn * int(c.knight_mob_mg[mob])
+            raw[f"knight_mob_eg_{mob}"] += sgn * int(c.knight_mob_eg[mob])
 
-        bishop_dirs = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
         for sq in board.pieces(chess.BISHOP, color):
             mob = 0
             r0 = chess.square_rank(sq)
@@ -451,9 +513,9 @@ def extract_position_terms(board: chess.Board, c: EvalConstants) -> dict[str, An
                         break
                     r += dr
                     f += df
-            mob = min(mob, 13)
-            raw["bishop_mob_mg"] += sgn * int(c.bishop_mob_mg[mob])
-            raw["bishop_mob_eg"] += sgn * int(c.bishop_mob_eg[mob])
+            mob = min(mob, len(c.bishop_mob_mg) - 1)
+            raw[f"bishop_mob_mg_{mob}"] += sgn * int(c.bishop_mob_mg[mob])
+            raw[f"bishop_mob_eg_{mob}"] += sgn * int(c.bishop_mob_eg[mob])
 
     w_king = board.king(chess.WHITE)
     if w_king is not None:
@@ -467,6 +529,7 @@ def extract_position_terms(board: chess.Board, c: EvalConstants) -> dict[str, An
                     if p is not None and p.piece_type == chess.PAWN and p.color == chess.WHITE:
                         shield += 1
         raw["shield_mg"] += shield * c.shield_mg
+        raw["shield_eg"] += shield * c.shield_eg
 
     b_king = board.king(chess.BLACK)
     if b_king is not None:
@@ -480,6 +543,7 @@ def extract_position_terms(board: chess.Board, c: EvalConstants) -> dict[str, An
                     if p is not None and p.piece_type == chess.PAWN and p.color == chess.BLACK:
                         shield += 1
         raw["shield_mg"] -= shield * c.shield_mg
+        raw["shield_eg"] -= shield * c.shield_eg
 
     return {
         "mg_base": float(mg_base),
@@ -509,9 +573,10 @@ def build_features(
     fens: list[str],
     labels: np.ndarray,
     constants: EvalConstants,
+    param_specs: list[ParamSpec],
 ) -> dict[str, np.ndarray]:
     n = len(fens)
-    p = len(PARAM_SPECS)
+    p = len(param_specs)
 
     mg_base = np.zeros(n, dtype=np.float64)
     eg_base = np.zeros(n, dtype=np.float64)
@@ -520,6 +585,8 @@ def build_features(
     mg_terms = np.zeros((n, p), dtype=np.float64)
     eg_terms = np.zeros((n, p), dtype=np.float64)
 
+    raw_keys = raw_keys_from_specs(param_specs)
+
     kept = 0
     for i, fen in enumerate(fens):
         try:
@@ -527,20 +594,18 @@ def build_features(
         except ValueError:
             continue
 
-        terms = extract_position_terms(board, constants)
+        terms = extract_position_terms(board, constants, raw_keys)
         mg_base[kept] = terms["mg_base"]
         eg_base[kept] = terms["eg_base"]
         phase[kept] = terms["phase"]
         side_sign[kept] = terms["side_sign"]
 
         raw = terms["raw"]
-        for j, spec in enumerate(PARAM_SPECS):
-            mg_key = spec["mg_key"]
-            eg_key = spec["eg_key"]
-            if mg_key is not None:
-                mg_terms[kept, j] = float(raw[mg_key])
-            if eg_key is not None:
-                eg_terms[kept, j] = float(raw[eg_key])
+        for j, spec in enumerate(param_specs):
+            if spec.mg_key is not None:
+                mg_terms[kept, j] = float(raw[spec.mg_key])
+            if spec.eg_key is not None:
+                eg_terms[kept, j] = float(raw[spec.eg_key])
 
         kept += 1
         if (i + 1) % 5000 == 0:
@@ -560,17 +625,26 @@ def build_features(
     }
 
 
-def save_feature_cache(cache_path: Path, arrays: dict[str, np.ndarray], dataset_csv: Path) -> None:
+def save_feature_cache(
+    cache_path: Path,
+    arrays: dict[str, np.ndarray],
+    dataset_csv: Path,
+    param_specs: list[ParamSpec],
+) -> None:
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(
         cache_path,
         dataset_csv=str(dataset_csv),
-        param_names=np.array([spec["name"] for spec in PARAM_SPECS], dtype="U32"),
+        param_names=np.array([spec.name for spec in param_specs], dtype="U64"),
         **arrays,
     )
 
 
-def load_feature_cache(cache_path: Path, dataset_csv: Path) -> dict[str, np.ndarray] | None:
+def load_feature_cache(
+    cache_path: Path,
+    dataset_csv: Path,
+    param_specs: list[ParamSpec],
+) -> dict[str, np.ndarray] | None:
     if not cache_path.exists():
         return None
 
@@ -579,7 +653,7 @@ def load_feature_cache(cache_path: Path, dataset_csv: Path) -> dict[str, np.ndar
         return None
 
     cached_names = [str(x) for x in data["param_names"].tolist()]
-    expected_names = [spec["name"] for spec in PARAM_SPECS]
+    expected_names = [spec.name for spec in param_specs]
     if cached_names != expected_names:
         return None
 
@@ -674,6 +748,7 @@ def optimize_k_for_scores(
 
 def train_texel(
     arrays: dict[str, np.ndarray],
+    param_specs: list[ParamSpec],
     *,
     seed: int,
     val_frac: float,
@@ -684,9 +759,14 @@ def train_texel(
     k_max: float,
     k_search_iters: int,
     log_every: int,
+    scale_min: float,
+    scale_max: float,
 ) -> dict[str, Any]:
     labels = arrays["labels"]
     n = len(labels)
+
+    if scale_min > scale_max:
+        raise ValueError("scale_min must be <= scale_max")
 
     train_idx, val_idx = split_indices(n, val_frac, seed)
 
@@ -697,7 +777,7 @@ def train_texel(
     mg_terms = arrays["mg_terms"]
     eg_terms = arrays["eg_terms"]
 
-    scales = np.ones(len(PARAM_SPECS), dtype=np.float64)
+    scales = np.ones(len(param_specs), dtype=np.float64)
 
     m_s = np.zeros_like(scales)
     v_s = np.zeros_like(scales)
@@ -745,16 +825,15 @@ def train_texel(
     dscore_ds_tr = tr[3][:, None] * (phase_mix_tr * tr[4] + eg_mix_tr * tr[5])
 
     for step in range(1, iters + 1):
-        k = k_fixed
         scores = predict_scores(tr[0], tr[1], tr[2], tr[3], tr[4], tr[5], scales)
-        p = sigmoid(k * scores)
+        p = sigmoid(k_fixed * scores)
         err = p - tr[6]
 
         mse = float(np.mean(err * err))
         reg = float(l2 * np.sum((scales - 1.0) ** 2))
         loss = mse + reg
 
-        common = 2.0 * err * (k * p * (1.0 - p))
+        common = 2.0 * err * (k_fixed * p * (1.0 - p))
         grad_scales = np.mean(common[:, None] * dscore_ds_tr, axis=0) + 2.0 * l2 * (scales - 1.0)
 
         m_s = beta1 * m_s + (1.0 - beta1) * grad_scales
@@ -763,7 +842,7 @@ def train_texel(
         v_s_hat = v_s / (1.0 - beta2**step)
         scales -= lr * m_s_hat / (np.sqrt(v_s_hat) + eps)
 
-        scales = np.clip(scales, 0.0, 3.0)
+        scales = np.clip(scales, scale_min, scale_max)
 
         if step % log_every == 0 or step == 1 or step == iters:
             val_scores = predict_scores(va[0], va[1], va[2], va[3], va[4], va[5], scales)
@@ -788,6 +867,7 @@ def train_texel(
         "num_positions": int(n),
         "num_train": int(len(train_idx)),
         "num_val": int(len(val_idx)),
+        "num_params": int(len(param_specs)),
         "initial_train_mse": initial_train_mse,
         "initial_val_mse": initial_val_mse,
         "best_train_mse": final_train_mse,
@@ -800,13 +880,13 @@ def train_texel(
             "iters": k_search_iters,
         },
         "k": best_k,
-        "scales": {spec["name"]: float(best_scales[i]) for i, spec in enumerate(PARAM_SPECS)},
+        "scales": {spec.name: float(best_scales[i]) for i, spec in enumerate(param_specs)},
     }
     return result
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Texel tune eval feature scalars")
+    parser = argparse.ArgumentParser(description="Texel tune eval feature scales")
     parser.add_argument("--dataset", required=True, help="CSV from build_texel_dataset.py")
     parser.add_argument("--eval-c", default="chess/engine/src/eval.c")
     parser.add_argument("--out", required=True, help="Output JSON path")
@@ -821,6 +901,8 @@ def main() -> None:
     parser.add_argument("--val-frac", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--log-every", type=int, default=20)
+    parser.add_argument("--scale-min", type=float, default=0.0)
+    parser.add_argument("--scale-max", type=float, default=3.0)
     args = parser.parse_args()
 
     dataset = Path(args.dataset)
@@ -829,24 +911,26 @@ def main() -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
 
     constants = parse_eval_constants(eval_c)
+    param_specs = build_param_specs(constants)
 
     cache_path = Path(args.feature_cache) if args.feature_cache else None
     arrays = None
     if cache_path is not None:
-        arrays = load_feature_cache(cache_path, dataset)
+        arrays = load_feature_cache(cache_path, dataset, param_specs)
         if arrays is not None:
             print(f"Loaded feature cache: {cache_path}")
 
     if arrays is None:
         fens, labels = load_dataset_rows(dataset, args.max_positions)
         print(f"Loaded dataset rows: {len(fens)}")
-        arrays = build_features(fens, labels, constants)
+        arrays = build_features(fens, labels, constants, param_specs)
         if cache_path is not None:
-            save_feature_cache(cache_path, arrays, dataset)
+            save_feature_cache(cache_path, arrays, dataset, param_specs)
             print(f"Saved feature cache: {cache_path}")
 
     result = train_texel(
         arrays,
+        param_specs,
         seed=args.seed,
         val_frac=args.val_frac,
         iters=args.iters,
@@ -856,19 +940,18 @@ def main() -> None:
         k_max=args.k_max,
         k_search_iters=args.k_search_iters,
         log_every=args.log_every,
+        scale_min=args.scale_min,
+        scale_max=args.scale_max,
     )
 
     result["dataset"] = str(dataset)
     result["eval_c"] = str(eval_c)
-    result["param_order"] = [spec["name"] for spec in PARAM_SPECS]
-    base_values: dict[str, Any] = {}
-    for param_name, attr_name in BASE_VALUE_ATTRS.items():
-        v = getattr(constants, attr_name)
-        if isinstance(v, np.ndarray):
-            base_values[param_name] = [int(x) for x in v.tolist()]
-        else:
-            base_values[param_name] = int(v)
-    result["base_values"] = base_values
+    result["param_order"] = [spec.name for spec in param_specs]
+    result["base_values"] = build_base_values(constants, param_specs)
+    result["base_tables"] = {
+        "mg_table": [[int(v) for v in row] for row in constants.mg_table.tolist()],
+        "eg_table": [[int(v) for v in row] for row in constants.eg_table.tolist()],
+    }
     result["config"] = {
         "iters": args.iters,
         "lr": args.lr,
@@ -879,6 +962,8 @@ def main() -> None:
         "val_frac": args.val_frac,
         "seed": args.seed,
         "max_positions": args.max_positions,
+        "scale_min": args.scale_min,
+        "scale_max": args.scale_max,
     }
 
     out.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")

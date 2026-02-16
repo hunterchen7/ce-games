@@ -37,4 +37,29 @@ void search_history_pop(void);
 void search_history_clear(void);
 void search_history_set_irreversible(void);
 
+/* ========== Search Profiling ========== */
+
+#ifdef SEARCH_PROFILE
+
+typedef struct {
+    uint32_t eval_cy;
+    uint32_t movegen_cy;
+    uint32_t legal_info_cy;
+    uint32_t moveorder_cy;
+    uint32_t make_unmake_cy;
+    uint32_t is_legal_cy;
+    uint32_t tt_cy;
+    uint32_t eval_cnt;
+    uint32_t movegen_cnt;
+    uint32_t make_cnt;     /* make/unmake pairs for legal moves */
+    uint32_t legal_cnt;    /* board_is_legal calls */
+    uint32_t tt_cnt;       /* tt_probe + tt_store calls */
+    uint32_t nodes;
+} search_profile_t;
+
+void search_profile_reset(void);
+const search_profile_t *search_profile_get(void);
+
+#endif /* SEARCH_PROFILE */
+
 #endif /* SEARCH_H */

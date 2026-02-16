@@ -57,6 +57,7 @@ static book_segment_t  segments[MAX_BOOK_SEGMENTS];
 static uint8_t         num_segments;
 static uint32_t        total_entries;        /* sum of all segment counts */
 static uint8_t         book_ready;
+uint32_t               book_random_seed;    /* set externally for variety */
 
 /* ========== Polyglot Random Number Indices ==========
  *
@@ -389,8 +390,14 @@ uint8_t book_probe(board_t *b, move_t *out)
     if (total_weight == 0)
         return 0;
 
-    /* Weighted random selection */
-    pick = (uint32_t)rand() % total_weight;
+    /* Weighted random selection using seed mixed with position hash */
+    {
+        uint32_t h = book_random_seed ^ (uint32_t)key ^ (uint32_t)(key >> 32);
+        h ^= h >> 16;
+        h *= 0x45d9f3bUL;
+        h ^= h >> 16;
+        pick = h % total_weight;
+    }
     cumulative = 0;
 
     for (i = 0; i < n_entries; i++) {
@@ -414,6 +421,13 @@ uint8_t book_probe(board_t *b, move_t *out)
     }
 
     return 0;
+}
+
+void book_get_info(uint8_t *ready, uint8_t *n_seg, uint32_t *n_entries)
+{
+    *ready = book_ready;
+    *n_seg = num_segments;
+    *n_entries = total_entries;
 }
 
 void book_close(void)

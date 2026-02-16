@@ -28,4 +28,21 @@ extern const int16_t phase_weight[6];
    Returns score in centipawns. Positive = good for side to move. */
 int16_t evaluate(const board_t *b);
 
+/* ========== Eval Sub-Profiling ========== */
+
+#ifdef SEARCH_PROFILE
+
+typedef struct {
+    uint32_t build_cy;      /* build_pawn_files */
+    uint32_t pieces_cy;     /* pawn structure + passed + rook files (both sides) */
+    uint32_t mobility_cy;   /* knight + bishop mobility (both sides) */
+    uint32_t shield_cy;     /* pawn shield */
+    uint32_t eval_count;    /* number of evaluate() calls */
+} eval_profile_t;
+
+void eval_profile_reset(void);
+const eval_profile_t *eval_profile_get(void);
+
+#endif /* SEARCH_PROFILE */
+
 #endif /* EVAL_H */

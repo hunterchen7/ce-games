@@ -4,7 +4,10 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <fileioc.h>
 #include "engine.h"
+#include "book.h"
 #include "piece_sprites.h"
 
 /* ========== Screen & Layout ========== */
@@ -86,6 +89,8 @@ typedef enum {
 
 static game_state_t state;
 static int running;
+static unsigned int frame_count; /* entropy source for RNG seeding */
+static unsigned int game_number; /* increments each game start */
 
 /* board — board[row][col], row 0 = top of screen (black back rank) */
 static int8_t board[8][8];
@@ -491,6 +496,46 @@ static void draw_sidebar(void)
     gfx_PrintStringXY(" Deselect", SIDEBAR_X + 2, 152);
     gfx_PrintStringXY("Mode", SIDEBAR_X + 2, 168);
     gfx_PrintStringXY(" Resign", SIDEBAR_X + 2, 180);
+
+    /* book debug info */
+    {
+        engine_book_info_t bi;
+        char buf[20];
+        void *vat = NULL;
+        int av_count = 0;
+        char *first_av = NULL;
+        uint8_t handle;
+
+        /* count AppVars visible to fileioc */
+        while (ti_Detect(&vat, "")) {
+            av_count++;
+            if (av_count == 1)
+                first_av = ti_Detect(&vat, ""); /* grab 2nd to show a name */
+        }
+
+        /* try opening CHBKRN directly */
+        handle = ti_Open("CHBKRN", "r");
+        if (handle) ti_Close(handle);
+
+        engine_get_book_info(&bi);
+        gfx_SetColor(PAL_PIECE_OL);
+        gfx_HorizLine_NoClip(SIDEBAR_X + 2, 196, SIDEBAR_W - 4);
+        gfx_SetTextFGColor(PAL_TEXT);
+
+        sprintf(buf, "AV:%d h:%d", av_count, handle);
+        gfx_PrintStringXY(buf, SIDEBAR_X + 2, 202);
+
+        if (bi.ready) {
+            sprintf(buf, "BK:%lu", (unsigned long)bi.total_entries);
+            gfx_PrintStringXY(buf, SIDEBAR_X + 2, 214);
+        } else {
+            gfx_PrintStringXY("BK:NONE", SIDEBAR_X + 2, 214);
+        }
+        if (engine_last_move_was_book()) {
+            gfx_SetTextFGColor(PAL_LEGAL);
+            gfx_PrintStringXY("(book)", SIDEBAR_X + 2, 226);
+        }
+    }
 }
 
 /* render board + sidebar to back buffer (no swap) */
@@ -718,6 +763,10 @@ static uint8_t apply_engine_move(engine_move_t move)
 static void start_game(void)
 {
     engine_hooks_t hooks;
+
+    game_number++;
+    book_random_seed = (uint32_t)clock() ^ (frame_count * 2654435761u) ^ (game_number * 1103515245u);
+    srand((unsigned int)book_random_seed);
 
     hooks.time_ms = ce_time_ms;
     engine_init(&hooks);
@@ -1175,8 +1224,8 @@ static void update_playing(void)
         return;
     }
 
-    /* skip redraw if no input this frame */
-    if (!new7 && !new6 && !new1)
+    /* skip redraw if no input and screen is clean */
+    if (!new7 && !new6 && !new1 && !screen_dirty)
         return;
 
     /* cursor movement — save old position for partial redraw */
@@ -1415,6 +1464,7 @@ int main(void)
         prev_g1 = cur_g1;
         prev_g6 = cur_g6;
         prev_g7 = cur_g7;
+        frame_count++;
 
         while (clock() - frame_start < FRAME_TIME)
             ;

@@ -22,11 +22,11 @@ Paired match setup:
 - 2000 FEN pairs (4000 games total), colors swapped per pair
 - `movetime = 0.03s`, `max_fullmoves = 180`
 
-| Comparison                            | Score      | Pct     | Elo Diff | 95% CI (Elo)        | Result JSON |
-| ------------------------------------- | ---------- | ------- | -------- | ------------------- | ----------- |
-| Round1 1M Texel vs Pre-tuning (`HEAD`) | 2296.5/4000 | 57.41%  | +51.89   | [+41.97, +61.89]    | `chess/engine/tuning/results/h2h_round1_vs_pretune_4000g.json` |
-| Round2 1M Texel vs Round1 1M Texel     | 1991.0/4000 | 49.78%  | -1.56    | [-11.29, +8.16]     | `chess/engine/tuning/results/h2h_round2_vs_round1_4000g.json` |
-| Round3 1M Texel vs Round1 1M Texel     | 1970.0/4000 | 49.25%  | -5.21    | [-14.92, +4.48]     | `chess/engine/tuning/results/h2h_round3_vs_round1_4000g.json` |
+| Comparison                             | Score       | Pct    | Elo Diff | 95% CI (Elo)     | Result JSON                                                    |
+| -------------------------------------- | ----------- | ------ | -------- | ---------------- | -------------------------------------------------------------- |
+| Round1 1M Texel vs Pre-tuning (`HEAD`) | 2296.5/4000 | 57.41% | +51.89   | [+41.97, +61.89] | `chess/engine/tuning/results/h2h_round1_vs_pretune_4000g.json` |
+| Round2 1M Texel vs Round1 1M Texel     | 1991.0/4000 | 49.78% | -1.56    | [-11.29, +8.16]  | `chess/engine/tuning/results/h2h_round2_vs_round1_4000g.json`  |
+| Round3 1M Texel vs Round1 1M Texel     | 1970.0/4000 | 49.25% | -5.21    | [-14.92, +4.48]  | `chess/engine/tuning/results/h2h_round3_vs_round1_4000g.json`  |
 
 Current kept eval parameters: **Round1 1M Texel**.
 
@@ -156,7 +156,7 @@ Positions drawn from well-known chess engine test suites.
 ## 5s Search on eZ80 (50 positions)
 
 Searched each of 50 benchmark positions for 5 seconds on the eZ80 (48 MHz, cycle-accurate emulator).
-Post-optimization engine (commit `293b90d`, includes movegen optimizations).
+Post eval-optimization + Texel tuning (2026-02-16).
 
 | Pos | Nodes | Depth |   ms | Pos | Nodes | Depth |   ms |
 | --- | ----: | ----: | ---: | --- | ----: | ----: | ---: |
@@ -227,6 +227,155 @@ Searched each of 50 benchmark positions for 10 seconds on the eZ80 (48 MHz, cycl
 - **Average: 3,932 nodes/position** in 10 seconds (~393 NPS)
 - Depth range: 1-16 (simple endgames reach d7-16, complex middlegames d1-3)
 
+## 5s Search on eZ80 — post-Texel (50 positions, 2026-02-16)
+
+Searched each of 50 benchmark positions for 5 seconds on the eZ80 (48 MHz, cycle-accurate emulator).
+Post eval-optimization + Texel tuning.
+
+| Pos | Nodes | Depth |   ms | Pos | Nodes | Depth |   ms |
+| --- | ----: | ----: | ---: | --- | ----: | ----: | ---: |
+| P0  |   566 |     3 | 5176 | P25 |  1339 |     1 | 5118 |
+| P1  |   286 |     1 | 5029 | P26 |  1767 |     2 | 5079 |
+| P2  |  2152 |     5 | 5102 | P27 |  1025 |     1 | 5242 |
+| P3  |  1195 |     1 | 5553 | P28 |   149 |     1 | 5554 |
+| P4  |   770 |     3 | 5330 | P29 |   425 |     1 | 5742 |
+| P5  |  1065 |     1 | 5199 | P30 |  1664 |     5 | 5005 |
+| P6  |  3640 |     6 | 5108 | P31 |  1345 |     5 | 5150 |
+| P7  |  3441 |     6 | 5021 | P32 |  2455 |     5 | 5316 |
+| P8  |  1978 |     5 | 5228 | P33 |  1696 |     4 | 5200 |
+| P9  |  3504 |     5 | 5245 | P34 |  2967 |     4 | 5137 |
+| P10 |  3895 |     5 | 5113 | P35 |   453 |     3 | 5285 |
+| P11 |   524 |     3 | 5058 | P36 |   602 |     2 | 5068 |
+| P12 |   418 |     3 | 5264 | P37 |   364 |     2 | 5170 |
+| P13 |  2250 |     3 | 5063 | P38 |  1332 |     3 | 5255 |
+| P14 |  1209 |     3 | 5051 | P39 |  1524 |     1 | 5595 |
+| P15 |  1264 |     5 | 5191 | P40 |   854 |     3 | 5243 |
+| P16 |  1048 |     5 | 5177 | P41 |  1637 |     5 | 5258 |
+| P17 |  3662 |    13 | 5164 | P42 |   868 |     3 | 5452 |
+| P18 |  3543 |     7 | 5128 | P43 |  2086 |     4 | 5110 |
+| P19 |   888 |     3 | 5152 | P44 |  3405 |     6 | 5123 |
+| P20 |   388 |     3 | 5208 | P45 |  1793 |     4 | 5330 |
+| P21 |   354 |     1 | 5752 | P46 |  2124 |     7 | 5019 |
+| P22 |  2260 |     5 | 5041 | P47 |  2122 |     6 | 5304 |
+| P23 |  2307 |     5 | 5195 | P48 |  1856 |     3 | 5050 |
+| P24 |  1202 |     5 | 5032 | P49 |  1532 |     3 | 5014 |
+
+- **Total: 81,193 nodes** across 50 positions
+- **Average: 1,624 nodes/position** in 5 seconds (~325 NPS)
+- Depth range: 1-13 (simple endgames reach d5-13, complex middlegames d1-3)
+- Time overshoot much improved vs previous (~5.2s avg vs ~6.1s before)
+
+## 10s Search on eZ80 — post-Texel (50 positions, 2026-02-16)
+
+Searched each of 50 benchmark positions for 10 seconds on the eZ80 (48 MHz, cycle-accurate emulator).
+Post eval-optimization + Texel tuning.
+
+| Pos | Nodes | Depth |    ms | Pos | Nodes | Depth |    ms |
+| --- | ----: | ----: | ----: | --- | ----: | ----: | ----: |
+| P0  |   695 |     3 | 10628 | P25 |  3416 |     2 | 10622 |
+| P1  |  1798 |     2 | 10374 | P26 |  3029 |     3 | 10490 |
+| P2  |  2540 |     5 | 10393 | P27 |  3708 |     3 | 10568 |
+| P3  |  2298 |     1 | 10240 | P28 |  2925 |     3 | 10069 |
+| P4  |  2166 |     4 | 10524 | P29 |   838 |     1 | 10216 |
+| P5  |  2525 |     2 | 10361 | P30 |  3317 |     6 | 10477 |
+| P6  |  3377 |     6 | 10222 | P31 |  4493 |     6 | 10249 |
+| P7  |  3479 |     6 | 10222 | P32 |  3073 |     5 | 10435 |
+| P8  |  7737 |     6 | 10067 | P33 |  3663 |     5 | 10476 |
+| P9  |  6758 |     5 | 10107 | P34 |  3867 |     4 | 10049 |
+| P10 |  8227 |     6 | 10180 | P35 |   392 |     3 | 10273 |
+| P11 |  5306 |     4 | 10423 | P36 |  3374 |     3 | 10297 |
+| P12 |  3274 |     5 | 10321 | P37 |  3543 |     4 | 10258 |
+| P13 |  1270 |     3 | 10153 | P38 |  4582 |     4 | 10254 |
+| P14 |  3716 |     4 | 10081 | P39 |  2092 |     1 | 10105 |
+| P15 |  8730 |     6 | 10122 | P40 |  1437 |     3 | 10097 |
+| P16 |   978 |     5 | 10003 | P41 |  5526 |     6 | 10417 |
+| P17 |  6588 |    14 | 10222 | P42 |   894 |     3 | 10168 |
+| P18 |  6453 |     8 | 10074 | P43 |  3227 |     5 | 10312 |
+| P19 |   966 |     3 | 10089 | P44 |  4969 |     6 | 10234 |
+| P20 |  5481 |     5 | 10033 | P45 |  5789 |     5 | 10415 |
+| P21 |   304 |     1 | 10373 | P46 |  4642 |     8 | 10104 |
+| P22 |  2369 |     5 | 10195 | P47 |  4683 |     7 | 10171 |
+| P23 |  3320 |     5 | 10119 | P48 |  2082 |     3 | 10360 |
+| P24 |  8319 |     7 | 10094 | P49 |  7193 |     5 | 10365 |
+
+- **Total: 185,428 nodes** across 50 positions
+- **Average: 3,709 nodes/position** in 10 seconds (~371 NPS)
+- Depth range: 1-14 (simple endgames reach d5-14, complex middlegames d1-3)
+
+## 5s Search on eZ80 — pre-Texel HCE (50 positions, 2026-02-16)
+
+Searched each of 50 benchmark positions for 5 seconds on the eZ80 (48 MHz, cycle-accurate emulator).
+Hand-crafted eval weights before Texel tuning, no code optimizations.
+
+| Pos | Nodes | Depth |   ms | Pos | Nodes | Depth |   ms |
+| --- | ----: | ----: | ---: | --- | ----: | ----: | ---: |
+| P0  |   638 |     3 | 5251 | P25 |  1536 |     0 | 5199 |
+| P1  |   435 |     1 | 5131 | P26 |  1238 |     2 | 5810 |
+| P2  |  2766 |     5 | 5065 | P27 |   881 |     1 | 5438 |
+| P3  |   979 |     1 | 5938 | P28 |   162 |     1 | 5394 |
+| P4  |   482 |     3 | 5270 | P29 |   387 |     1 | 5502 |
+| P5  |   512 |     1 | 6047 | P30 |   771 |     4 | 5003 |
+| P6  |  3622 |     6 | 5282 | P31 |  2301 |     6 | 5060 |
+| P7  |  3568 |     6 | 5331 | P32 |  1479 |     4 | 5330 |
+| P8  |  1895 |     5 | 5121 | P33 |  1599 |     4 | 5280 |
+| P9  |  4235 |     5 | 5234 | P34 |  2773 |     3 | 5218 |
+| P10 |  3897 |     5 | 5149 | P35 |   593 |     3 | 5101 |
+| P11 |   483 |     3 | 5460 | P36 |   480 |     2 | 5182 |
+| P12 |   484 |     3 | 5338 | P37 |  1726 |     3 | 5026 |
+| P13 |   860 |     3 | 5223 | P38 |  1781 |     3 | 5176 |
+| P14 |  1385 |     3 | 5325 | P39 |  1536 |     0 | 6006 |
+| P15 |  1278 |     5 | 5081 | P40 |   964 |     3 | 5387 |
+| P16 |  1207 |     5 | 5254 | P41 |  1797 |     5 | 5441 |
+| P17 |  3541 |    13 | 5082 | P42 |   886 |     3 | 5021 |
+| P18 |  3616 |     7 | 5198 | P43 |  2149 |     4 | 5571 |
+| P19 |   991 |     3 | 5455 | P44 |  2234 |     5 | 5250 |
+| P20 |   585 |     3 | 5247 | P45 |  2529 |     4 | 5288 |
+| P21 |   192 |     1 | 5847 | P46 |  2145 |     7 | 5132 |
+| P22 |  2317 |     5 | 5215 | P47 |  2426 |     6 | 5293 |
+| P23 |  3262 |     5 | 5208 | P48 |  1761 |     3 | 5135 |
+| P24 |  1544 |     5 | 5207 | P49 |  1576 |     3 | 5135 |
+
+- **Total: 82,484 nodes** across 50 positions
+- **Average: 1,650 nodes/position** in 5 seconds (~330 NPS)
+- Depth range: 0-13 (simple endgames reach d5-13, complex middlegames d1-3)
+
+## 10s Search on eZ80 — pre-Texel HCE (50 positions, 2026-02-16)
+
+Searched each of 50 benchmark positions for 10 seconds on the eZ80 (48 MHz, cycle-accurate emulator).
+Hand-crafted eval weights before Texel tuning, no code optimizations.
+
+| Pos | Nodes | Depth |    ms | Pos | Nodes | Depth |    ms |
+| --- | ----: | ----: | ----: | --- | ----: | ----: | ----: |
+| P0  |  2379 |     4 | 10312 | P25 |  3281 |     2 | 10612 |
+| P1  |  1522 |     2 | 10019 | P26 |  1957 |     3 | 10839 |
+| P2  |  2733 |     5 | 10117 | P27 |   877 |     1 | 10251 |
+| P3  |   979 |     1 | 10080 | P28 |  2625 |     2 | 10643 |
+| P4  |  2000 |     4 | 10637 | P29 |  3314 |     2 | 10699 |
+| P5  |   629 |     1 | 10299 | P30 |  3970 |     6 | 10409 |
+| P6  |  3622 |     6 | 10158 | P31 |  4202 |     7 | 10101 |
+| P7  |  3705 |     6 | 10214 | P32 |  5054 |     5 | 10170 |
+| P8  |  1993 |     5 | 10285 | P33 |  3348 |     5 | 10462 |
+| P9  | 10107 |     6 | 10047 | P34 |  4596 |     4 | 10158 |
+| P10 |  7841 |     6 | 10016 | P35 |   564 |     3 | 10042 |
+| P11 |  4794 |     4 | 10129 | P36 |  3407 |     3 | 10174 |
+| P12 |  3493 |     5 | 10275 | P37 |  3727 |     4 | 10131 |
+| P13 |  8632 |     5 | 10015 | P38 |  4121 |     4 | 10454 |
+| P14 |  3367 |     4 | 10203 | P39 |   924 |     1 | 10354 |
+| P15 |  1078 |     5 | 10168 | P40 |  1008 |     3 | 10211 |
+| P16 |  5986 |     6 | 10060 | P41 |  5035 |     6 | 10150 |
+| P17 |  5859 |    15 |  7374 | P42 |   884 |     3 | 10430 |
+| P18 |  5984 |     8 | 10050 | P43 |  3225 |     5 | 10194 |
+| P19 |   985 |     3 | 10075 | P44 |  6233 |     6 | 10159 |
+| P20 |  7123 |     5 | 10188 | P45 |  2488 |     4 | 10427 |
+| P21 |   192 |     1 | 10739 | P46 |  5214 |     8 | 10199 |
+| P22 |  2318 |     5 | 10272 | P47 |  4888 |     7 | 10047 |
+| P23 |  3024 |     5 | 10134 | P48 |  1717 |     3 | 10024 |
+| P24 |  5994 |     6 | 10142 | P49 |  8079 |     5 | 10076 |
+
+- **Total: 181,077 nodes** across 50 positions
+- **Average: 3,622 nodes/position** in 10 seconds (~362 NPS)
+- Depth range: 1-15 (simple endgames reach d5-15, complex middlegames d1-3)
+
 ## 15s Search on eZ80 (50 positions)
 
 Searched each of 50 benchmark positions for 15 seconds on the eZ80 (48 MHz, cycle-accurate emulator).
@@ -268,33 +417,33 @@ Searched each of 50 benchmark positions for 15 seconds on the eZ80 (48 MHz, cycl
 Searched each of 50 benchmark positions for 30 seconds on the eZ80 (48 MHz, cycle-accurate emulator).
 Depth capped at 15 to prevent timer overflow aliasing on trivial endgames (P17 exhausts d15 in 8.7s).
 
-| Pos | Nodes  | Depth |    ms | Pos | Nodes  | Depth |    ms |
-| --- | -----: | ----: | ----: | --- | -----: | ----: | ----: |
-| P0  |   5467 |     5 | 30744 | P25 |   8643 |     4 | 30713 |
-| P1  |   7190 |     3 | 30910 | P26 |   6807 |     4 | 30077 |
-| P2  |  11677 |     7 | 30353 | P27 |   3334 |     3 | 30334 |
-| P3  |   4706 |     3 | 30600 | P28 |   3653 |     3 | 30475 |
-| P4  |   6453 |     5 | 30278 | P29 |   4064 |     3 | 30145 |
-| P5  |   4390 |     3 | 30312 | P30 |   9243 |     7 | 30028 |
-| P6  |  15220 |     8 | 30083 | P31 |  12547 |     8 | 30076 |
-| P7  |  16109 |     8 | 30196 | P32 |  10450 |     6 | 30403 |
-| P8  |  11646 |     7 | 30096 | P33 |   8552 |     6 | 30184 |
-| P9  |  26462 |     7 | 30008 | P34 |  15688 |     5 | 30027 |
-| P10 |  23270 |     7 | 30115 | P35 |   9591 |     5 | 30453 |
-| P11 |   6986 |     5 | 30306 | P36 |   6410 |     4 | 30694 |
-| P12 |   9372 |     6 | 30283 | P37 |   3495 |     4 | 30255 |
-| P13 |   8398 |     5 | 30029 | P38 |   7397 |     5 | 30557 |
-| P14 |   9770 |     5 | 30043 | P39 |   4362 |     3 | 30209 |
-| P15 |  12613 |     7 | 30095 | P40 |   5008 |     4 | 30234 |
-| P16 |  19757 |     7 | 30147 | P41 |   6108 |     7 | 30491 |
-| P17 |   7115 |    15 |  8745 | P42 |   5753 |     5 | 30362 |
-| P18 |  12543 |     9 | 30120 | P43 |  11440 |     6 | 30645 |
-| P19 |   8586 |     5 | 30214 | P44 |  21818 |     8 | 30205 |
-| P20 |  15211 |     7 | 30069 | P45 |   6053 |     5 | 30022 |
-| P21 |   4660 |     3 | 30740 | P46 |  13535 |     9 | 30213 |
-| P22 |  22274 |     7 | 30257 | P47 |  20410 |     9 | 30006 |
-| P23 |  21461 |     7 | 30186 | P48 |   5267 |     4 | 30708 |
-| P24 |   8597 |     7 | 30302 | P49 |  11688 |     6 | 30064 |
+| Pos | Nodes | Depth |    ms | Pos | Nodes | Depth |    ms |
+| --- | ----: | ----: | ----: | --- | ----: | ----: | ----: |
+| P0  |  5467 |     5 | 30744 | P25 |  8643 |     4 | 30713 |
+| P1  |  7190 |     3 | 30910 | P26 |  6807 |     4 | 30077 |
+| P2  | 11677 |     7 | 30353 | P27 |  3334 |     3 | 30334 |
+| P3  |  4706 |     3 | 30600 | P28 |  3653 |     3 | 30475 |
+| P4  |  6453 |     5 | 30278 | P29 |  4064 |     3 | 30145 |
+| P5  |  4390 |     3 | 30312 | P30 |  9243 |     7 | 30028 |
+| P6  | 15220 |     8 | 30083 | P31 | 12547 |     8 | 30076 |
+| P7  | 16109 |     8 | 30196 | P32 | 10450 |     6 | 30403 |
+| P8  | 11646 |     7 | 30096 | P33 |  8552 |     6 | 30184 |
+| P9  | 26462 |     7 | 30008 | P34 | 15688 |     5 | 30027 |
+| P10 | 23270 |     7 | 30115 | P35 |  9591 |     5 | 30453 |
+| P11 |  6986 |     5 | 30306 | P36 |  6410 |     4 | 30694 |
+| P12 |  9372 |     6 | 30283 | P37 |  3495 |     4 | 30255 |
+| P13 |  8398 |     5 | 30029 | P38 |  7397 |     5 | 30557 |
+| P14 |  9770 |     5 | 30043 | P39 |  4362 |     3 | 30209 |
+| P15 | 12613 |     7 | 30095 | P40 |  5008 |     4 | 30234 |
+| P16 | 19757 |     7 | 30147 | P41 |  6108 |     7 | 30491 |
+| P17 |  7115 |    15 |  8745 | P42 |  5753 |     5 | 30362 |
+| P18 | 12543 |     9 | 30120 | P43 | 11440 |     6 | 30645 |
+| P19 |  8586 |     5 | 30214 | P44 | 21818 |     8 | 30205 |
+| P20 | 15211 |     7 | 30069 | P45 |  6053 |     5 | 30022 |
+| P21 |  4660 |     3 | 30740 | P46 | 13535 |     9 | 30213 |
+| P22 | 22274 |     7 | 30257 | P47 | 20410 |     9 | 30006 |
+| P23 | 21461 |     7 | 30186 | P48 |  5267 |     4 | 30708 |
+| P24 |  8597 |     7 | 30302 | P49 | 11688 |     6 | 30064 |
 
 - **Total: 521,249 nodes** across 50 positions
 - **Average: 10,425 nodes/position** in 30 seconds (~347 NPS)
@@ -401,3 +550,77 @@ Desktop Arm64 search strength — shows the engine's algorithmic ceiling. (m5 ma
 - **Bishop count** saves 8,905 cy/eval (-5.9%) by tracking bishop counts incrementally in make/unmake instead of counting them during eval. The make/unmake cost increases slightly (+88 cy/pair).
 - **Piece index** is the biggest perft win: -5.1% total cycles at depth 3, primarily through faster make/unmake operations.
 - At 48 MHz, perft(3) from startpos takes ~5.4s on the baseline and ~5.4s on the final version. The net cycle savings from all optimizations is -3.7% for perft(3).
+
+## Eval Optimization Pass (2026-02-16)
+
+Search profiling (50 positions x 1000 nodes) identified eval as the dominant bottleneck at **53% of search time** (~110K cy/call, ~157K cy/node total). Sub-profiling broke down eval into four sections:
+
+### Eval Sub-Profile (before optimization)
+
+| Section     |     cy/call | % of eval |
+| ----------- | ----------: | --------: |
+| pieces      |      49,127 |       42% |
+| mobility    |      38,655 |       33% |
+| build_pawns |      15,369 |       13% |
+| shield      |       2,392 |        2% |
+| other       |      10,642 |        9% |
+| **total**   | **116,185** |  **100%** |
+
+### Optimizations Applied
+
+1. **Combined `build_pawn_info`** — merged two separate pawn file array passes (`build_pawn_files` for white/black) with pawn attack bitmap generation into a single function. One loop per color builds file bitmasks and writes attack squares simultaneously.
+
+2. **Pawn attack bitmap** — static 128-byte array indexed by 0x88 square, with bit 0 = attacked by white pawn, bit 1 = attacked by black pawn. Mobility evaluation uses O(1) bitmap lookups (`pawn_atk[dest] & 2`) instead of per-square `pawn_attacks_sq()` function calls.
+
+3. **Bitmask passed pawn detection** — replaced inner file-scanning loop with a bitmask approach. Each file stores a rank occupancy bitmask (bit per row); passed pawn test becomes `b_pawns[f] & ahead_mask` instead of iterating rows.
+
+### Eval Sub-Profile (after optimization)
+
+| Section     |    cy/call | % of eval |      Delta |
+| ----------- | ---------: | --------: | ---------: |
+| pieces      |     30,231 |       36% |       -38% |
+| mobility    |     22,363 |       27% |       -42% |
+| build_pawns |     17,694 |       21% |       +15% |
+| shield      |      2,441 |        3% |          — |
+| other       |     10,285 |       12% |          — |
+| **total**   | **83,014** |  **100%** | **-28.5%** |
+
+`build_pawns` increased slightly because it now also does the 128-byte `memset` + attack bitmap population, but this is more than offset by the gains in `pieces` and `mobility`.
+
+### Overall Impact
+
+| Metric  |  Before |   After |  Delta |
+| ------- | ------: | ------: | -----: |
+| cy/eval | 116,185 |  83,014 | -28.5% |
+| cy/node | 161,271 | 135,855 | -15.7% |
+
+### eZ80 Lesson: Static vs Stack Allocation
+
+Initial implementation allocated `pawn_atk[128]` on the stack. This caused a **14% performance regression** across all eval sections because the 128 extra bytes pushed local variable offsets beyond the eZ80's efficient IX+displacement range (signed 8-bit: -128 to +127). Making the array `static` fixed this entirely. This is safe because `evaluate()` is never called recursively.
+
+## 5s Search on eZ80 — pre-Texel HCE + code opts (50 positions, 2026-02-16)
+
+Searched each of 50 benchmark positions for 5 seconds on the eZ80 (48 MHz, cycle-accurate emulator).
+Hand-crafted eval weights before Texel tuning, WITH eval code optimizations (pawn attack bitmap, combined build_pawn_info, bitmask passed pawns).
+
+- **Total: 85,965 nodes** across 50 positions
+- **Average: 1,719 nodes/position** in 5 seconds (~344 NPS)
+- vs pre-Texel HCE without code opts (82,484): **+4.2%**
+
+## 10s Search on eZ80 — pre-Texel HCE + code opts (50 positions, 2026-02-16)
+
+Searched each of 50 benchmark positions for 10 seconds on the eZ80 (48 MHz, cycle-accurate emulator).
+Hand-crafted eval weights before Texel tuning, WITH eval code optimizations (pawn attack bitmap, combined build_pawn_info, bitmask passed pawns).
+
+- **Total: 197,911 nodes** across 50 positions
+- **Average: 3,958 nodes/position** in 10 seconds (~396 NPS)
+- vs pre-Texel HCE without code opts (181,077): **+9.3%**
+
+### Code Optimization Impact Summary (pre-Texel weights held constant)
+
+| Time Limit | No Code Opts | With Code Opts | Delta |
+| ---------- | -----------: | -------------: | ----: |
+| 5s         |       82,484 |         85,965 | +4.2% |
+| 10s        |      181,077 |        197,911 | +9.3% |
+
+The larger improvement at 10s is likely due to: (a) faster eval allowing deeper searches within the time window, and (b) reduced time overshoot with faster eval (time checks occur every 1024 nodes).

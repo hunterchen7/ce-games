@@ -315,6 +315,7 @@ int main(void)
     hooks.time_ms = bench_time_ms;
     engine_init(&hooks);
 
+#if 0  /* skip sections 1-5 for faster profile run */
     /* ======== 1. Memory Sizes ======== */
     out("-- Memory --");
     sprintf(buf, "board_t: %u B", (unsigned)sizeof(board_t));
@@ -487,13 +488,136 @@ int main(void)
     sprintf(buf, "Avg: %lu cy/search",
             (unsigned long)(total_cycles / NUM_POS));
     out(buf);
+#endif  /* skip sections 1-5 */
 
-    /* ======== 6. Timed Search (50 positions x 10s, 15s, 30s) ======== */
+    /* ======== 6. Profiled Search (50 positions x 1000n) ======== */
     {
-        static const uint32_t time_limits[] = { 10000, 15000, 30000 };
+        const search_profile_t *prof;
+        const eval_profile_t *eprof;
+        uint32_t total_search_cy = 0;
+        uint32_t total_nodes = 0;
+
+        out("-- Profile 1000n (50 pos) --");
+        search_profile_reset();
+        eval_profile_reset();
+        for (i = 0; i < NUM_POS; i++) {
+            parse_fen_board(fens[i], &b);
+            search_history_clear();
+            tt_clear();
+            limits.max_depth = 0;
+            limits.max_time_ms = 0;
+            limits.max_nodes = 1000;
+            limits.time_fn = NULL;
+            timer_Set(1, 0);
+            sr = search_go(&b, &limits);
+            cycles = timer_GetSafe(1, TIMER_UP);
+            total_search_cy += cycles;
+            total_nodes += sr.nodes;
+            sprintf(buf, "P%d: n=%lu %lums", i,
+                    (unsigned long)sr.nodes, (unsigned long)(cycles / 48000UL));
+            out(buf);
+        }
+        prof = search_profile_get();
+
+        dbg_printf("\n=== SEARCH PROFILE (50 pos x 1000 nodes) ===\n");
+        dbg_printf("nodes:       %lu\n", (unsigned long)total_nodes);
+        dbg_printf("total_cy:    %lu\n", (unsigned long)total_search_cy);
+        dbg_printf("cy/node:     %lu\n", total_nodes ? (unsigned long)(total_search_cy / total_nodes) : 0UL);
+        dbg_printf("\n");
+        dbg_printf("%-14s %10s %8s %8s %5s\n", "Category", "Cycles", "Cnt", "Cy/call", "Pct");
+        dbg_printf("%-14s %10s %8s %8s %5s\n", "--------------", "----------", "--------", "--------", "-----");
+
+#define PROF_ROW(label, cy_field, cnt_field) do { \
+    uint32_t _cy = prof->cy_field; \
+    uint32_t _cn = prof->cnt_field; \
+    uint32_t _pc = _cn ? (_cy / _cn) : 0; \
+    uint32_t _pct = total_search_cy ? (uint32_t)(((uint64_t)_cy * 100) / total_search_cy) : 0; \
+    dbg_printf("%-14s %10lu %8lu %8lu %4lu%%\n", \
+               label, (unsigned long)_cy, (unsigned long)_cn, (unsigned long)_pc, (unsigned long)_pct); \
+    sprintf(buf, "%s: %lu%% (%lu cy)", label, (unsigned long)_pct, (unsigned long)_cy); \
+    out(buf); \
+} while(0)
+
+        PROF_ROW("eval",       eval_cy,       eval_cnt);
+        PROF_ROW("movegen",    movegen_cy,     movegen_cnt);
+        PROF_ROW("make/unmake",make_unmake_cy, make_cnt);
+        PROF_ROW("is_legal",   is_legal_cy,    legal_cnt);
+        {
+            /* legal_info: called once per non-leaf node; use total_nodes for cnt */
+            uint32_t _cy = prof->legal_info_cy;
+            uint32_t _pc = total_nodes ? (_cy / total_nodes) : 0;
+            uint32_t _pct = total_search_cy ? (uint32_t)(((uint64_t)_cy * 100) / total_search_cy) : 0;
+            dbg_printf("%-14s %10lu %8lu %8lu %4lu%%\n",
+                       "legal_info", (unsigned long)_cy, (unsigned long)total_nodes,
+                       (unsigned long)_pc, (unsigned long)_pct);
+            sprintf(buf, "legal_info: %lu%% (%lu cy)", (unsigned long)_pct, (unsigned long)_cy);
+            out(buf);
+        }
+        PROF_ROW("moveorder",  moveorder_cy,   movegen_cnt);
+        PROF_ROW("tt",         tt_cy,          tt_cnt);
+#undef PROF_ROW
+
+        {
+            uint32_t accounted = prof->eval_cy + prof->movegen_cy +
+                prof->make_unmake_cy + prof->is_legal_cy +
+                prof->legal_info_cy + prof->moveorder_cy + prof->tt_cy;
+            uint32_t overhead = total_search_cy - accounted;
+            uint32_t pct = total_search_cy ? (uint32_t)(((uint64_t)overhead * 100) / total_search_cy) : 0;
+            dbg_printf("%-14s %10lu %8s %8s %4lu%%\n",
+                       "overhead", (unsigned long)overhead, "-", "-", (unsigned long)pct);
+            sprintf(buf, "overhead: %lu%% (%lu cy)", (unsigned long)pct, (unsigned long)overhead);
+            out(buf);
+            sprintf(buf, "total: %lu cy, %lu nodes",
+                    (unsigned long)total_search_cy, (unsigned long)total_nodes);
+            out(buf);
+        }
+
+        /* ---- Eval Sub-Profile ---- */
+        eprof = eval_profile_get();
+        dbg_printf("\n=== EVAL SUB-PROFILE ===\n");
+        dbg_printf("eval calls:  %lu\n", (unsigned long)eprof->eval_count);
+        dbg_printf("total eval:  %lu cy\n", (unsigned long)prof->eval_cy);
+        if (eprof->eval_count > 0) {
+            dbg_printf("cy/eval:     %lu\n",
+                       (unsigned long)(prof->eval_cy / eprof->eval_count));
+        }
+        dbg_printf("\n");
+        dbg_printf("%-14s %10s %8s %5s\n", "Section", "Cycles", "Cy/call", "Pct");
+        dbg_printf("%-14s %10s %8s %5s\n", "--------------", "----------", "--------", "-----");
+
+#define EPROF_ROW(label, field) do { \
+    uint32_t _cy = eprof->field; \
+    uint32_t _pc = eprof->eval_count ? (_cy / eprof->eval_count) : 0; \
+    uint32_t _pct = prof->eval_cy ? (uint32_t)(((uint64_t)_cy * 100) / prof->eval_cy) : 0; \
+    dbg_printf("%-14s %10lu %8lu %4lu%%\n", \
+               label, (unsigned long)_cy, (unsigned long)_pc, (unsigned long)_pct); \
+    sprintf(buf, "  %s: %lu%% %lu cy/c", label, (unsigned long)_pct, (unsigned long)_pc); \
+    out(buf); \
+} while(0)
+
+        out("-- Eval Breakdown --");
+        EPROF_ROW("build_pawns", build_cy);
+        EPROF_ROW("pieces",      pieces_cy);
+        EPROF_ROW("mobility",    mobility_cy);
+        EPROF_ROW("shield",      shield_cy);
+        {
+            uint32_t eacc = eprof->build_cy + eprof->pieces_cy +
+                            eprof->mobility_cy + eprof->shield_cy;
+            uint32_t eov = prof->eval_cy > eacc ? prof->eval_cy - eacc : 0;
+            uint32_t epct = prof->eval_cy ? (uint32_t)(((uint64_t)eov * 100) / prof->eval_cy) : 0;
+            dbg_printf("%-14s %10lu %8s %4lu%%\n",
+                       "other", (unsigned long)eov, "-", (unsigned long)epct);
+            sprintf(buf, "  other: %lu%%", (unsigned long)epct);
+            out(buf);
+        }
+#undef EPROF_ROW
+    }
+    /* ======== 7. Timed Search (50 positions x 5s, 10s) ======== */
+    {
+        static const uint32_t time_limits[] = { 5000, 10000 };
         uint32_t total_nodes;
         int t;
-        for (t = 0; t < 3; t++) {
+        for (t = 0; t < 2; t++) {
             sprintf(buf, "-- Search %lus (50 pos) --",
                     (unsigned long)(time_limits[t] / 1000));
             out(buf);

@@ -4,6 +4,44 @@
 #include "tt.h"
 #include "zobrist.h"
 
+/* ========== Search Profiling ========== */
+
+#ifdef SEARCH_PROFILE
+#include <sys/timers.h>
+#include <string.h>
+
+static search_profile_t _sp;
+
+static inline uint32_t _prof_now(void) {
+    return timer_GetSafe(1, TIMER_UP);
+}
+
+void search_profile_reset(void) {
+    memset(&_sp, 0, sizeof(_sp));
+}
+
+const search_profile_t *search_profile_get(void) {
+    return &_sp;
+}
+
+/* PROF_B(): save current timer value into local _pt.
+   PROF_E(f): accumulate elapsed time since _pt into _sp.f.
+   PROF_C(f): increment counter _sp.f.
+   PROF_VARS: declare the local timer variable. */
+#define PROF_VARS  uint32_t _pt
+#define PROF_B()   (_pt = _prof_now())
+#define PROF_E(f)  (_sp.f += _prof_now() - _pt)
+#define PROF_C(f)  (_sp.f++)
+
+#else
+
+#define PROF_VARS
+#define PROF_B()
+#define PROF_E(f)
+#define PROF_C(f)
+
+#endif /* SEARCH_PROFILE */
+
 /* ========== MVV-LVA Table ========== */
 
 /* Indexed by [victim_type-1][attacker_type-1] (0-based: P=0..K=5) */
@@ -444,21 +482,29 @@ static int16_t quiescence(board_t *b, int16_t alpha, int16_t beta,
     scored_move_t *moves;
     undo_t undo;
     legal_info_t linfo;
+    PROF_VARS;
 
     if (search_stopped) return 0;
     search_nodes++;
     check_time();
     if (search_stopped) return 0;
 
-    if (ply >= MAX_PLY || qs_depth >= QS_MAX_DEPTH) return evaluate(b);
+    if (ply >= MAX_PLY || qs_depth >= QS_MAX_DEPTH) {
+        PROF_B(); stand_pat = evaluate(b); PROF_E(eval_cy); PROF_C(eval_cnt);
+        return stand_pat;
+    }
 
+    PROF_B();
     compute_legal_info(b, &linfo);
+    PROF_E(legal_info_cy);
     in_check = linfo.in_check;
 
     if (in_check) {
         /* In check: must search all moves (evasions) */
         uint8_t legal_found = 0;
+        PROF_B();
         count = generate_moves(b, raw_moves_buf, GEN_ALL);
+        PROF_E(movegen_cy); PROF_C(movegen_cnt);
 
         /* Claim pool space */
         base = move_sp;
@@ -469,21 +515,35 @@ static int16_t quiescence(board_t *b, int16_t alpha, int16_t beta,
             moves[i].score = 0;
         }
         move_sp = base + count;
+        PROF_B();
         score_moves(b, moves, count, ply, MOVE_NONE);
+        PROF_E(moveorder_cy);
 
         /* Keep caller's alpha bound (do NOT reset to -SCORE_INF) */
         for (i = 0; i < count; i++) {
+            PROF_B();
             pick_move(moves, count, i);
+            PROF_E(moveorder_cy);
             if (!is_evasion_candidate(b, &linfo, moves[i].move))
                 continue;
+            PROF_B();
             board_make(b, moves[i].move, &undo);
+            PROF_E(make_unmake_cy);
+            PROF_B();
             if (!board_is_legal(b)) {
+                PROF_E(is_legal_cy); PROF_C(legal_cnt);
+                PROF_B();
                 board_unmake(b, moves[i].move, &undo);
+                PROF_E(make_unmake_cy);
                 continue;
             }
+            PROF_E(is_legal_cy); PROF_C(legal_cnt);
+            PROF_C(make_cnt);
             legal_found = 1;
             score = -quiescence(b, -beta, -alpha, ply + 1, qs_depth + 1);
+            PROF_B();
             board_unmake(b, moves[i].move, &undo);
+            PROF_E(make_unmake_cy);
 
             if (search_stopped) { move_sp = base; return 0; }
             if (score > alpha) {
@@ -501,7 +561,9 @@ static int16_t quiescence(board_t *b, int16_t alpha, int16_t beta,
     }
 
     /* Not in check: stand pat */
+    PROF_B();
     stand_pat = evaluate(b);
+    PROF_E(eval_cy); PROF_C(eval_cnt);
     if (stand_pat >= beta) return beta;
     if (stand_pat > alpha) alpha = stand_pat;
 
@@ -509,7 +571,9 @@ static int16_t quiescence(board_t *b, int16_t alpha, int16_t beta,
     if (stand_pat + 1100 < alpha) return alpha;
 
     /* Generate captures only */
+    PROF_B();
     count = generate_moves(b, raw_moves_buf, GEN_CAPTURES);
+    PROF_E(movegen_cy); PROF_C(movegen_cnt);
 
     /* Claim pool space */
     base = move_sp;
@@ -520,19 +584,35 @@ static int16_t quiescence(board_t *b, int16_t alpha, int16_t beta,
         moves[i].score = 0;
     }
     move_sp = base + count;
+    PROF_B();
     score_moves(b, moves, count, ply, MOVE_NONE);
+    PROF_E(moveorder_cy);
 
     for (i = 0; i < count; i++) {
         uint8_t need_legality_check;
+        PROF_B();
         pick_move(moves, count, i);
+        PROF_E(moveorder_cy);
         need_legality_check = move_needs_legality_check(b, &linfo, moves[i].move);
+        PROF_B();
         board_make(b, moves[i].move, &undo);
-        if (need_legality_check && !board_is_legal(b)) {
-            board_unmake(b, moves[i].move, &undo);
-            continue;
+        PROF_E(make_unmake_cy);
+        if (need_legality_check) {
+            PROF_B();
+            if (!board_is_legal(b)) {
+                PROF_E(is_legal_cy); PROF_C(legal_cnt);
+                PROF_B();
+                board_unmake(b, moves[i].move, &undo);
+                PROF_E(make_unmake_cy);
+                continue;
+            }
+            PROF_E(is_legal_cy); PROF_C(legal_cnt);
         }
+        PROF_C(make_cnt);
         score = -quiescence(b, -beta, -alpha, ply + 1, qs_depth + 1);
+        PROF_B();
         board_unmake(b, moves[i].move, &undo);
+        PROF_E(make_unmake_cy);
 
         if (search_stopped) { move_sp = base; return 0; }
         if (score > alpha) {
@@ -567,6 +647,7 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
     int8_t new_depth;
     legal_info_t linfo;
     uint8_t can_futility;
+    PROF_VARS;
 
     if (search_stopped) return 0;
     search_nodes++;
@@ -586,6 +667,7 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
 
     /* TT probe */
     tt_move = MOVE_NONE;
+    PROF_B();
     if (tt_probe(b->hash, b->lock, &tt_score, &tt_best_packed, &tt_depth, &tt_flag)) {
         /* Adjust mate scores */
         if (tt_score > SCORE_MATE - MAX_PLY)
@@ -594,15 +676,18 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
             tt_score += ply;
 
         if (tt_depth >= depth) {
-            if (tt_flag == TT_EXACT) return tt_score;
-            if (tt_flag == TT_BETA && tt_score >= beta) return beta;
-            if (tt_flag == TT_ALPHA && tt_score <= alpha) return alpha;
+            if (tt_flag == TT_EXACT) { PROF_E(tt_cy); PROF_C(tt_cnt); return tt_score; }
+            if (tt_flag == TT_BETA && tt_score >= beta) { PROF_E(tt_cy); PROF_C(tt_cnt); return beta; }
+            if (tt_flag == TT_ALPHA && tt_score <= alpha) { PROF_E(tt_cy); PROF_C(tt_cnt); return alpha; }
         }
         if (tt_best_packed != TT_MOVE_NONE)
             tt_move = tt_unpack_move(tt_best_packed);
     }
+    PROF_E(tt_cy); PROF_C(tt_cnt);
 
+    PROF_B();
     compute_legal_info(b, &linfo);
+    PROF_E(legal_info_cy);
     in_check = linfo.in_check;
 
     /* Check extension — limited to 2 per search path */
@@ -612,8 +697,11 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
        that have no chance of raising alpha */
     can_futility = 0;
     if (!in_check && depth <= 2 && ply > 0) {
-        int16_t static_eval = evaluate(b);
+        int16_t static_eval;
         int16_t futility_margin = (depth == 1) ? 200 : 500;
+        PROF_B();
+        static_eval = evaluate(b);
+        PROF_E(eval_cy); PROF_C(eval_cnt);
         if (static_eval + futility_margin <= alpha)
             can_futility = 1;
     }
@@ -668,7 +756,9 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
     for (stage = 0; stage < 2 && !cutoff; stage++) {
         uint8_t mode = (stage == 0) ? GEN_CAPTURES : GEN_QUIETS;
 
+        PROF_B();
         count = generate_moves(b, raw_moves_buf, mode);
+        PROF_E(movegen_cy); PROF_C(movegen_cnt);
         base = move_sp;
         if (base + count > MOVE_POOL_SIZE) return evaluate(b);
         moves = &move_pool[base];
@@ -677,13 +767,17 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
             moves[i].score = 0;
         }
         move_sp = base + count;
+        PROF_B();
         score_moves(b, moves, count, ply, tt_move);
+        PROF_E(moveorder_cy);
 
         for (i = 0; i < count; i++) {
             move_t m;
             uint8_t need_legality_check;
 
+            PROF_B();
             pick_move(moves, count, i);
+            PROF_E(moveorder_cy);
             m = moves[i].move;
             if (!is_evasion_candidate(b, &linfo, m))
                 continue;
@@ -696,11 +790,21 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
 
             need_legality_check = move_needs_legality_check(b, &linfo, m);
 
+            PROF_B();
             board_make(b, m, &undo);
-            if (need_legality_check && !board_is_legal(b)) {
-                board_unmake(b, m, &undo);
-                continue;
+            PROF_E(make_unmake_cy);
+            if (need_legality_check) {
+                PROF_B();
+                if (!board_is_legal(b)) {
+                    PROF_E(is_legal_cy); PROF_C(legal_cnt);
+                    PROF_B();
+                    board_unmake(b, m, &undo);
+                    PROF_E(make_unmake_cy);
+                    continue;
+                }
+                PROF_E(is_legal_cy); PROF_C(legal_cnt);
             }
+            PROF_C(make_cnt);
             legal_moves++;
 
             /* Save first legal root move as fallback in case the search
@@ -733,7 +837,9 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
             }
 
             search_history_pop();
+            PROF_B();
             board_unmake(b, m, &undo);
+            PROF_E(make_unmake_cy);
 
             if (search_stopped) { move_sp = base; return 0; }
 
@@ -783,8 +889,10 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
         else if (store_score < -SCORE_MATE + MAX_PLY)
             store_score -= ply;
 
+        PROF_B();
         tt_store(b->hash, b->lock, store_score,
                  tt_pack_move(best_move), depth, best_flag);
+        PROF_E(tt_cy); PROF_C(tt_cnt);
     }
 
     return best_score;

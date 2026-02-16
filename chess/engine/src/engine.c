@@ -10,6 +10,7 @@
 
 board_t engine_board;
 static engine_hooks_t engine_hooks;
+static uint8_t last_was_book;
 
 /* ========== Translation Helpers ========== */
 
@@ -324,8 +325,10 @@ engine_move_t engine_think(uint8_t max_depth, uint32_t max_time_ms)
 
     /* Try the opening book first — instant response */
     if (book_probe(&engine_board, &book_move)) {
+        last_was_book = 1;
         return internal_to_engine_move(book_move);
     }
+    last_was_book = 0;
 
     limits.max_depth = max_depth;
     limits.max_time_ms = max_time_ms;
@@ -375,6 +378,18 @@ uint8_t engine_in_check(void)
     return is_square_attacked(&engine_board,
                               engine_board.king_sq[engine_board.side],
                               engine_board.side ^ 1);
+}
+
+/* ========== Book Diagnostics ========== */
+
+void engine_get_book_info(engine_book_info_t *out)
+{
+    book_get_info(&out->ready, &out->num_segments, &out->total_entries);
+}
+
+uint8_t engine_last_move_was_book(void)
+{
+    return last_was_book;
 }
 
 /* ========== Cleanup ========== */
