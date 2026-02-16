@@ -350,7 +350,7 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
     uint8_t tt_flag;
     uint16_t base;
     scored_move_t *moves;
-    uint8_t count, i;
+    uint8_t count, i, stage, cutoff;
     undo_t undo;
     uint8_t best_flag;
     move_t best_move;
@@ -435,83 +435,91 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
         }
     }
 
-    /* Generate all moves into pool */
-    count = generate_moves(b, raw_moves_buf, GEN_ALL);
-    base = move_sp;
-    if (base + count > MOVE_POOL_SIZE) return evaluate(b);
-    moves = &move_pool[base];
-    for (i = 0; i < count; i++) {
-        moves[i].move = raw_moves_buf[i];
-        moves[i].score = 0;
-    }
-    move_sp = base + count;
-    score_moves(b, moves, count, ply, tt_move);
-
     best_score = -SCORE_INF;
     best_flag = TT_ALPHA;
     best_move = MOVE_NONE;
     legal_moves = 0;
+    cutoff = 0;
 
-    for (i = 0; i < count; i++) {
-        pick_move(moves, count, i);
-        move_t m = moves[i].move;
+    /* Staged generation: captures first, then quiets. */
+    for (stage = 0; stage < 2 && !cutoff; stage++) {
+        uint8_t mode = (stage == 0) ? GEN_CAPTURES : GEN_QUIETS;
 
-        board_make(b, m, &undo);
-        if (!board_is_legal(b)) {
-            board_unmake(b, m, &undo);
-            continue;
+        count = generate_moves(b, raw_moves_buf, mode);
+        base = move_sp;
+        if (base + count > MOVE_POOL_SIZE) return evaluate(b);
+        moves = &move_pool[base];
+        for (i = 0; i < count; i++) {
+            moves[i].move = raw_moves_buf[i];
+            moves[i].score = 0;
         }
-        legal_moves++;
+        move_sp = base + count;
+        score_moves(b, moves, count, ply, tt_move);
 
-        /* Record position for repetition detection */
-        search_history_push(b->hash);
+        for (i = 0; i < count; i++) {
+            move_t m;
 
-        /* Late move reductions */
-        new_depth = depth - 1;
-        if (!in_check && legal_moves > 4 && depth >= 3 &&
-            !(m.flags & FLAG_CAPTURE) && !(m.flags & FLAG_PROMOTION)) {
-            new_depth--;
-            /* Re-search at full depth if reduced search improves alpha */
-            score = -negamax(b, new_depth, -beta, -alpha, ply + 1, 1);
-            if (score > alpha && !search_stopped) {
-                new_depth = depth - 1;
+            pick_move(moves, count, i);
+            m = moves[i].move;
+
+            board_make(b, m, &undo);
+            if (!board_is_legal(b)) {
+                board_unmake(b, m, &undo);
+                continue;
+            }
+            legal_moves++;
+
+            /* Record position for repetition detection */
+            search_history_push(b->hash);
+
+            /* Late move reductions */
+            new_depth = depth - 1;
+            if (!in_check && legal_moves > 4 && depth >= 3 &&
+                !(m.flags & FLAG_CAPTURE) && !(m.flags & FLAG_PROMOTION)) {
+                new_depth--;
+                /* Re-search at full depth if reduced search improves alpha */
+                score = -negamax(b, new_depth, -beta, -alpha, ply + 1, 1);
+                if (score > alpha && !search_stopped) {
+                    new_depth = depth - 1;
+                    score = -negamax(b, new_depth, -beta, -alpha, ply + 1, 1);
+                }
+            } else {
                 score = -negamax(b, new_depth, -beta, -alpha, ply + 1, 1);
             }
-        } else {
-            score = -negamax(b, new_depth, -beta, -alpha, ply + 1, 1);
-        }
 
-        search_history_pop();
-        board_unmake(b, m, &undo);
+            search_history_pop();
+            board_unmake(b, m, &undo);
 
-        if (search_stopped) { move_sp = base; return 0; }
+            if (search_stopped) { move_sp = base; return 0; }
 
-        if (score > best_score) {
-            best_score = score;
-            best_move = m;
+            if (score > best_score) {
+                best_score = score;
+                best_move = m;
 
-            if (ply == 0)
-                search_best_root_move = m;
+                if (ply == 0)
+                    search_best_root_move = m;
 
-            if (score > alpha) {
-                alpha = score;
-                best_flag = TT_EXACT;
+                if (score > alpha) {
+                    alpha = score;
+                    best_flag = TT_EXACT;
 
-                if (alpha >= beta) {
-                    best_flag = TT_BETA;
+                    if (alpha >= beta) {
+                        best_flag = TT_BETA;
 
-                    /* Update killers and history for quiet moves */
-                    if (!(m.flags & FLAG_CAPTURE)) {
-                        update_killers(ply, m);
-                        update_history(b->side, m, depth);
+                        /* Update killers and history for quiet moves */
+                        if (!(m.flags & FLAG_CAPTURE)) {
+                            update_killers(ply, m);
+                            update_history(b->side, m, depth);
+                        }
+                        cutoff = 1;
+                        break;
                     }
-                    break;
                 }
             }
         }
-    }
 
-    move_sp = base;
+        move_sp = base;
+    }
 
     /* Checkmate or stalemate */
     if (legal_moves == 0) {

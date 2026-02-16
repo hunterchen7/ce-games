@@ -44,11 +44,13 @@ static void board_set_fen(board_t *b, const char *fen)
             if (piece != PIECE_NONE) {
                 uint8_t sq = RC_TO_SQ(r, c);
                 uint8_t s = IS_BLACK(piece) ? BLACK : WHITE;
+                uint8_t idx = b->piece_count[s];
                 b->squares[sq] = piece;
                 if (PIECE_TYPE(piece) == PIECE_KING)
                     b->king_sq[s] = sq;
-                b->piece_list[s][b->piece_count[s]] = sq;
-                b->piece_count[s]++;
+                b->piece_list[s][idx] = sq;
+                b->piece_index[sq] = idx;
+                b->piece_count[s] = idx + 1;
             }
             c++;
         }
