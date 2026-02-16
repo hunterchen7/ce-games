@@ -6,7 +6,8 @@ This folder contains an end-to-end pipeline to tune `chess/engine/src/eval.c` us
 
 The tuner now learns a larger mg/eg parameter set:
 
-- piece-table row scales per piece type (pawn/knight/bishop/rook/queen/king) for mg and eg
+- material scales per piece type (pawn/knight/bishop/rook/queen/king) for mg and eg
+- PST scales per piece type (pawn/knight/bishop/rook/queen/king) for mg and eg
 - bishop pair, tempo, doubled/isolated pawns, rook file bonuses, pawn shield (all mg/eg where applicable)
 - connected pawn bonuses split by rank and phase
 - passed pawn bonuses split by rank and phase
@@ -65,6 +66,12 @@ Output columns:
 
 ## 3) Run Texel tuning
 
+Build the exact C-side feature extractor first:
+
+```bash
+make -C chess/engine eval-terms
+```
+
 The tuner follows classic Texel flow:
 
 1. Find best sigmoid slope `K` for current static eval.
@@ -77,6 +84,8 @@ python3 chess/engine/tuning/texel_tune.py \
   --dataset chess/engine/tuning/data/texel_positions.csv \
   --feature-cache chess/engine/tuning/results/features.npz \
   --out chess/engine/tuning/results/texel_pilot.json \
+  --feature-backend engine \
+  --terms-bin chess/engine/build/eval_terms \
   --max-positions 60000 \
   --iters 60
 ```
@@ -88,6 +97,8 @@ python3 chess/engine/tuning/texel_tune.py \
   --dataset chess/engine/tuning/data/texel_positions_1m.csv \
   --feature-cache chess/engine/tuning/results/features_1m_r4_expanded.npz \
   --out chess/engine/tuning/results/texel_1m_round4_expanded.json \
+  --feature-backend engine \
+  --terms-bin chess/engine/build/eval_terms \
   --max-positions 1000000 \
   --iters 400
 ```
@@ -99,6 +110,8 @@ python3 chess/engine/tuning/texel_tune.py \
   --dataset chess/engine/tuning/data/texel_positions_1m.csv \
   --feature-cache chess/engine/tuning/results/features_1m_r4_expanded.npz \
   --out chess/engine/tuning/results/texel_1m_round4b_constrained.json \
+  --feature-backend engine \
+  --terms-bin chess/engine/build/eval_terms \
   --max-positions 1000000 \
   --iters 150 \
   --l2 0.003 \
@@ -114,8 +127,9 @@ python3 chess/engine/tuning/apply_texel_params.py \
   --eval-c chess/engine/src/eval.c
 ```
 
-`texel_tune.py` writes `base_values` and `base_tables` to the JSON so apply is
-absolute against the training baseline and does not stack if re-run.
+`texel_tune.py` writes `base_values`, `base_tables`, and `table_decomp` to the
+JSON so apply is absolute against the training baseline and does not stack if
+re-run.
 
 ## 5) Verify build/tests
 
@@ -129,4 +143,10 @@ make -C chess/engine uci test-search test-integration eval-fen
 
 ```bash
 echo "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" | ./chess/engine/build/eval_fen
+```
+
+`eval-terms` utility:
+
+```bash
+echo "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" | ./chess/engine/build/eval_terms
 ```

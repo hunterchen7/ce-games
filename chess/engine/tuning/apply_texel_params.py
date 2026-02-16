@@ -121,6 +121,12 @@ def validate_table(table: list[list[int]], name: str) -> None:
             raise ValueError(f"{name}[{i}]: expected 64 cols, got {len(row)}")
 
 
+def replace_material_comment_values(text: str, key: str, values: list[int]) -> tuple[str, int]:
+    pattern = rf"({re.escape(key)}\s*=\s*)\{{[^\}}]*\}}"
+    repl = rf"\g<1>{format_array_1d(values)}"
+    return re.subn(pattern, repl, text, count=1)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Apply trained Texel params to eval.c")
     parser.add_argument("--params", required=True, help="JSON output from texel_tune.py")
@@ -135,6 +141,7 @@ def main() -> None:
     scales: dict[str, float] = data["scales"]
     base_values: dict[str, object] | None = data.get("base_values")
     base_tables: dict[str, object] | None = data.get("base_tables")
+    table_decomp: dict[str, object] | None = data.get("table_decomp")
 
     constants = parse_eval_constants(eval_c_path)
     text = eval_c_path.read_text(encoding="utf-8")
@@ -256,31 +263,111 @@ def main() -> None:
         if values_new != values_old:
             changes.append(f"{array_name}: updated")
 
-    if base_tables and "mg_table" in base_tables:
-        mg_base = [[int(v) for v in row] for row in base_tables["mg_table"]]  # type: ignore[index]
+    has_split_scales = any(k.startswith("material_") or k.startswith("pst_") for k in scales)
+
+    if has_split_scales:
+        if (
+            table_decomp
+            and "mg_material" in table_decomp
+            and "eg_material" in table_decomp
+            and "mg_pst" in table_decomp
+            and "eg_pst" in table_decomp
+        ):
+            mg_material_base = [int(v) for v in table_decomp["mg_material"]]  # type: ignore[index]
+            eg_material_base = [int(v) for v in table_decomp["eg_material"]]  # type: ignore[index]
+            mg_pst_base = [[int(v) for v in row] for row in table_decomp["mg_pst"]]  # type: ignore[index]
+            eg_pst_base = [[int(v) for v in row] for row in table_decomp["eg_pst"]]  # type: ignore[index]
+        else:
+            if base_tables and "mg_table" in base_tables:
+                mg_table_base = [[int(v) for v in row] for row in base_tables["mg_table"]]  # type: ignore[index]
+            else:
+                mg_table_base = [[int(v) for v in row] for row in constants.mg_table.tolist()]
+            if base_tables and "eg_table" in base_tables:
+                eg_table_base = [[int(v) for v in row] for row in base_tables["eg_table"]]  # type: ignore[index]
+            else:
+                eg_table_base = [[int(v) for v in row] for row in constants.eg_table.tolist()]
+
+            validate_table(mg_table_base, "mg_table")
+            validate_table(eg_table_base, "eg_table")
+
+            mg_material_base = [int(v) for v in constants.mg_value.tolist()]
+            eg_material_base = [int(v) for v in constants.eg_value.tolist()]
+            mg_pst_base = [
+                [int(mg_table_base[p][sq] - mg_material_base[p]) for sq in range(64)]
+                for p in range(6)
+            ]
+            eg_pst_base = [
+                [int(eg_table_base[p][sq] - eg_material_base[p]) for sq in range(64)]
+                for p in range(6)
+            ]
+
+        validate_table(mg_pst_base, "mg_pst")
+        validate_table(eg_pst_base, "eg_pst")
+        if len(mg_material_base) != 6 or len(eg_material_base) != 6:
+            raise ValueError("material bases must have 6 entries")
+
+        mg_new = [[0 for _ in range(64)] for _ in range(6)]
+        eg_new = [[0 for _ in range(64)] for _ in range(6)]
+
+        mg_material_new: list[int] = []
+        eg_material_new: list[int] = []
+
+        for piece_idx, piece_name in enumerate(PIECE_NAMES):
+            m_mg_scale = param_scale(scales, f"material_{piece_name}_mg")
+            m_eg_scale = param_scale(scales, f"material_{piece_name}_eg")
+            pst_mg_scale = param_scale(scales, f"pst_{piece_name}_mg")
+            pst_eg_scale = param_scale(scales, f"pst_{piece_name}_eg")
+
+            mat_mg = int(round(mg_material_base[piece_idx] * m_mg_scale))
+            mat_eg = int(round(eg_material_base[piece_idx] * m_eg_scale))
+            mg_material_new.append(mat_mg)
+            eg_material_new.append(mat_eg)
+
+            for sq in range(64):
+                mg_term = int(round(mg_pst_base[piece_idx][sq] * pst_mg_scale))
+                eg_term = int(round(eg_pst_base[piece_idx][sq] * pst_eg_scale))
+                mg_new[piece_idx][sq] = mat_mg + mg_term
+                eg_new[piece_idx][sq] = mat_eg + eg_term
+
+            if (
+                abs(m_mg_scale - 1.0) > 1e-12
+                or abs(m_eg_scale - 1.0) > 1e-12
+                or abs(pst_mg_scale - 1.0) > 1e-12
+                or abs(pst_eg_scale - 1.0) > 1e-12
+            ):
+                changes.append(
+                    f"{piece_name}: material_mg={m_mg_scale:.6f} material_eg={m_eg_scale:.6f} "
+                    f"pst_mg={pst_mg_scale:.6f} pst_eg={pst_eg_scale:.6f}"
+                )
+
+        text, _ = replace_material_comment_values(text, "mg_value", mg_material_new)
+        text, _ = replace_material_comment_values(text, "eg_value", eg_material_new)
     else:
-        mg_base = [[int(v) for v in row] for row in constants.mg_table.tolist()]
-    if base_tables and "eg_table" in base_tables:
-        eg_base = [[int(v) for v in row] for row in base_tables["eg_table"]]  # type: ignore[index]
-    else:
-        eg_base = [[int(v) for v in row] for row in constants.eg_table.tolist()]
+        if base_tables and "mg_table" in base_tables:
+            mg_base = [[int(v) for v in row] for row in base_tables["mg_table"]]  # type: ignore[index]
+        else:
+            mg_base = [[int(v) for v in row] for row in constants.mg_table.tolist()]
+        if base_tables and "eg_table" in base_tables:
+            eg_base = [[int(v) for v in row] for row in base_tables["eg_table"]]  # type: ignore[index]
+        else:
+            eg_base = [[int(v) for v in row] for row in constants.eg_table.tolist()]
 
-    validate_table(mg_base, "mg_table")
-    validate_table(eg_base, "eg_table")
+        validate_table(mg_base, "mg_table")
+        validate_table(eg_base, "eg_table")
 
-    mg_new = [row[:] for row in mg_base]
-    eg_new = [row[:] for row in eg_base]
+        mg_new = [row[:] for row in mg_base]
+        eg_new = [row[:] for row in eg_base]
 
-    for piece_idx, piece_name in enumerate(PIECE_NAMES):
-        mg_scale = param_scale(scales, f"table_{piece_name}_mg")
-        eg_scale = param_scale(scales, f"table_{piece_name}_eg")
-        for sq in range(64):
-            mg_new[piece_idx][sq] = int(round(mg_base[piece_idx][sq] * mg_scale))
-            eg_new[piece_idx][sq] = int(round(eg_base[piece_idx][sq] * eg_scale))
-        if abs(mg_scale - 1.0) > 1e-12 or abs(eg_scale - 1.0) > 1e-12:
-            changes.append(
-                f"table_{piece_name}: mg_scale={mg_scale:.6f} eg_scale={eg_scale:.6f}"
-            )
+        for piece_idx, piece_name in enumerate(PIECE_NAMES):
+            mg_scale = param_scale(scales, f"table_{piece_name}_mg")
+            eg_scale = param_scale(scales, f"table_{piece_name}_eg")
+            for sq in range(64):
+                mg_new[piece_idx][sq] = int(round(mg_base[piece_idx][sq] * mg_scale))
+                eg_new[piece_idx][sq] = int(round(eg_base[piece_idx][sq] * eg_scale))
+            if abs(mg_scale - 1.0) > 1e-12 or abs(eg_scale - 1.0) > 1e-12:
+                changes.append(
+                    f"table_{piece_name}: mg_scale={mg_scale:.6f} eg_scale={eg_scale:.6f}"
+                )
 
     text, n = replace_table(text, "mg_table", mg_new)
     if n != 1:

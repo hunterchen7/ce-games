@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Texel tuning for chess/engine/src/eval.c feature groups.
 
-This tuner keeps the search code fixed and tunes evaluation-term scales.
+This tuner supports two feature backends:
+- engine: exact C-side term extraction via chess/engine/build/eval_terms
+- python: fallback Python reconstruction of eval terms
 """
 
 from __future__ import annotations
@@ -11,6 +13,8 @@ import csv
 import json
 import math
 import re
+import subprocess
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -20,6 +24,11 @@ import numpy as np
 
 
 PIECE_NAMES = ["pawn", "knight", "bishop", "rook", "queen", "king"]
+PIECE_INDEX = {name: i for i, name in enumerate(PIECE_NAMES)}
+
+# PeSTO material anchors (also present in eval.c comments).
+DEFAULT_MG_VALUE = np.array([82, 337, 365, 477, 1025, 0], dtype=np.int32)
+DEFAULT_EG_VALUE = np.array([94, 281, 297, 512, 936, 0], dtype=np.int32)
 
 SCALAR_PARAMS = [
     "bishop_pair_mg",
@@ -51,6 +60,8 @@ class EvalConstants:
     mg_table: np.ndarray
     eg_table: np.ndarray
     phase_weight: np.ndarray
+    mg_value: np.ndarray
+    eg_value: np.ndarray
     bishop_pair_mg: int
     bishop_pair_eg: int
     tempo_mg: int
@@ -106,6 +117,14 @@ def parse_named_array_1d(text: str, name: str, expected_count: int | None = None
     return parse_array_block(m.group(1), expected_count)
 
 
+def parse_material_from_comment(raw_text: str, key: str) -> np.ndarray | None:
+    m = re.search(rf"{re.escape(key)}\s*=\s*\{{(.*?)\}}", raw_text, flags=re.S)
+    if not m:
+        return None
+    vals = parse_array_block(m.group(1), expected_count=6)
+    return vals
+
+
 def parse_eval_constants(eval_c_path: Path) -> EvalConstants:
     raw = eval_c_path.read_text(encoding="utf-8")
     text = strip_c_comments(raw)
@@ -120,26 +139,37 @@ def parse_eval_constants(eval_c_path: Path) -> EvalConstants:
     mg_vals = parse_array_block(mg_block[mg_block.index("{") : mg_block.rindex("}") + 1], 6 * 64)
     eg_vals = parse_array_block(eg_block[eg_block.index("{") : eg_block.rindex("}") + 1], 6 * 64)
 
+    mg_table = mg_vals.reshape(6, 64)
+    eg_table = eg_vals.reshape(6, 64)
+
+    mg_value = parse_material_from_comment(raw, "mg_value")
+    eg_value = parse_material_from_comment(raw, "eg_value")
+
+    if mg_value is None:
+        mg_value = np.rint(np.mean(mg_table, axis=1)).astype(np.int32)
+    if eg_value is None:
+        eg_value = np.rint(np.mean(eg_table, axis=1)).astype(np.int32)
+
     phase_weight = parse_named_array_1d(text, "phase_weight", expected_count=6)
 
     try:
         connected_bonus_mg = parse_named_array_1d(text, "connected_bonus_mg")
         connected_bonus_eg = parse_named_array_1d(text, "connected_bonus_eg")
     except ValueError:
-        # Backward compatibility with older eval.c that used one connected array.
         connected_bonus = parse_named_array_1d(text, "connected_bonus")
         connected_bonus_mg = connected_bonus.copy()
         connected_bonus_eg = connected_bonus.copy()
 
-    if len(connected_bonus_mg) > 6:
-        connected_bonus_mg = connected_bonus_mg[:6]
-    if len(connected_bonus_eg) > 6:
-        connected_bonus_eg = connected_bonus_eg[:6]
+    # Eval uses ranks 2..7 => 6 buckets.
+    connected_bonus_mg = connected_bonus_mg[:6]
+    connected_bonus_eg = connected_bonus_eg[:6]
 
     return EvalConstants(
-        mg_table=mg_vals.reshape(6, 64),
-        eg_table=eg_vals.reshape(6, 64),
+        mg_table=mg_table,
+        eg_table=eg_table,
         phase_weight=phase_weight,
+        mg_value=mg_value,
+        eg_value=eg_value,
         bishop_pair_mg=parse_define(text, "BISHOP_PAIR_MG"),
         bishop_pair_eg=parse_define(text, "BISHOP_PAIR_EG"),
         tempo_mg=parse_define(text, "TEMPO_MG"),
@@ -150,8 +180,8 @@ def parse_eval_constants(eval_c_path: Path) -> EvalConstants:
         isolated_eg=parse_define(text, "ISOLATED_EG"),
         connected_bonus_mg=connected_bonus_mg,
         connected_bonus_eg=connected_bonus_eg,
-        passed_mg=parse_named_array_1d(text, "passed_mg"),
-        passed_eg=parse_named_array_1d(text, "passed_eg"),
+        passed_mg=parse_named_array_1d(text, "passed_mg")[:6],
+        passed_eg=parse_named_array_1d(text, "passed_eg")[:6],
         rook_open_mg=parse_define(text, "ROOK_OPEN_MG"),
         rook_open_eg=parse_define(text, "ROOK_OPEN_EG"),
         rook_semiopen_mg=parse_define(text, "ROOK_SEMIOPEN_MG"),
@@ -168,18 +198,17 @@ def parse_eval_constants(eval_c_path: Path) -> EvalConstants:
 def build_param_specs(c: EvalConstants) -> list[ParamSpec]:
     specs: list[ParamSpec] = []
 
-    # Piece-table row scales (mg+eg) per piece type.
     for piece in PIECE_NAMES:
-        specs.append(ParamSpec(name=f"table_{piece}_mg", mg_key=f"table_{piece}_mg", eg_key=None))
-        specs.append(ParamSpec(name=f"table_{piece}_eg", mg_key=None, eg_key=f"table_{piece}_eg"))
+        specs.append(ParamSpec(name=f"material_{piece}_mg", mg_key=f"material_{piece}_mg", eg_key=None))
+        specs.append(ParamSpec(name=f"material_{piece}_eg", mg_key=None, eg_key=f"material_{piece}_eg"))
+        specs.append(ParamSpec(name=f"pst_{piece}_mg", mg_key=f"pst_{piece}_mg", eg_key=None))
+        specs.append(ParamSpec(name=f"pst_{piece}_eg", mg_key=None, eg_key=f"pst_{piece}_eg"))
 
     for name in SCALAR_PARAMS:
         if name.endswith("_mg"):
             specs.append(ParamSpec(name=name, mg_key=name, eg_key=None))
-        elif name.endswith("_eg"):
-            specs.append(ParamSpec(name=name, mg_key=None, eg_key=name))
         else:
-            raise ValueError(f"unexpected scalar param name: {name}")
+            specs.append(ParamSpec(name=name, mg_key=None, eg_key=name))
 
     for i in range(len(c.connected_bonus_mg)):
         rank = i + 2
@@ -209,7 +238,7 @@ def build_base_values(c: EvalConstants, param_specs: list[ParamSpec]) -> dict[st
     for spec in param_specs:
         name = spec.name
 
-        if name.startswith("table_"):
+        if name.startswith("material_") or name.startswith("pst_"):
             out[name] = 1
             continue
 
@@ -252,6 +281,21 @@ def build_base_values(c: EvalConstants, param_specs: list[ParamSpec]) -> dict[st
         raise ValueError(f"unknown param for base value: {name}")
 
     return out
+
+
+def build_table_decomp(c: EvalConstants) -> dict[str, Any]:
+    mg_material = c.mg_value.astype(np.int32)
+    eg_material = c.eg_value.astype(np.int32)
+
+    mg_pst = c.mg_table.astype(np.int32) - mg_material[:, None]
+    eg_pst = c.eg_table.astype(np.int32) - eg_material[:, None]
+
+    return {
+        "mg_material": [int(x) for x in mg_material.tolist()],
+        "eg_material": [int(x) for x in eg_material.tolist()],
+        "mg_pst": [[int(v) for v in row] for row in mg_pst.tolist()],
+        "eg_pst": [[int(v) for v in row] for row in eg_pst.tolist()],
+    }
 
 
 def raw_keys_from_specs(param_specs: list[ParamSpec]) -> set[str]:
@@ -309,14 +353,10 @@ def pawn_attacks_square(board: chess.Board, square: chess.Square, by_color: ches
     return False
 
 
-def extract_position_terms(board: chess.Board, c: EvalConstants, raw_keys: set[str]) -> dict[str, Any]:
-    mg_base = 0.0
-    eg_base = 0.0
+def extract_position_terms_python(board: chess.Board, c: EvalConstants, raw_keys: set[str]) -> dict[str, Any]:
     phase = 0
-
     raw = {k: 0 for k in raw_keys}
 
-    # Piece-table contributions are fully tunable; keep them out of mg_base/eg_base.
     for square, piece in board.piece_map().items():
         idx = piece.piece_type - 1
         sq64 = square_to_sq64(square)
@@ -324,14 +364,19 @@ def extract_position_terms(board: chess.Board, c: EvalConstants, raw_keys: set[s
         sgn = piece_sign(piece.color)
 
         piece_name = PIECE_NAMES[idx]
-        raw[f"table_{piece_name}_mg"] += sgn * int(c.mg_table[idx, pst_sq])
-        raw[f"table_{piece_name}_eg"] += sgn * int(c.eg_table[idx, pst_sq])
+        mg_v = int(c.mg_value[idx])
+        eg_v = int(c.eg_value[idx])
+        mg_t = int(c.mg_table[idx, pst_sq])
+        eg_t = int(c.eg_table[idx, pst_sq])
+
+        raw[f"material_{piece_name}_mg"] += sgn * mg_v
+        raw[f"material_{piece_name}_eg"] += sgn * eg_v
+        raw[f"pst_{piece_name}_mg"] += sgn * (mg_t - mg_v)
+        raw[f"pst_{piece_name}_eg"] += sgn * (eg_t - eg_v)
+
         phase += int(c.phase_weight[idx])
 
-    if phase < 0:
-        phase = 0
-    elif phase > 24:
-        phase = 24
+    phase = max(0, min(24, phase))
 
     w_bishops = len(board.pieces(chess.BISHOP, chess.WHITE))
     b_bishops = len(board.pieces(chess.BISHOP, chess.BLACK))
@@ -342,6 +387,10 @@ def extract_position_terms(board: chess.Board, c: EvalConstants, raw_keys: set[s
         raw["bishop_pair_mg"] -= c.bishop_pair_mg
         raw["bishop_pair_eg"] -= c.bishop_pair_eg
 
+    # Preserve current eval.c behavior (including duplicated white tempo add).
+    if board.turn == chess.WHITE:
+        raw["tempo_mg"] += c.tempo_mg
+        raw["tempo_eg"] += c.tempo_eg
     if board.turn == chess.WHITE:
         raw["tempo_mg"] += c.tempo_mg
         raw["tempo_eg"] += c.tempo_eg
@@ -484,11 +533,11 @@ def extract_position_terms(board: chess.Board, c: EvalConstants, raw_keys: set[s
         (2, -1),
         (2, 1),
     ]
-
     bishop_dirs = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
 
     for color, enemy in ((chess.WHITE, chess.BLACK), (chess.BLACK, chess.WHITE)):
         sgn = 1 if color == chess.WHITE else -1
+
         for sq in board.pieces(chess.KNIGHT, color):
             mob = 0
             r0 = chess.square_rank(sq)
@@ -560,8 +609,8 @@ def extract_position_terms(board: chess.Board, c: EvalConstants, raw_keys: set[s
         raw["shield_eg"] -= shield * c.shield_eg
 
     return {
-        "mg_base": float(mg_base),
-        "eg_base": float(eg_base),
+        "mg_base": 0.0,
+        "eg_base": 0.0,
         "phase": float(phase),
         "side_sign": 1.0 if board.turn == chess.WHITE else -1.0,
         "raw": raw,
@@ -583,7 +632,7 @@ def load_dataset_rows(path: Path, max_positions: int | None) -> tuple[list[str],
     return fens, np.array(labels, dtype=np.float64)
 
 
-def build_features(
+def build_features_from_python(
     fens: list[str],
     labels: np.ndarray,
     constants: EvalConstants,
@@ -608,7 +657,7 @@ def build_features(
         except ValueError:
             continue
 
-        terms = extract_position_terms(board, constants, raw_keys)
+        terms = extract_position_terms_python(board, constants, raw_keys)
         mg_base[kept] = terms["mg_base"]
         eg_base[kept] = terms["eg_base"]
         phase[kept] = terms["phase"]
@@ -623,10 +672,202 @@ def build_features(
 
         kept += 1
         if (i + 1) % 5000 == 0:
-            print(f"feature_extract processed={i+1} kept={kept}", flush=True)
+            print(f"feature_extract(py) processed={i+1} kept={kept}", flush=True)
 
     if kept == 0:
         raise RuntimeError("no valid positions extracted")
+
+    return {
+        "mg_base": mg_base[:kept],
+        "eg_base": eg_base[:kept],
+        "phase": phase[:kept],
+        "side_sign": side_sign[:kept],
+        "mg_terms": mg_terms[:kept],
+        "eg_terms": eg_terms[:kept],
+        "labels": labels[:kept],
+    }
+
+
+def build_features_from_engine(
+    fens: list[str],
+    labels: np.ndarray,
+    constants: EvalConstants,
+    param_specs: list[ParamSpec],
+    terms_bin: Path,
+) -> dict[str, np.ndarray]:
+    if not terms_bin.exists():
+        raise FileNotFoundError(f"terms binary not found: {terms_bin}")
+
+    n = len(fens)
+    p = len(param_specs)
+
+    mg_base = np.zeros(n, dtype=np.float64)
+    eg_base = np.zeros(n, dtype=np.float64)
+    phase = np.zeros(n, dtype=np.float64)
+    side_sign = np.zeros(n, dtype=np.float64)
+    mg_terms = np.zeros((n, p), dtype=np.float64)
+    eg_terms = np.zeros((n, p), dtype=np.float64)
+
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as tf:
+        for fen in fens:
+            tf.write(fen)
+            tf.write("\n")
+        temp_fens_path = Path(tf.name)
+
+    try:
+        with temp_fens_path.open("r", encoding="utf-8") as f_in:
+            proc = subprocess.Popen(
+                [str(terms_bin)],
+                stdin=f_in,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+
+            assert proc.stdout is not None
+            header_line = proc.stdout.readline().strip()
+            if not header_line:
+                stderr = proc.stderr.read() if proc.stderr else ""
+                proc.wait()
+                raise RuntimeError(f"eval_terms produced no header. stderr={stderr}")
+
+            header = [x.strip() for x in header_line.split(",")]
+            name_to_col = {name: i for i, name in enumerate(header)}
+
+            for required in ("mg_base", "eg_base", "phase", "side_sign"):
+                if required not in name_to_col:
+                    stderr = proc.stderr.read() if proc.stderr else ""
+                    proc.wait()
+                    raise RuntimeError(f"eval_terms missing column '{required}'. stderr={stderr}")
+
+            # Required for material/pst decomposition when the engine emits
+            # table+count terms instead of direct material/pst columns.
+            piece_count_col: dict[str, int] = {}
+            table_mg_col: dict[str, int] = {}
+            table_eg_col: dict[str, int] = {}
+            for piece in PIECE_NAMES:
+                count_name = f"count_{piece}"
+                mg_name = f"table_{piece}_mg"
+                eg_name = f"table_{piece}_eg"
+                if count_name not in name_to_col or mg_name not in name_to_col or eg_name not in name_to_col:
+                    raise RuntimeError(
+                        f"eval_terms missing decomposition columns for '{piece}' "
+                        f"(need {count_name}, {mg_name}, {eg_name})"
+                    )
+                piece_count_col[piece] = name_to_col[count_name]
+                table_mg_col[piece] = name_to_col[mg_name]
+                table_eg_col[piece] = name_to_col[eg_name]
+
+            mg_col_idx: list[int] = []
+            mg_param_idx: list[int] = []
+            eg_col_idx: list[int] = []
+            eg_param_idx: list[int] = []
+
+            # (param_index, is_pst, count_col, table_col, material_value)
+            derived_mg: list[tuple[int, bool, int, int, float]] = []
+            derived_eg: list[tuple[int, bool, int, int, float]] = []
+
+            mat_pst_mg_re = re.compile(r"(material|pst)_([a-z]+)_mg$")
+            mat_pst_eg_re = re.compile(r"(material|pst)_([a-z]+)_eg$")
+
+            for j, spec in enumerate(param_specs):
+                if spec.mg_key is not None:
+                    col = name_to_col.get(spec.mg_key)
+                    if col is not None:
+                        mg_col_idx.append(col)
+                        mg_param_idx.append(j)
+                    else:
+                        m = mat_pst_mg_re.fullmatch(spec.name)
+                        if not m:
+                            raise RuntimeError(f"eval_terms missing feature column '{spec.mg_key}'")
+                        kind, piece = m.groups()
+                        piece_idx = PIECE_INDEX.get(piece)
+                        if piece_idx is None:
+                            raise RuntimeError(f"unknown piece in param: {spec.name}")
+                        derived_mg.append(
+                            (
+                                j,
+                                kind == "pst",
+                                piece_count_col[piece],
+                                table_mg_col[piece],
+                                float(constants.mg_value[piece_idx]),
+                            )
+                        )
+                if spec.eg_key is not None:
+                    col = name_to_col.get(spec.eg_key)
+                    if col is not None:
+                        eg_col_idx.append(col)
+                        eg_param_idx.append(j)
+                    else:
+                        m = mat_pst_eg_re.fullmatch(spec.name)
+                        if not m:
+                            raise RuntimeError(f"eval_terms missing feature column '{spec.eg_key}'")
+                        kind, piece = m.groups()
+                        piece_idx = PIECE_INDEX.get(piece)
+                        if piece_idx is None:
+                            raise RuntimeError(f"unknown piece in param: {spec.name}")
+                        derived_eg.append(
+                            (
+                                j,
+                                kind == "pst",
+                                piece_count_col[piece],
+                                table_eg_col[piece],
+                                float(constants.eg_value[piece_idx]),
+                            )
+                        )
+
+            mg_col_idx_arr = np.array(mg_col_idx, dtype=np.int32)
+            mg_param_idx_arr = np.array(mg_param_idx, dtype=np.int32)
+            eg_col_idx_arr = np.array(eg_col_idx, dtype=np.int32)
+            eg_param_idx_arr = np.array(eg_param_idx, dtype=np.int32)
+
+            kept = 0
+            for i, line in enumerate(proc.stdout):
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith("ERR"):
+                    continue
+
+                vals = np.fromstring(line, sep=",", dtype=np.float64)
+                if vals.size != len(header):
+                    continue
+
+                mg_base[kept] = vals[name_to_col["mg_base"]]
+                eg_base[kept] = vals[name_to_col["eg_base"]]
+                phase[kept] = vals[name_to_col["phase"]]
+                side_sign[kept] = vals[name_to_col["side_sign"]]
+
+                if mg_col_idx_arr.size:
+                    mg_terms[kept, mg_param_idx_arr] = vals[mg_col_idx_arr]
+                if eg_col_idx_arr.size:
+                    eg_terms[kept, eg_param_idx_arr] = vals[eg_col_idx_arr]
+
+                for param_idx, is_pst, count_col, table_col, mat_val in derived_mg:
+                    material_term = vals[count_col] * mat_val
+                    mg_terms[kept, param_idx] = vals[table_col] - material_term if is_pst else material_term
+
+                for param_idx, is_pst, count_col, table_col, mat_val in derived_eg:
+                    material_term = vals[count_col] * mat_val
+                    eg_terms[kept, param_idx] = vals[table_col] - material_term if is_pst else material_term
+
+                kept += 1
+                if (i + 1) % 5000 == 0:
+                    print(f"feature_extract(engine) processed={i+1} kept={kept}", flush=True)
+
+            stderr = proc.stderr.read() if proc.stderr is not None else ""
+            rc = proc.wait()
+            if rc != 0:
+                raise RuntimeError(f"eval_terms exited with {rc}. stderr={stderr}")
+
+            if kept == 0:
+                raise RuntimeError("eval_terms produced zero usable rows")
+
+            if kept < n:
+                print(f"feature_extract(engine) warning: kept={kept} expected={n}")
+
+    finally:
+        temp_fens_path.unlink(missing_ok=True)
 
     return {
         "mg_base": mg_base[:kept],
@@ -644,12 +885,16 @@ def save_feature_cache(
     arrays: dict[str, np.ndarray],
     dataset_csv: Path,
     param_specs: list[ParamSpec],
+    feature_backend: str,
+    terms_bin: str,
 ) -> None:
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(
         cache_path,
         dataset_csv=str(dataset_csv),
         param_names=np.array([spec.name for spec in param_specs], dtype="U64"),
+        feature_backend=feature_backend,
+        terms_bin=terms_bin,
         **arrays,
     )
 
@@ -658,6 +903,8 @@ def load_feature_cache(
     cache_path: Path,
     dataset_csv: Path,
     param_specs: list[ParamSpec],
+    feature_backend: str,
+    terms_bin: str,
 ) -> dict[str, np.ndarray] | None:
     if not cache_path.exists():
         return None
@@ -670,6 +917,13 @@ def load_feature_cache(
     expected_names = [spec.name for spec in param_specs]
     if cached_names != expected_names:
         return None
+
+    if "feature_backend" in data and str(data["feature_backend"]) != feature_backend:
+        return None
+
+    if feature_backend == "engine" and "terms_bin" in data:
+        if str(data["terms_bin"]) != terms_bin:
+            return None
 
     return {
         "mg_base": data["mg_base"],
@@ -877,7 +1131,7 @@ def train_texel(
     final_train_mse = mse_from_scores(final_train_scores, tr[6], best_k)
     final_val_mse = mse_from_scores(final_val_scores, va[6], best_k)
 
-    result = {
+    return {
         "num_positions": int(n),
         "num_train": int(len(train_idx)),
         "num_val": int(len(val_idx)),
@@ -896,7 +1150,6 @@ def train_texel(
         "k": best_k,
         "scales": {spec.name: float(best_scales[i]) for i, spec in enumerate(param_specs)},
     }
-    return result
 
 
 def main() -> None:
@@ -905,6 +1158,8 @@ def main() -> None:
     parser.add_argument("--eval-c", default="chess/engine/src/eval.c")
     parser.add_argument("--out", required=True, help="Output JSON path")
     parser.add_argument("--feature-cache", default=None, help="Optional .npz cache path")
+    parser.add_argument("--feature-backend", choices=["engine", "python"], default="engine")
+    parser.add_argument("--terms-bin", default="chess/engine/build/eval_terms")
     parser.add_argument("--max-positions", type=int, default=None)
     parser.add_argument("--iters", type=int, default=400)
     parser.add_argument("--lr", type=float, default=0.02)
@@ -930,16 +1185,45 @@ def main() -> None:
     cache_path = Path(args.feature_cache) if args.feature_cache else None
     arrays = None
     if cache_path is not None:
-        arrays = load_feature_cache(cache_path, dataset, param_specs)
+        arrays = load_feature_cache(
+            cache_path,
+            dataset,
+            param_specs,
+            args.feature_backend,
+            str(Path(args.terms_bin)),
+        )
         if arrays is not None:
             print(f"Loaded feature cache: {cache_path}")
 
     if arrays is None:
         fens, labels = load_dataset_rows(dataset, args.max_positions)
         print(f"Loaded dataset rows: {len(fens)}")
-        arrays = build_features(fens, labels, constants, param_specs)
+
+        if args.feature_backend == "engine":
+            arrays = build_features_from_engine(
+                fens,
+                labels,
+                constants,
+                param_specs,
+                Path(args.terms_bin),
+            )
+        else:
+            arrays = build_features_from_python(
+                fens,
+                labels,
+                constants,
+                param_specs,
+            )
+
         if cache_path is not None:
-            save_feature_cache(cache_path, arrays, dataset, param_specs)
+            save_feature_cache(
+                cache_path,
+                arrays,
+                dataset,
+                param_specs,
+                args.feature_backend,
+                str(Path(args.terms_bin)),
+            )
             print(f"Saved feature cache: {cache_path}")
 
     result = train_texel(
@@ -966,6 +1250,7 @@ def main() -> None:
         "mg_table": [[int(v) for v in row] for row in constants.mg_table.tolist()],
         "eg_table": [[int(v) for v in row] for row in constants.eg_table.tolist()],
     }
+    result["table_decomp"] = build_table_decomp(constants)
     result["config"] = {
         "iters": args.iters,
         "lr": args.lr,
@@ -978,6 +1263,8 @@ def main() -> None:
         "max_positions": args.max_positions,
         "scale_min": args.scale_min,
         "scale_max": args.scale_max,
+        "feature_backend": args.feature_backend,
+        "terms_bin": str(Path(args.terms_bin)),
     }
 
     out.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")

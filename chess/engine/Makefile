@@ -11,7 +11,7 @@ OBJS = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SRCS))
 
 ABLATION_FEATURES = TEMPO PAWNS PASSED ROOK_FILES MOBILITY SHIELD
 
-.PHONY: all clean perft uci test-search test-integration bench eval-fen ablation
+.PHONY: all clean perft uci test-search test-integration bench eval-fen eval-terms ablation
 
 all: perft uci test-search test-integration
 
@@ -44,6 +44,10 @@ bench: $(OBJS) $(TESTDIR)/bench.c | $(BUILDDIR)
 # Static eval utility (FEN -> centipawn score)
 eval-fen: $(OBJS) $(TESTDIR)/eval_fen.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) $(OBJS) $(TESTDIR)/eval_fen.c -o $(BUILDDIR)/eval_fen
+
+# Eval feature extraction utility (FEN -> Texel term CSV)
+eval-terms: $(SRCDIR)/board.c $(SRCDIR)/zobrist.c $(TESTDIR)/eval_terms.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) $(SRCDIR)/board.c $(SRCDIR)/zobrist.c $(TESTDIR)/eval_terms.c -o $(BUILDDIR)/eval_terms
 
 # Ablation: build full + all NO_* variants
 ablation: uci
