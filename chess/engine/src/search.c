@@ -685,6 +685,12 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
             }
             legal_moves++;
 
+            /* Save first legal root move as fallback in case the search
+               times out before any move is fully evaluated (can happen
+               on slow hardware when check extensions deepen the tree) */
+            if (ply == 0 && search_best_root_move.from == SQ_NONE)
+                search_best_root_move = m;
+
             /* Record position for repetition detection */
             search_history_push(b->hash);
 
@@ -798,7 +804,20 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
         search_best_root_move = MOVE_NONE;
         score = negamax(b, d, -SCORE_INF, SCORE_INF, 0, 1);
 
-        if (search_stopped) break;
+        if (search_stopped) {
+            /* If we timed out without finding ANY move yet (can happen
+               when check extensions deepen the tree on slow hardware),
+               extend the deadline and continue the current iteration. */
+            if (result.best_move.from == SQ_NONE &&
+                search_best_root_move.from == SQ_NONE &&
+                search_deadline && search_time_fn) {
+                search_deadline = search_time_fn() + 5000;
+                search_stopped = 0;
+                d--;  /* retry same depth */
+                continue;
+            }
+            break;
+        }
 
         /* Completed iteration — save result */
         if (search_best_root_move.from != SQ_NONE) {
