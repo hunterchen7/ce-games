@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "engine.h"
+#include "piece_sprites.h"
 
 /* ========== Screen & Layout ========== */
 
@@ -166,9 +167,9 @@ static void setup_palette(void)
     gfx_palette[PAL_SEL_DARK]  = gfx_RGBTo1555(186, 202, 68);
     gfx_palette[PAL_LAST_LIGHT]= gfx_RGBTo1555(205, 210, 106);
     gfx_palette[PAL_LAST_DARK] = gfx_RGBTo1555(170, 162, 58);
-    gfx_palette[PAL_WHITE_PC]  = gfx_RGBTo1555(255, 255, 255);
-    gfx_palette[PAL_BLACK_PC]  = gfx_RGBTo1555(30, 30, 30);
-    gfx_palette[PAL_PIECE_OL]  = gfx_RGBTo1555(80, 80, 80);
+    gfx_palette[PAL_WHITE_PC]  = gfx_RGBTo1555(242, 239, 232);
+    gfx_palette[PAL_BLACK_PC]  = gfx_RGBTo1555(20, 22, 26);
+    gfx_palette[PAL_PIECE_OL]  = gfx_RGBTo1555(70, 70, 74);
     gfx_palette[PAL_CURSOR]    = gfx_RGBTo1555(50, 120, 255);
     gfx_palette[PAL_TEXT]      = gfx_RGBTo1555(220, 220, 220);
     gfx_palette[PAL_MENU_HL]   = gfx_RGBTo1555(70, 130, 230);
@@ -207,109 +208,64 @@ static void init_board(void)
 
 /* ========== Piece Drawing ========== */
 
-/* All coordinates relative to square top-left (sx, sy).
-   Square center: cx = sx + 13. Pieces drawn in an ~18x20 area. */
-
-static void draw_pawn(int sx, int sy)
+static void draw_piece_sprite(int type, int sx, int sy, uint8_t fill_color)
 {
-    int cx = sx + 13;
-    /* head */
-    gfx_FillCircle_NoClip(cx, sy + 8, 4);
-    /* body */
-    gfx_FillRectangle_NoClip(cx - 3, sy + 12, 6, 4);
-    /* flare */
-    gfx_FillRectangle_NoClip(cx - 5, sy + 16, 10, 3);
-    /* base */
-    gfx_FillRectangle_NoClip(cx - 7, sy + 19, 14, 4);
-}
+    int row, col;
+    int px = sx + PIECE_SPR_XOFF;
+    int py = sy + PIECE_SPR_YOFF;
+    const uint8_t (*sprite)[PIECE_SPR_W];
 
-static void draw_rook(int sx, int sy)
-{
-    int cx = sx + 13;
-    /* merlons */
-    gfx_FillRectangle_NoClip(cx - 7, sy + 3, 3, 4);
-    gfx_FillRectangle_NoClip(cx - 1, sy + 3, 3, 4);
-    gfx_FillRectangle_NoClip(cx + 5, sy + 3, 3, 4);
-    /* top bar */
-    gfx_FillRectangle_NoClip(cx - 7, sy + 7, 15, 2);
-    /* body */
-    gfx_FillRectangle_NoClip(cx - 5, sy + 9, 11, 8);
-    /* bottom bar */
-    gfx_FillRectangle_NoClip(cx - 7, sy + 17, 15, 2);
-    /* base */
-    gfx_FillRectangle_NoClip(cx - 8, sy + 19, 17, 4);
-}
+    if (type < 1 || type > 6) return;
+    sprite = piece_sprites[type - 1];
 
-static void draw_knight(int sx, int sy)
-{
-    int cx = sx + 13;
-    /* ear */
-    gfx_FillRectangle_NoClip(cx - 1, sy + 2, 4, 3);
-    /* head */
-    gfx_FillRectangle_NoClip(cx - 5, sy + 4, 10, 5);
-    /* snout */
-    gfx_FillRectangle_NoClip(cx - 7, sy + 6, 4, 3);
-    /* neck */
-    gfx_FillRectangle_NoClip(cx - 3, sy + 9, 7, 4);
-    /* body */
-    gfx_FillRectangle_NoClip(cx - 5, sy + 13, 11, 4);
-    /* base bar */
-    gfx_FillRectangle_NoClip(cx - 7, sy + 17, 15, 2);
-    /* base */
-    gfx_FillRectangle_NoClip(cx - 8, sy + 19, 17, 4);
-}
+    gfx_SetColor(PAL_PIECE_OL);
+    for (row = 0; row < PIECE_SPR_H; row++)
+    {
+        for (col = 0; col < PIECE_SPR_W; col++)
+        {
+            if (sprite[row][col] == 2)
+                gfx_SetPixel(px + col, py + row);
+        }
+    }
 
-static void draw_bishop(int sx, int sy)
-{
-    int cx = sx + 13;
-    /* top ball */
-    gfx_FillCircle_NoClip(cx, sy + 4, 2);
-    /* hat — triangle approximated with narrowing rects */
-    gfx_FillRectangle_NoClip(cx - 2, sy + 6, 5, 2);
-    gfx_FillRectangle_NoClip(cx - 3, sy + 8, 7, 2);
-    gfx_FillRectangle_NoClip(cx - 4, sy + 10, 9, 2);
-    gfx_FillRectangle_NoClip(cx - 5, sy + 12, 11, 2);
-    /* collar */
-    gfx_FillRectangle_NoClip(cx - 6, sy + 14, 13, 2);
-    /* stem */
-    gfx_FillRectangle_NoClip(cx - 4, sy + 16, 9, 3);
-    /* base */
-    gfx_FillRectangle_NoClip(cx - 7, sy + 19, 15, 4);
-}
+    gfx_SetColor(fill_color);
+    for (row = 0; row < PIECE_SPR_H; row++)
+    {
+        for (col = 0; col < PIECE_SPR_W; col++)
+        {
+            if (sprite[row][col] == 1)
+                gfx_SetPixel(px + col, py + row);
+        }
+    }
 
-static void draw_queen(int sx, int sy)
-{
-    int cx = sx + 13;
-    /* crown points */
-    gfx_FillCircle_NoClip(cx - 5, sy + 4, 2);
-    gfx_FillCircle_NoClip(cx, sy + 3, 2);
-    gfx_FillCircle_NoClip(cx + 5, sy + 4, 2);
-    /* upper body — widening */
-    gfx_FillRectangle_NoClip(cx - 3, sy + 6, 7, 2);
-    gfx_FillRectangle_NoClip(cx - 4, sy + 8, 9, 2);
-    gfx_FillRectangle_NoClip(cx - 5, sy + 10, 11, 2);
-    /* body */
-    gfx_FillRectangle_NoClip(cx - 5, sy + 12, 11, 5);
-    /* collar */
-    gfx_FillRectangle_NoClip(cx - 6, sy + 17, 13, 2);
-    /* base */
-    gfx_FillRectangle_NoClip(cx - 7, sy + 19, 15, 4);
-}
+    /* Reinforce contour after fill so piece edges (especially bases) stay crisp. */
+    gfx_SetColor(PAL_PIECE_OL);
+    for (row = 0; row < PIECE_SPR_H; row++)
+    {
+        for (col = 0; col < PIECE_SPR_W; col++)
+        {
+            int up_open;
+            int down_open;
 
-static void draw_king(int sx, int sy)
-{
-    int cx = sx + 13;
-    /* cross */
-    gfx_FillRectangle_NoClip(cx - 1, sy + 2, 3, 7);
-    gfx_FillRectangle_NoClip(cx - 4, sy + 4, 9, 3);
-    /* head */
-    gfx_FillRectangle_NoClip(cx - 5, sy + 9, 11, 3);
-    /* body */
-    gfx_FillRectangle_NoClip(cx - 4, sy + 12, 9, 5);
-    /* collar */
-    gfx_FillRectangle_NoClip(cx - 6, sy + 17, 13, 2);
-    /* base */
-    gfx_FillRectangle_NoClip(cx - 7, sy + 19, 15, 4);
+            if (sprite[row][col] != 1) continue;
+
+            up_open = (row == 0) || (sprite[row - 1][col] == 0);
+            down_open = (row + 1 >= PIECE_SPR_H) || (sprite[row + 1][col] == 0);
+
+            if (up_open || down_open)
+            {
+                /* Inner contour stroke for strong top/bottom borders. */
+                gfx_SetPixel(px + col, py + row);
+
+                if ((up_open) && (row > 0))
+                    gfx_SetPixel(px + col, py + row - 1);
+
+                /* Extra outer base stroke when there is empty space below. */
+                if ((down_open) && (row + 1 < PIECE_SPR_H))
+                    gfx_SetPixel(px + col, py + row + 1);
+            }
+        }
+    }
 }
 
 static void draw_piece(int8_t piece, int sx, int sy)
@@ -321,36 +277,7 @@ static void draw_piece(int8_t piece, int sx, int sy)
 
     type = PIECE_TYPE(piece);
     fill_color = PIECE_IS_WHITE(piece) ? PAL_WHITE_PC : PAL_BLACK_PC;
-
-    /* draw outline (slightly offset in 4 directions) */
-    gfx_SetColor(PAL_PIECE_OL);
-    switch (type)
-    {
-        case 1: draw_pawn(sx - 1, sy); draw_pawn(sx + 1, sy);
-                draw_pawn(sx, sy - 1); draw_pawn(sx, sy + 1); break;
-        case 2: draw_knight(sx - 1, sy); draw_knight(sx + 1, sy);
-                draw_knight(sx, sy - 1); draw_knight(sx, sy + 1); break;
-        case 3: draw_bishop(sx - 1, sy); draw_bishop(sx + 1, sy);
-                draw_bishop(sx, sy - 1); draw_bishop(sx, sy + 1); break;
-        case 4: draw_rook(sx - 1, sy); draw_rook(sx + 1, sy);
-                draw_rook(sx, sy - 1); draw_rook(sx, sy + 1); break;
-        case 5: draw_queen(sx - 1, sy); draw_queen(sx + 1, sy);
-                draw_queen(sx, sy - 1); draw_queen(sx, sy + 1); break;
-        case 6: draw_king(sx - 1, sy); draw_king(sx + 1, sy);
-                draw_king(sx, sy - 1); draw_king(sx, sy + 1); break;
-    }
-
-    /* draw filled piece */
-    gfx_SetColor(fill_color);
-    switch (type)
-    {
-        case 1: draw_pawn(sx, sy); break;
-        case 2: draw_knight(sx, sy); break;
-        case 3: draw_bishop(sx, sy); break;
-        case 4: draw_rook(sx, sy); break;
-        case 5: draw_queen(sx, sy); break;
-        case 6: draw_king(sx, sy); break;
-    }
+    draw_piece_sprite(type, sx, sy, fill_color);
 }
 
 /* ========== Board Drawing ========== */
