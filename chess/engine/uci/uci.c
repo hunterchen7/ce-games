@@ -250,7 +250,10 @@ int main(void)
     hooks.time_ms = uci_time_ms;
     engine_init(&hooks);
 
-    engine_set_max_nodes(2000);
+#ifndef NODE_LIMIT
+#define NODE_LIMIT 2000
+#endif
+    engine_set_max_nodes(NODE_LIMIT);
 
     while (fgets(line, sizeof(line), stdin)) {
         line[strcspn(line, "\n")] = '\0';

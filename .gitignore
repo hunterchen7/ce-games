@@ -4,3 +4,9 @@
 # IDE
 .vscode/
 *.code-workspace
+
+# Desktop build artifacts (engine UCI/test binaries)
+chess/engine/build/
+
+# Tournament PGN output
+*.pgn
