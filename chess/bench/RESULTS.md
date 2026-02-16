@@ -80,6 +80,63 @@ Benchmarked on eZ80 @ 48 MHz (cycle-accurate emulator).
 | check_pin      | 85,302       | 7,572             | 15,200           | 135,134   |
 | bishop_count   | 85,302       | 7,572             | 15,262           | 125,530   |
 
+## Benchmark Positions (50)
+
+Positions drawn from well-known chess engine test suites.
+
+| #   | Description                        | Source                    |
+| --- | ---------------------------------- | ------------------------- |
+| P0  | Starting position                  | Chessprogramming Wiki     |
+| P1  | Kiwipete (Peter McKenzie)          | Chessprogramming Wiki     |
+| P2  | Sparse endgame                     | Chessprogramming Wiki     |
+| P3  | Promotion-heavy                    | Chessprogramming Wiki     |
+| P4  | Pawn on d7 promotes                | Chessprogramming Wiki     |
+| P5  | Steven Edwards symmetrical         | Chessprogramming Wiki     |
+| P6  | Illegal EP — bishop pins pawn (W)  | TalkChess / Martin Sedlak |
+| P7  | Illegal EP — bishop pins pawn (B)  | TalkChess / Martin Sedlak |
+| P8  | EP gives discovered check          | TalkChess / Martin Sedlak |
+| P9  | Short castling gives check         | TalkChess / Martin Sedlak |
+| P10 | Long castling gives check          | TalkChess / Martin Sedlak |
+| P11 | Castling rights lost by rook cap   | TalkChess / Martin Sedlak |
+| P12 | Castling prevented by attack       | TalkChess / Martin Sedlak |
+| P13 | Promote out of check               | TalkChess / Martin Sedlak |
+| P14 | Discovered check                   | TalkChess / Martin Sedlak |
+| P15 | Promote to give check              | TalkChess / Martin Sedlak |
+| P16 | Under-promote to avoid stalemate   | TalkChess / Martin Sedlak |
+| P17 | Self stalemate                     | TalkChess / Martin Sedlak |
+| P18 | Stalemate vs checkmate             | TalkChess / Martin Sedlak |
+| P19 | Rook vs bishop endgame             | Peterellisjones           |
+| P20 | EP discovered check (bishop a2)    | Peterellisjones           |
+| P21 | Kiwipete variant — Qe6+            | Peterellisjones           |
+| P22 | Simple rook vs pawn                | Peterellisjones           |
+| P23 | Illegal EP — king exposed to rook  | Peterellisjones           |
+| P24 | Bishop pin prevents EP             | Peterellisjones           |
+| P25 | Tactical middlegame                | Stockfish benchmark.cpp   |
+| P26 | Open game                          | Stockfish benchmark.cpp   |
+| P27 | Sicilian-type                      | Stockfish benchmark.cpp   |
+| P28 | Attacking position                 | Stockfish benchmark.cpp   |
+| P29 | Active rook                        | Stockfish benchmark.cpp   |
+| P30 | Closed pawns                       | Stockfish benchmark.cpp   |
+| P31 | Pawn endgame                       | Stockfish benchmark.cpp   |
+| P32 | Rook + pawn endgame                | Stockfish benchmark.cpp   |
+| P33 | Bishop + pawn endgame              | Stockfish benchmark.cpp   |
+| P34 | Rook endgame passed pawn           | Stockfish benchmark.cpp   |
+| P35 | Minor piece endgame                | Stockfish benchmark.cpp   |
+| P36 | Queen middlegame                   | Stockfish benchmark.cpp   |
+| P37 | Opposite colored bishops           | Stockfish benchmark.cpp   |
+| P38 | Promotion bug catcher              | TalkChess movegen tests   |
+| P39 | Mirrored position 4                | TalkChess movegen tests   |
+| P40 | EP after double push (real game)   | TalkChess movegen tests   |
+| P41 | Complex castling + EP + extra rook | TalkChess movegen tests   |
+| P42 | Real game endgame with EP          | TalkChess movegen tests   |
+| P43 | Deep endgame — Q+R+B               | TalkChess movegen tests   |
+| P44 | Castling with rook threat          | TalkChess movegen tests   |
+| P45 | Castling + pawn structure + pins   | TalkChess movegen tests   |
+| P46 | Pure pawn race                     | TalkChess movegen tests   |
+| P47 | K+P endgame — distant pawns        | TalkChess movegen tests   |
+| P48 | Realistic middlegame — both castle | TalkChess movegen tests   |
+| P49 | Double check position              | TalkChess movegen tests   |
+
 ## 5s Search on eZ80 (50 positions)
 
 Searched each of 50 benchmark positions for 5 seconds on the eZ80 (48 MHz, cycle-accurate emulator).
@@ -118,7 +175,81 @@ Post-optimization engine (commit `293b90d`, includes movegen optimizations).
 - Depth range: 0-11 (simple endgames reach d6-11, complex middlegames d1-3)
 - Time overshoot due to time check granularity (every 1024 nodes)
 
+## 10s Search on eZ80 (50 positions)
+
+Searched each of 50 benchmark positions for 10 seconds on the eZ80 (48 MHz, cycle-accurate emulator).
+
+| Pos | Nodes | Depth |    ms | Pos | Nodes | Depth |    ms |
+| --- | ----: | ----: | ----: | --- | ----: | ----: | ----: |
+| P0  |  2379 |     4 | 11441 | P25 |  3128 |     2 | 13227 |
+| P1  |  1522 |     2 | 12096 | P26 |  1987 |     3 | 12952 |
+| P2  |  2733 |     5 | 11393 | P27 |   855 |     1 | 10291 |
+| P3  |   979 |     1 | 11120 | P28 |  2780 |     2 | 10630 |
+| P4  |  2000 |     4 | 10662 | P29 |  3313 |     2 | 12837 |
+| P5  |  2821 |     2 | 12139 | P30 |  4001 |     6 | 10968 |
+| P6  |  3622 |     6 | 10825 | P31 |  4357 |     7 | 10863 |
+| P7  |  3705 |     6 | 11415 | P32 |  4951 |     5 | 10237 |
+| P8  |  1993 |     5 | 10918 | P33 |  3334 |     5 | 10515 |
+| P9  | 10147 |     6 | 10372 | P34 |  3800 |     4 | 10649 |
+| P10 |  7950 |     6 | 10369 | P35 |   565 |     3 | 10163 |
+| P11 |  4796 |     4 | 10192 | P36 |  3420 |     3 | 10216 |
+| P12 |  3419 |     5 | 12037 | P37 |  3876 |     4 | 12224 |
+| P13 |  8135 |     5 | 10345 | P38 |  4110 |     4 | 10046 |
+| P14 |  3714 |     4 | 10113 | P39 |   924 |     1 | 11395 |
+| P15 |  9328 |     6 | 11173 | P40 |  4028 |     4 | 11361 |
+| P16 |  6071 |     6 | 10205 | P41 |  4930 |     6 | 10184 |
+| P17 |  7437 |    16 | 10970 | P42 |   884 |     3 | 11601 |
+| P18 |  6515 |     8 | 10440 | P43 |  3200 |     5 | 13086 |
+| P19 |   997 |     3 | 11036 | P44 |  6051 |     6 | 10177 |
+| P20 |  7232 |     5 | 10916 | P45 |  2558 |     4 | 10468 |
+| P21 |   192 |     1 | 11798 | P46 |  5360 |     8 | 10184 |
+| P22 |  2310 |     5 | 10352 | P47 |  5389 |     7 | 11146 |
+| P23 |  3214 |     5 | 10308 | P48 |  1672 |     3 | 10623 |
+| P24 |  5998 |     6 | 10588 | P49 |  7918 |     5 | 10470 |
+
+- **Total: 196,600 nodes** across 50 positions
+- **Average: 3,932 nodes/position** in 10 seconds (~393 NPS)
+- Depth range: 1-16 (simple endgames reach d7-16, complex middlegames d1-3)
+
+## 15s Search on eZ80 (50 positions)
+
+Searched each of 50 benchmark positions for 15 seconds on the eZ80 (48 MHz, cycle-accurate emulator).
+
+| Pos | Nodes | Depth |    ms | Pos | Nodes | Depth |    ms |
+| --- | ----: | ----: | ----: | --- | ----: | ----: | ----: |
+| P0  |  5344 |     5 | 18297 | P25 |  3706 |     2 | 16558 |
+| P1  |  1492 |     2 | 16452 | P26 |  2109 |     3 | 15593 |
+| P2  |  9549 |     6 | 16124 | P27 |  2699 |     3 | 16102 |
+| P3  |  4339 |     3 | 18145 | P28 |  3612 |     3 | 17609 |
+| P4  |  2114 |     4 | 17293 | P29 |  4099 |     3 | 16229 |
+| P5  |  4059 |     3 | 16149 | P30 |  4613 |     6 | 15206 |
+| P6  |  7630 |     7 | 15098 | P31 |  4304 |     7 | 16141 |
+| P7  |  8430 |     7 | 15852 | P32 |  5729 |     5 | 16677 |
+| P8  |  9014 |     7 | 15625 | P33 |  3397 |     5 | 15754 |
+| P9  |  9736 |     6 | 15395 | P34 |  4252 |     4 | 15498 |
+| P10 |  7489 |     6 | 15367 | P35 |  8150 |     4 | 16313 |
+| P11 |  6684 |     5 | 15654 | P36 |  6597 |     4 | 17183 |
+| P12 |  3268 |     5 | 16759 | P37 |  3791 |     4 | 16743 |
+| P13 |  7821 |     5 | 15237 | P38 |  7131 |     5 | 16175 |
+| P14 |  7835 |     5 | 15407 | P39 |  4313 |     3 | 18334 |
+| P15 | 12388 |     7 | 15581 | P40 |   914 |     3 | 15831 |
+| P16 |  9016 |     6 | 15086 | P41 |  6043 |     7 | 15242 |
+| P17 | 11653 |    17 | 15209 | P42 |  5720 |     5 | 15878 |
+| P18 |  9750 |     9 | 15321 | P43 |  3208 |     5 | 16275 |
+| P19 |   988 |     3 | 16061 | P44 | 11703 |     7 | 15159 |
+| P20 |  7338 |     5 | 15977 | P45 |  5376 |     5 | 15659 |
+| P21 |   192 |     1 | 16086 | P46 |  5311 |     8 | 15733 |
+| P22 |  2285 |     5 | 15390 | P47 | 10753 |     8 | 15356 |
+| P23 | 10085 |     6 | 15220 | P48 |  5360 |     4 | 15917 |
+| P24 |  7655 |     7 | 15268 | P49 | 10541 |     6 | 16236 |
+
+- **Total: 299,585 nodes** across 50 positions
+- **Average: 5,992 nodes/position** in 15 seconds (~399 NPS)
+- Depth range: 1-17 (simple endgames reach d7-17, complex middlegames d1-3)
+
 ## Tournament vs Stockfish
+
+the methodology here is to limit nodes to avg. nodes it got in the 50 benchmark positions and then have the node-limited engine play against stockfish at diff. ratings. obv. this is flawed since nodes/pos differs by a good margin, but this should still paint a decent picture.
 
 ### Node-limited (1800 nodes, 0.1s/move, XXL book)
 
@@ -134,7 +265,42 @@ Simulates eZ80 playing strength (~1800 nodes per move based on 5s search bench).
 
 **Estimated eZ80 Elo: ~1700** (50% mark vs SF-1700)
 
-### Unleashed (0.1s/move, no node limit, XXL book)
+### Node-limited (4000 nodes, 0.1s/move, no book)
+
+PGN: [`chess/engine/tournament_4000_nobook.pgn`](../../chess/engine/tournament_4000_nobook.pgn)
+
+Simulates ~10s search on eZ80 (~3,932 nodes per move based on 10s search bench).
+
+| SF Elo | W   | D   | L   | Score   | Pct | Elo diff |
+| ------ | --- | --- | --- | ------- | --- | -------- |
+| 1700   | 19  | 4   | 7   | 21.0/30 | 70% | +147     |
+| 1800   | 14  | 2   | 14  | 15.0/30 | 50% | +0       |
+| 1900   | 12  | 3   | 15  | 13.5/30 | 45% | -35      |
+| 2000   | 9   | 6   | 15  | 12.0/30 | 40% | -70      |
+| 2100   | 8   | 9   | 13  | 12.5/30 | 42% | -58      |
+
+**Estimated eZ80 Elo: ~1800** (50% mark vs SF-1800)
+
+### Node-limited (6000 nodes, 0.1s/move, no book)
+
+PGN: [`chess/engine/tournament_6000_nobook.pgn`](../../chess/engine/tournament_6000_nobook.pgn), [`chess/engine/tournament_6000_1950.pgn`](../../chess/engine/tournament_6000_1950.pgn)
+
+Simulates ~15s search on eZ80 (~5,992 nodes per move based on 15s search bench).
+
+| SF Elo | W   | D   | L   | Score   | Pct | Elo diff |
+| ------ | --- | --- | --- | ------- | --- | -------- |
+| 1700   | 22  | 1   | 7   | 22.5/30 | 75% | +191     |
+| 1800   | 15  | 7   | 8   | 18.5/30 | 62% | +83      |
+| 1900   | 13  | 6   | 11  | 16.0/30 | 53% | +23      |
+| 1950   | 12  | 6   | 12  | 15.0/30 | 50% | +0       |
+| 2000   | 9   | 7   | 14  | 12.5/30 | 42% | -58      |
+| 2100   | 12  | 8   | 10  | 16.0/30 | 53% | +23      |
+
+**Estimated eZ80 Elo: ~1950** (50% mark vs SF-1950)
+
+### "Unleashed" (0.1s/move, no node limit, XXL book)
+
+PGN: [`chess/engine/tournament.pgn`](../../chess/engine/tournament.pgn)
 
 Desktop Arm64 search strength — shows the engine's algorithmic ceiling. (m5 macbook pro)
 
