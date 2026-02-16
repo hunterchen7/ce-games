@@ -26,7 +26,7 @@ extern const int16_t phase_weight[6];
 
 /* Evaluate the position from the side-to-move perspective.
    Returns score in centipawns. Positive = good for side to move. */
-int16_t evaluate(const board_t *b);
+int evaluate(const board_t *b);
 
 /* ========== Eval Sub-Profiling ========== */
 

@@ -342,8 +342,8 @@ static void test_draws(void)
 /* ========== Test: Eval Sanity ========== */
 
 /* Recompute eval from scratch for comparison */
-static void recompute_eval(const board_t *b, int16_t *mg_w, int16_t *mg_b,
-                           int16_t *eg_w, int16_t *eg_b, int16_t *ph)
+static void recompute_eval(const board_t *b, int *mg_w, int *mg_b,
+                           int *eg_w, int *eg_b, int *ph)
 {
     int sq;
     *mg_w = 0; *mg_b = 0; *eg_w = 0; *eg_b = 0; *ph = 0;
@@ -375,14 +375,14 @@ extern board_t engine_board;
 
 static void test_eval_sanity(void)
 {
-    int16_t mg_w, mg_b, eg_w, eg_b, ph;
+    int mg_w, mg_b, eg_w, eg_b, ph;
 
     printf("\n=== Eval Sanity ===\n");
 
     /* Starting position: should be roughly equal */
     engine_new_game();
     {
-        int16_t score = evaluate(&engine_board);
+        int score = evaluate(&engine_board);
         if (score >= -30 && score <= 30)
             PASS("Startpos eval near 0");
         else
@@ -405,7 +405,7 @@ static void test_eval_sanity(void)
     /* White up a queen: eval should be strongly positive for white */
     set_fen("rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     {
-        int16_t score = evaluate(&engine_board);
+        int score = evaluate(&engine_board);
         if (score > 800)
             PASS("Queen advantage eval > 800cp");
         else
@@ -440,7 +440,7 @@ static void test_eval_sanity(void)
 
 static void test_eval_incremental(void)
 {
-    int16_t mg_w, mg_b, eg_w, eg_b, ph;
+    int mg_w, mg_b, eg_w, eg_b, ph;
 
     printf("\n=== Incremental Eval Deep Tests ===\n");
 

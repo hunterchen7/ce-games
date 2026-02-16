@@ -11,7 +11,7 @@ void tt_clear(void)
 }
 
 uint8_t tt_probe(uint32_t hash, uint16_t lock,
-                 int16_t *score, tt_move16_t *best_move,
+                 int *score, tt_move16_t *best_move,
                  int8_t *depth, uint8_t *flag)
 {
     tt_entry_t *e = &tt[hash & TT_MASK];
@@ -27,7 +27,7 @@ uint8_t tt_probe(uint32_t hash, uint16_t lock,
 }
 
 void tt_store(uint32_t hash, uint16_t lock,
-              int16_t score, tt_move16_t best_move,
+              int score, tt_move16_t best_move,
               int8_t depth, uint8_t flag)
 {
     tt_entry_t *e = &tt[hash & TT_MASK];

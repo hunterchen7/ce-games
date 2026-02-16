@@ -256,8 +256,8 @@ static void update_killers(uint8_t ply, move_t m)
 
 static void update_history(uint8_t side, move_t m, int8_t depth)
 {
-    int16_t bonus = (int16_t)depth * depth;
-    int16_t val = history[side][m.to];
+    int bonus = (int)depth * depth;
+    int val = history[side][m.to];
     /* Gravity: prevent overflow, trend toward 0 */
     val += bonus - val * bonus / 16384;
     if (val > 4000) val = 4000;
@@ -471,11 +471,11 @@ static uint8_t is_evasion_candidate(const board_t *b,
 
 /* ========== Quiescence Search ========== */
 
-static int16_t quiescence(board_t *b, int16_t alpha, int16_t beta,
-                          uint8_t ply, uint8_t qs_depth)
+static int quiescence(board_t *b, int alpha, int beta,
+                      uint8_t ply, uint8_t qs_depth)
 {
-    int16_t stand_pat;
-    int16_t score;
+    int stand_pat;
+    int score;
     uint8_t in_check;
     uint8_t count, i;
     uint16_t base;
@@ -627,15 +627,15 @@ static int16_t quiescence(board_t *b, int16_t alpha, int16_t beta,
 
 /* ========== Negamax with Alpha-Beta ========== */
 
-static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
-                       uint8_t ply, uint8_t do_null, uint8_t ext)
+static int negamax(board_t *b, int8_t depth, int alpha, int beta,
+                   uint8_t ply, uint8_t do_null, uint8_t ext)
 {
-    int16_t score, best_score;
+    int score, best_score;
     uint8_t in_check;
     uint8_t legal_moves;
     tt_move16_t tt_best_packed;
     move_t tt_move;
-    int16_t tt_score;
+    int tt_score;
     int8_t tt_depth;
     uint8_t tt_flag;
     uint16_t base;
@@ -697,8 +697,8 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
        that have no chance of raising alpha */
     can_futility = 0;
     if (!in_check && depth <= 2 && ply > 0) {
-        int16_t static_eval;
-        int16_t futility_margin = (depth == 1) ? 200 : 500;
+        int static_eval;
+        int futility_margin = (depth == 1) ? 200 : 500;
         PROF_B();
         static_eval = evaluate(b);
         PROF_E(eval_cy); PROF_C(eval_cnt);
@@ -882,7 +882,7 @@ static int16_t negamax(board_t *b, int8_t depth, int16_t alpha, int16_t beta,
 
     /* TT store */
     {
-        int16_t store_score = best_score;
+        int store_score = best_score;
         /* Adjust mate scores for TT storage */
         if (store_score > SCORE_MATE - MAX_PLY)
             store_score += ply;
@@ -905,7 +905,7 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
     search_result_t result;
     uint8_t max_depth;
     int8_t d;
-    int16_t score;
+    int score;
 
     /* Reset search state */
     search_nodes = 0;
@@ -932,7 +932,7 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
     result.nodes = 0;
 
     for (d = 1; d <= (int8_t)max_depth; d++) {
-        int16_t asp_alpha, asp_beta;
+        int asp_alpha, asp_beta;
         search_best_root_move = MOVE_NONE;
 
         /* Aspiration windows: narrow search around previous score */

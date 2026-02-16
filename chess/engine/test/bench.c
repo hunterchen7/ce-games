@@ -323,7 +323,7 @@ int main(void)
     uint64_t t0, t1, total_ns, nodes;
     uint8_t nmoves;
     int i, j, d;
-    int16_t eval_result;
+    int eval_result;
     search_limits_t limits;
     search_result_t sr;
     engine_hooks_t hooks;

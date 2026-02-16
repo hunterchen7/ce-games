@@ -9,7 +9,7 @@ typedef uint32_t (*time_ms_fn)(void);
 /* Search result */
 typedef struct {
     move_t best_move;
-    int16_t score;
+    int score;
     uint8_t depth;       /* depth of last completed iteration */
     uint32_t nodes;      /* total nodes searched */
 } search_result_t;

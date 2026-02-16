@@ -41,12 +41,12 @@ void tt_clear(void);
    On hit, *score, *best_move, *depth, *flag are filled in.
    The caller must adjust mate scores by ply. */
 uint8_t tt_probe(uint32_t hash, uint16_t lock,
-                 int16_t *score, tt_move16_t *best_move,
+                 int *score, tt_move16_t *best_move,
                  int8_t *depth, uint8_t *flag);
 
 /* Store an entry in the TT (always-replace). */
 void tt_store(uint32_t hash, uint16_t lock,
-              int16_t score, tt_move16_t best_move,
+              int score, tt_move16_t best_move,
               int8_t depth, uint8_t flag);
 
 /* Pack a move_t into tt_move16_t */
