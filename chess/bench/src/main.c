@@ -153,15 +153,118 @@ static uint32_t perft(board_t *b, uint8_t depth)
 
 /* ========== Benchmark Positions ========== */
 
+/*
+ * 50 benchmark positions from well-known chess engine test suites:
+ *   - Chessprogramming Wiki Perft Results (positions 0-5)
+ *   - TalkChess / Martin Sedlak edge cases (positions 6-18)
+ *   - Peterellisjones perft collection (positions 19-24)
+ *   - Stockfish benchmark.cpp (positions 25-37)
+ *   - Additional TalkChess movegen test positions (positions 38-49)
+ */
 static const char *fens[] = {
+    /* 0: Starting position */
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    "r1bqkbnr/1ppp1ppp/p1n5/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 1 4",
-    "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 1 5",
-    "r1bqkb1r/pppp1ppp/2n2n2/4p3/3PP3/2N2N2/PPP2PPP/R1BQKB1R b KQkq - 0 4",
-    "r1bq1rk1/1p4pp/p1n1p3/3n1p2/1b1NQ1P1/2N4P/PPPB1P2/3RKB1R w K - 0 13",
+    /* 1: Kiwipete (Peter McKenzie) */
+    "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+    /* 2: Sparse endgame */
+    "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+    /* 3: Promotion-heavy */
+    "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+    /* 4: Pawn on d7 promotes */
+    "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+    /* 5: Steven Edwards symmetrical */
+    "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+    /* 6: Illegal EP — bishop pins pawn (W) */
+    "8/5bk1/8/2Pp4/8/1K6/8/8 w - d6 0 1",
+    /* 7: Illegal EP — bishop pins pawn (B) */
+    "8/8/1k6/8/2pP4/8/5BK1/8 b - d3 0 1",
+    /* 8: EP gives discovered check */
+    "8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1",
+    /* 9: Short castling gives check */
+    "5k2/8/8/8/8/8/8/4K2R w K - 0 1",
+    /* 10: Long castling gives check */
+    "3k4/8/8/8/8/8/8/R3K3 w Q - 0 1",
+    /* 11: Castling rights lost by rook capture */
+    "r3k2r/1b4bq/8/8/8/8/7B/R3K2R w KQkq - 0 1",
+    /* 12: Castling prevented by attack */
+    "r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq - 0 1",
+    /* 13: Promote out of check */
+    "2K2r2/4P3/8/8/8/8/8/3k4 w - - 0 1",
+    /* 14: Discovered check */
+    "8/8/1P2K3/8/2n5/1q6/8/5k2 b - - 0 1",
+    /* 15: Promote to give check */
+    "4k3/1P6/8/8/8/8/K7/8 w - - 0 1",
+    /* 16: Under-promote to avoid stalemate */
+    "8/P1k5/K7/8/8/8/8/8 w - - 0 1",
+    /* 17: Self stalemate */
+    "K1k5/8/P7/8/8/8/8/8 w - - 0 1",
+    /* 18: Stalemate vs checkmate */
+    "8/k1P5/8/1K6/8/8/8/8 w - - 0 1",
+    /* 19: Rook vs bishop endgame */
+    "r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2",
+    /* 20: EP discovered check (bishop a2) */
+    "8/8/8/2k5/2pP4/8/B7/4K3 b - d3 0 3",
+    /* 21: Kiwipete variant — Qe6+ */
+    "r3k2r/p1pp1pb1/bn2Qnp1/2qPN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQkq - 3 2",
+    /* 22: Simple rook vs pawn */
+    "2r5/3pk3/8/2P5/8/2K5/8/8 w - - 5 4",
+    /* 23: Illegal EP — king exposed to rook */
+    "3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1",
+    /* 24: Bishop pin prevents EP */
+    "8/8/4k3/8/2p5/8/B2P2K1/8 w - - 0 1",
+    /* 25: Stockfish — tactical middlegame */
+    "4rrk1/pp1n3p/3q2pQ/2p1pb2/2PP4/2P3N1/P2B2PP/4RRK1 b - - 7 19",
+    /* 26: Stockfish — open game */
+    "r3r1k1/2p2ppp/p1p1bn2/8/1q2P3/2NPQN2/PPP3PP/R4RK1 b - - 2 15",
+    /* 27: Stockfish — Sicilian-type */
+    "r1bbk1nr/pp3p1p/2n5/1N4p1/2Np1B2/8/PPP2PPP/2KR1B1R w kq - 0 13",
+    /* 28: Stockfish — attacking position */
+    "r1bq1rk1/ppp1nppp/4n3/3p3Q/3P4/1BP1B3/PP1N2PP/R4RK1 w - - 1 16",
+    /* 29: Stockfish — active rook */
+    "4r1k1/r1q2ppp/ppp2n2/4P3/5Rb1/1N1BQ3/PPP3PP/R5K1 w - - 1 17",
+    /* 30: Stockfish — closed pawns */
+    "3b4/5kp1/1p1p1p1p/pP1PpP1P/P1P1P3/3KN3/8/8 w - - 0 1",
+    /* 31: Stockfish — pawn endgame */
+    "8/1p3pp1/7p/5P1P/2k3P1/8/2K2P2/8 w - - 0 1",
+    /* 32: Stockfish — rook + pawn endgame */
+    "8/pp2r1k1/2p1p3/3pP2p/1P1P1P1P/P5KR/8/8 w - - 0 1",
+    /* 33: Stockfish — bishop + pawn endgame */
+    "8/3p4/p1bk3p/Pp6/1Kp1PpPp/2P2P1P/2P5/5B2 b - - 0 1",
+    /* 34: Stockfish — rook endgame passed pawn */
+    "5k2/7R/4P2p/5K2/p1r2P1p/8/8/8 b - - 0 1",
+    /* 35: Stockfish — minor piece endgame */
+    "6k1/6p1/P6p/r1N5/5p2/7P/1b3PP1/4R1K1 w - - 0 1",
+    /* 36: Stockfish — queen middlegame */
+    "1r3k2/4q3/2Pp3b/3Bp3/2Q2p2/1p1P2P1/1P2KP2/3N4 w - - 0 1",
+    /* 37: Stockfish — opposite colored bishops */
+    "6k1/4pp1p/3p2p1/P1pPb3/R7/1r2P1PP/3B1P2/6K1 w - - 0 1",
+    /* 38: Promotion bug catcher */
+    "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1",
+    /* 39: Mirrored position 4 */
+    "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1",
+    /* 40: EP after double push (real game) */
+    "rnbqkb1r/ppppp1pp/7n/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3",
+    /* 41: Complex castling + EP + extra rook */
+    "r3k2r/8/8/8/3pPp2/8/8/R3K1RR b KQkq e3 0 1",
+    /* 42: Real game endgame with EP */
+    "8/7p/p5pb/4k3/P1pPn3/8/P5PP/1rB2RK1 b - d3 0 28",
+    /* 43: Deep endgame — Q+R+B */
+    "8/3K4/2p5/p2b2r1/5k2/8/8/1q6 b - - 1 67",
+    /* 44: Castling with rook threat */
+    "1k6/1b6/8/8/7R/8/8/4K2R b K - 0 1",
+    /* 45: Castling + pawn structure + pins */
+    "r3k2r/p6p/8/B7/1pp1p3/3b4/P6P/R3K2R w KQkq - 0 1",
+    /* 46: Pure pawn race */
+    "8/p7/8/1P6/K1k3p1/6P1/7P/8 w - - 0 1",
+    /* 47: K+P endgame — distant pawns */
+    "8/5p2/8/2k3P1/p3K3/8/1P6/8 b - - 0 1",
+    /* 48: Realistic middlegame — both castle */
+    "r3k2r/pb3p2/5npp/n2p4/1p1PPB2/6P1/P2N1PBP/R3K2R w KQkq - 0 1",
+    /* 49: Double check position */
+    "8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1",
 };
-#define NUM_POS   5
-#define ITERS     1000
+#define NUM_POS   50
+#define ITERS     100
 
 /* ========== Main ========== */
 
@@ -253,7 +356,7 @@ int main(void)
     out(buf);
 
     /* ======== 3. Iterated Component Benchmarks ======== */
-    out("-- Movegen x1000 --");
+    out("-- Movegen x100 --");
     total_cycles = 0;
     for (i = 0; i < NUM_POS; i++) {
         parse_fen_board(fens[i], &b);
@@ -269,7 +372,7 @@ int main(void)
             (unsigned long)(total_cycles / (NUM_POS * ITERS)));
     out(buf);
 
-    out("-- Eval x1000 --");
+    out("-- Eval x100 --");
     total_cycles = 0;
     for (i = 0; i < NUM_POS; i++) {
         parse_fen_board(fens[i], &b);
@@ -286,7 +389,7 @@ int main(void)
     out(buf);
     (void)eval_result;
 
-    out("-- Make/Unmake x1000 --");
+    out("-- Make/Unmake x100 --");
     total_cycles = 0;
     for (i = 0; i < NUM_POS; i++) {
         parse_fen_board(fens[i], &b);
@@ -324,30 +427,30 @@ int main(void)
         dbg_printf("\n");
     }
 
-    /* ======== 5. Search Benchmarks ======== */
-    out("-- Search d3 --");
-    total_cycles = 0;
-    for (i = 0; i < NUM_POS; i++) {
-        parse_fen_board(fens[i], &b);
+    /* ======== 5. Search Benchmarks (startpos, d1-d5) ======== */
+    out("-- Search (startpos) --");
+    for (j = 1; j <= 5; j++) {
+        parse_fen_board(fens[0], &b);
         search_history_clear();
         tt_clear();
-        limits.max_depth = 3;
+        limits.max_depth = (uint8_t)j;
         limits.max_time_ms = 0;
         limits.max_nodes = 0;
         limits.time_fn = NULL;
         timer_Set(1, 0);
         sr = search_go(&b, &limits);
         cycles = timer_GetSafe(1, TIMER_UP);
-        total_cycles += cycles;
-        sprintf(buf, "P%d: %lu cy n=%lu",
-                i, (unsigned long)cycles, (unsigned long)sr.nodes);
+        ms = cycles / 48000UL;
+        sprintf(buf, "d%d: n=%lu %lu ms",
+                j, (unsigned long)sr.nodes, (unsigned long)ms);
         out(buf);
+        dbg_printf("  search(%d) = %lu nodes  %lu cycles  %lu ms\n",
+                   j, (unsigned long)sr.nodes,
+                   (unsigned long)cycles, (unsigned long)ms);
     }
-    sprintf(buf, "Avg: %lu cy/search",
-            (unsigned long)(total_cycles / NUM_POS));
-    out(buf);
 
-    out("-- Search d4 --");
+    /* Search all 5 positions at d3 and d4 */
+    out("-- Search d4 (50 pos) --");
     total_cycles = 0;
     for (i = 0; i < NUM_POS; i++) {
         parse_fen_board(fens[i], &b);

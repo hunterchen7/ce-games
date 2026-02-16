@@ -11,7 +11,7 @@ OBJS = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SRCS))
 
 ABLATION_FEATURES = TEMPO PAWNS PASSED ROOK_FILES MOBILITY SHIELD
 
-.PHONY: all clean perft uci test-search test-integration ablation
+.PHONY: all clean perft uci test-search test-integration bench ablation
 
 all: perft uci test-search test-integration
 
@@ -36,6 +36,10 @@ test-search: $(OBJS) $(TESTDIR)/test_search.c | $(BUILDDIR)
 # Integration test binary
 test-integration: $(OBJS) $(TESTDIR)/test_integration.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) $(OBJS) $(TESTDIR)/test_integration.c -o $(BUILDDIR)/test_integration
+
+# Desktop benchmark binary
+bench: $(OBJS) $(TESTDIR)/bench.c | $(BUILDDIR)
+	$(CC) $(CFLAGS) $(OBJS) $(TESTDIR)/bench.c -o $(BUILDDIR)/bench
 
 # Ablation: build full + all NO_* variants
 ablation: uci
