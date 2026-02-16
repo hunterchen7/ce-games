@@ -153,44 +153,44 @@ const int16_t eg_table[6][64] = {
 
 /* ========== Feature Constants ========== */
 
-#define BISHOP_PAIR_MG  30
-#define BISHOP_PAIR_EG  50
+#define BISHOP_PAIR_MG  19
+#define BISHOP_PAIR_EG  56
 
 /* Tempo bonus (Stockfish-tuned) */
-#define TEMPO_MG  24
-#define TEMPO_EG  11
+#define TEMPO_MG  10
+#define TEMPO_EG  9
 
 /* Pawn structure penalties/bonuses */
-#define DOUBLED_MG   11
-#define DOUBLED_EG   56
-#define ISOLATED_MG  15
-#define ISOLATED_EG  20
+#define DOUBLED_MG   12
+#define DOUBLED_EG   3
+#define ISOLATED_MG  12
+#define ISOLATED_EG  17
 
 /* Connected pawn bonus by relative rank (2nd..7th) */
-static const int16_t connected_bonus[] = { 0, 7, 8, 12, 29, 48, 86 };
+static const int16_t connected_bonus[] = { 0, 9, 10, 16, 39, 65, 117 };
 
 /* Passed pawn bonus: mg = 20*rr, eg = 10*(rr+r+1) where r=relrank-2, rr=r*(r-1) */
 /* Precomputed for relative ranks 2..7 (index 0..5) */
-static const int16_t passed_mg[] = { 0,  0,  0, 20, 120, 240 };
-static const int16_t passed_eg[] = { 10, 20, 30, 50, 100, 170 };
+static const int16_t passed_mg[] = { 0, 0, 0, 7, 43, 85 };
+static const int16_t passed_eg[] = { 13, 27, 40, 67, 135, 229 };
 
 /* Rook file bonuses */
-#define ROOK_OPEN_MG      43
-#define ROOK_OPEN_EG      21
-#define ROOK_SEMIOPEN_MG  19
-#define ROOK_SEMIOPEN_EG  10
+#define ROOK_OPEN_MG      38
+#define ROOK_OPEN_EG      24
+#define ROOK_SEMIOPEN_MG  23
+#define ROOK_SEMIOPEN_EG  11
 
 /* Pawn shield bonus per pawn in front of king */
-#define SHIELD_MG  15
+#define SHIELD_MG  6
 #define SHIELD_EG   0
 
 /* Knight mobility bonus table (0..8 safe squares) — from Stockfish classical */
-static const int16_t knight_mob_mg[] = { -38, -25, -12, 0, 12, 25, 31, 33, 38 };
-static const int16_t knight_mob_eg[] = { -33, -23, -13, -1, 7, 14, 22, 24, 27 };
+static const int16_t knight_mob_mg[] = { -19, -13, -6, 0, 6, 13, 16, 17, 19 };
+static const int16_t knight_mob_eg[] = { -61, -43, -24, -2, 13, 26, 41, 45, 50 };
 
 /* Bishop mobility bonus table (0..13 safe squares) */
-static const int16_t bishop_mob_mg[] = { -25, -11, 3, 17, 22, 34, 37, 44, 51, 56, 59, 62, 66, 78 };
-static const int16_t bishop_mob_eg[] = { -30, -16, -2, 12, 22, 32, 43, 51, 59, 64, 68, 72, 75, 73 };
+static const int16_t bishop_mob_mg[] = { -12, -6, 2, 9, 11, 16, 18, 21, 25, 27, 29, 30, 32, 37 };
+static const int16_t bishop_mob_eg[] = { -17, -9, -1, 7, 12, 17, 23, 27, 32, 35, 37, 39, 41, 40 };
 
 /* Knight move offsets (0x88) */
 static const int8_t knight_offsets[] = { -33, -31, -18, -14, 14, 18, 31, 33 };

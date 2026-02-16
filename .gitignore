@@ -11,3 +11,5 @@ chess/engine/build/
 
 chess/piece_variants
 chess/references
+chess/engine/tuning/data/
+chess/engine/tuning/results/

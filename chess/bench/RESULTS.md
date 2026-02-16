@@ -14,6 +14,21 @@ Benchmarked on eZ80 @ 48 MHz (cycle-accurate emulator).
 | 4   | `0868f82` | Precompute check/pin info                  |
 | 5   | `b8d7cf9` | Track bishop counts incrementally          |
 
+## Texel Tuning Elo (Desktop Paired H2H)
+
+Paired match setup:
+
+- Start positions sampled from `chess/engine/tuning/data/texel_positions_1m.csv`
+- 2000 FEN pairs (4000 games total), colors swapped per pair
+- `movetime = 0.03s`, `max_fullmoves = 180`
+
+| Comparison                            | Score      | Pct     | Elo Diff | 95% CI (Elo)        | Result JSON |
+| ------------------------------------- | ---------- | ------- | -------- | ------------------- | ----------- |
+| Round1 1M Texel vs Pre-tuning (`HEAD`) | 2296.5/4000 | 57.41%  | +51.89   | [+41.97, +61.89]    | `chess/engine/tuning/results/h2h_round1_vs_pretune_4000g.json` |
+| Round2 1M Texel vs Round1 1M Texel     | 1991.0/4000 | 49.78%  | -1.56    | [-11.29, +8.16]     | `chess/engine/tuning/results/h2h_round2_vs_round1_4000g.json` |
+
+Current kept eval parameters: **Round1 1M Texel**.
+
 ## Memory
 
 | Commit         | `board_t` | `undo_t` | `move_t` |
