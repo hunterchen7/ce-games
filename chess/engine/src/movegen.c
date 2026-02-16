@@ -175,14 +175,17 @@ static uint8_t gen_king_moves(const board_t *b, uint8_t sq, uint8_t side,
     if (mode != GEN_CAPTURES) {
         uint8_t w_rook = MAKE_PIECE(COLOR_WHITE, PIECE_ROOK);
         uint8_t b_rook = MAKE_PIECE(COLOR_BLACK, PIECE_ROOK);
+        uint8_t in_check;
 
-        if (side == WHITE && sq == SQ_E1) {
+        if (side == WHITE && sq == SQ_E1 &&
+            (b->castling & (CASTLE_WK | CASTLE_WQ))) {
+            in_check = is_square_attacked(b, SQ_E1, BLACK);
+            if (in_check) return count;
             /* Kingside: e1-g1, rook on h1 */
             if ((b->castling & CASTLE_WK) &&
                 b->squares[SQ_H1] == w_rook &&
                 b->squares[SQ_E1 + 1] == PIECE_NONE &&
                 b->squares[SQ_E1 + 2] == PIECE_NONE &&
-                !is_square_attacked(b, SQ_E1, BLACK) &&
                 !is_square_attacked(b, SQ_E1 + 1, BLACK) &&
                 !is_square_attacked(b, SQ_E1 + 2, BLACK)) {
                 list[count++] = make_move(SQ_E1, SQ_E1 + 2, FLAG_CASTLE);
@@ -193,18 +196,19 @@ static uint8_t gen_king_moves(const board_t *b, uint8_t sq, uint8_t side,
                 b->squares[SQ_E1 - 1] == PIECE_NONE &&
                 b->squares[SQ_E1 - 2] == PIECE_NONE &&
                 b->squares[SQ_E1 - 3] == PIECE_NONE &&
-                !is_square_attacked(b, SQ_E1, BLACK) &&
                 !is_square_attacked(b, SQ_E1 - 1, BLACK) &&
                 !is_square_attacked(b, SQ_E1 - 2, BLACK)) {
                 list[count++] = make_move(SQ_E1, SQ_E1 - 2, FLAG_CASTLE);
             }
-        } else if (side == BLACK && sq == SQ_E8) {
+        } else if (side == BLACK && sq == SQ_E8 &&
+                   (b->castling & (CASTLE_BK | CASTLE_BQ))) {
+            in_check = is_square_attacked(b, SQ_E8, WHITE);
+            if (in_check) return count;
             /* Kingside: e8-g8, rook on h8 */
             if ((b->castling & CASTLE_BK) &&
                 b->squares[SQ_H8] == b_rook &&
                 b->squares[SQ_E8 + 1] == PIECE_NONE &&
                 b->squares[SQ_E8 + 2] == PIECE_NONE &&
-                !is_square_attacked(b, SQ_E8, WHITE) &&
                 !is_square_attacked(b, SQ_E8 + 1, WHITE) &&
                 !is_square_attacked(b, SQ_E8 + 2, WHITE)) {
                 list[count++] = make_move(SQ_E8, SQ_E8 + 2, FLAG_CASTLE);
@@ -215,7 +219,6 @@ static uint8_t gen_king_moves(const board_t *b, uint8_t sq, uint8_t side,
                 b->squares[SQ_E8 - 1] == PIECE_NONE &&
                 b->squares[SQ_E8 - 2] == PIECE_NONE &&
                 b->squares[SQ_E8 - 3] == PIECE_NONE &&
-                !is_square_attacked(b, SQ_E8, WHITE) &&
                 !is_square_attacked(b, SQ_E8 - 1, WHITE) &&
                 !is_square_attacked(b, SQ_E8 - 2, WHITE)) {
                 list[count++] = make_move(SQ_E8, SQ_E8 - 2, FLAG_CASTLE);
