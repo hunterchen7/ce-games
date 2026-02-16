@@ -72,7 +72,6 @@
 
 typedef enum {
     STATE_MENU,
-    STATE_DIFFICULTY,
     STATE_PLAYING,
     STATE_PROMOTION,
     STATE_GAMEOVER
@@ -96,7 +95,8 @@ static int current_turn;       /* WHITE_TURN or BLACK_TURN */
 
 /* game mode */
 static int game_mode;
-static int ai_difficulty;      /* 1-10 */
+static int player_color;       /* WHITE_TURN or BLACK_TURN */
+static int board_flipped;      /* 1 when playing as black */
 
 /* last move highlight */
 static int last_from_r, last_from_c;
@@ -129,7 +129,6 @@ static uint8_t game_over_reason; /* ENGINE_STATUS_* value */
 
 /* menu state */
 static int menu_cursor;
-static int diff_cursor;
 
 /* keyboard */
 static uint8_t cur_g1, cur_g6, cur_g7;
@@ -321,28 +320,30 @@ static uint8_t square_bg_color(int r, int c)
 
 static void draw_board(void)
 {
-    int r, c, sx, sy;
+    int dr, dc, lr, lc, sx, sy;
 
-    /* draw squares and pieces */
-    for (r = 0; r < 8; r++)
+    /* draw squares and pieces — iterate display positions, map to logical */
+    for (dr = 0; dr < 8; dr++)
     {
-        for (c = 0; c < 8; c++)
+        for (dc = 0; dc < 8; dc++)
         {
-            sx = BOARD_X + c * SQ_SIZE;
-            sy = BOARD_Y + r * SQ_SIZE;
+            lr = board_flipped ? 7 - dr : dr;
+            lc = board_flipped ? 7 - dc : dc;
+            sx = BOARD_X + dc * SQ_SIZE;
+            sy = BOARD_Y + dr * SQ_SIZE;
 
             /* square background */
-            gfx_SetColor(square_bg_color(r, c));
+            gfx_SetColor(square_bg_color(lr, lc));
             gfx_FillRectangle_NoClip(sx, sy, SQ_SIZE, SQ_SIZE);
 
             /* legal move indicators */
             if (sel_r >= 0)
             {
-                uint8_t lt = is_legal_target(r, c);
+                uint8_t lt = is_legal_target(lr, lc);
                 if (lt)
                 {
                     gfx_SetColor(PAL_LEGAL);
-                    if (lt == 1 && board[r][c] == EMPTY)
+                    if (lt == 1 && board[lr][lc] == EMPTY)
                     {
                         /* quiet move: small dot in center */
                         gfx_FillCircle_NoClip(sx + SQ_SIZE / 2, sy + SQ_SIZE / 2, 4);
@@ -359,15 +360,17 @@ static void draw_board(void)
             }
 
             /* piece */
-            if (board[r][c] != EMPTY)
-                draw_piece(board[r][c], sx, sy);
+            if (board[lr][lc] != EMPTY)
+                draw_piece(board[lr][lc], sx, sy);
         }
     }
 
     /* cursor — 2px border, color depends on legality */
     {
-        int cx = BOARD_X + cur_c * SQ_SIZE;
-        int cy = BOARD_Y + cur_r * SQ_SIZE;
+        int dcr = board_flipped ? 7 - cur_r : cur_r;
+        int dcc = board_flipped ? 7 - cur_c : cur_c;
+        int cx = BOARD_X + dcc * SQ_SIZE;
+        int cy = BOARD_Y + dcr * SQ_SIZE;
         uint8_t cur_color = PAL_CURSOR;
         if (sel_r >= 0 && !(cur_r == sel_r && cur_c == sel_c))
             cur_color = is_legal_target(cur_r, cur_c) ? PAL_CUR_LEGAL : PAL_CUR_ILLEGAL;
@@ -382,20 +385,22 @@ static void draw_board(void)
         gfx_FillRectangle_NoClip(cx + SQ_SIZE - 2, cy, 2, SQ_SIZE);
     }
 
-    /* file labels (a-h) */
+    /* file labels */
     gfx_SetTextScale(1, 1);
     gfx_SetTextFGColor(PAL_TEXT);
-    for (c = 0; c < 8; c++)
+    for (dc = 0; dc < 8; dc++)
     {
-        gfx_SetTextXY(BOARD_X + c * SQ_SIZE + 10, BOARD_Y + BOARD_PX + 2);
-        gfx_PrintChar('a' + c);
+        lc = board_flipped ? 7 - dc : dc;
+        gfx_SetTextXY(BOARD_X + dc * SQ_SIZE + 10, BOARD_Y + BOARD_PX + 2);
+        gfx_PrintChar('a' + lc);
     }
 
-    /* rank labels (8-1) */
-    for (r = 0; r < 8; r++)
+    /* rank labels */
+    for (dr = 0; dr < 8; dr++)
     {
-        gfx_SetTextXY(BOARD_X - 10, BOARD_Y + r * SQ_SIZE + 9);
-        gfx_PrintChar('8' - r);
+        lr = board_flipped ? 7 - dr : dr;
+        gfx_SetTextXY(BOARD_X - 10, BOARD_Y + dr * SQ_SIZE + 9);
+        gfx_PrintChar('8' - lr);
     }
 }
 
@@ -410,45 +415,38 @@ static void draw_sidebar(void)
     gfx_SetTextFGColor(PAL_TEXT);
     gfx_PrintStringXY(game_mode == MODE_HUMAN ? "vs Human" : "vs CPU", SIDEBAR_X + 4, 6);
 
-    if (game_mode == MODE_COMPUTER)
-    {
-        gfx_SetTextXY(SIDEBAR_X + 4, 18);
-        gfx_PrintString("Lv ");
-        gfx_PrintInt(ai_difficulty, 1);
-    }
-
     /* separator */
     gfx_SetColor(PAL_PIECE_OL);
-    gfx_HorizLine_NoClip(SIDEBAR_X + 2, 32, SIDEBAR_W - 4);
+    gfx_HorizLine_NoClip(SIDEBAR_X + 2, 20, SIDEBAR_W - 4);
 
     /* turn indicator */
     gfx_SetTextScale(1, 1);
     gfx_SetTextFGColor(current_turn == WHITE_TURN ? PAL_WHITE_PC : PAL_TEXT);
-    gfx_PrintStringXY(current_turn == WHITE_TURN ? "White" : "Black", SIDEBAR_X + 4, 38);
+    gfx_PrintStringXY(current_turn == WHITE_TURN ? "White" : "Black", SIDEBAR_X + 4, 26);
 
     /* show check or thinking status */
     if (ai_thinking)
     {
         gfx_SetTextFGColor(PAL_MENU_HL);
-        gfx_PrintStringXY("Thinking", SIDEBAR_X + 4, 50);
+        gfx_PrintStringXY("Thinking", SIDEBAR_X + 4, 38);
     }
     else if (engine_in_check())
     {
         gfx_SetTextFGColor(PAL_CURSOR);
-        gfx_PrintStringXY("CHECK!", SIDEBAR_X + 4, 50);
+        gfx_PrintStringXY("CHECK!", SIDEBAR_X + 4, 38);
     }
     else
     {
-        gfx_PrintStringXY("to move", SIDEBAR_X + 4, 50);
+        gfx_PrintStringXY("to move", SIDEBAR_X + 4, 38);
     }
 
     /* selection indicator */
     if (sel_r >= 0)
     {
         gfx_SetColor(PAL_PIECE_OL);
-        gfx_HorizLine_NoClip(SIDEBAR_X + 2, 65, SIDEBAR_W - 4);
+        gfx_HorizLine_NoClip(SIDEBAR_X + 2, 53, SIDEBAR_W - 4);
         gfx_SetTextFGColor(PAL_CURSOR);
-        gfx_SetTextXY(SIDEBAR_X + 4, 72);
+        gfx_SetTextXY(SIDEBAR_X + 4, 60);
         gfx_PrintString("Sel: ");
         gfx_PrintChar('a' + sel_c);
         gfx_PrintChar('8' - sel_r);
@@ -456,18 +454,18 @@ static void draw_sidebar(void)
 
     /* separator */
     gfx_SetColor(PAL_PIECE_OL);
-    gfx_HorizLine_NoClip(SIDEBAR_X + 2, 90, SIDEBAR_W - 4);
+    gfx_HorizLine_NoClip(SIDEBAR_X + 2, 78, SIDEBAR_W - 4);
 
     /* controls */
     gfx_SetTextFGColor(PAL_TEXT);
-    gfx_PrintStringXY("D-pad", SIDEBAR_X + 2, 96);
-    gfx_PrintStringXY(" Move", SIDEBAR_X + 2, 108);
-    gfx_PrintStringXY("Enter", SIDEBAR_X + 2, 124);
-    gfx_PrintStringXY(" Select", SIDEBAR_X + 2, 136);
-    gfx_PrintStringXY("Clear", SIDEBAR_X + 2, 152);
-    gfx_PrintStringXY(" Deselect", SIDEBAR_X + 2, 164);
-    gfx_PrintStringXY("Mode", SIDEBAR_X + 2, 180);
-    gfx_PrintStringXY(" Resign", SIDEBAR_X + 2, 192);
+    gfx_PrintStringXY("D-pad", SIDEBAR_X + 2, 84);
+    gfx_PrintStringXY(" Move", SIDEBAR_X + 2, 96);
+    gfx_PrintStringXY("Enter", SIDEBAR_X + 2, 112);
+    gfx_PrintStringXY(" Select", SIDEBAR_X + 2, 124);
+    gfx_PrintStringXY("Clear", SIDEBAR_X + 2, 140);
+    gfx_PrintStringXY(" Deselect", SIDEBAR_X + 2, 152);
+    gfx_PrintStringXY("Mode", SIDEBAR_X + 2, 168);
+    gfx_PrintStringXY(" Resign", SIDEBAR_X + 2, 180);
 }
 
 /* render board + sidebar to back buffer (no swap) */
@@ -686,7 +684,7 @@ static uint8_t apply_engine_move(engine_move_t move)
     legal_target_count = 0;
 
     /* trigger AI if needed */
-    if (game_mode == MODE_COMPUTER && current_turn == BLACK_TURN)
+    if (game_mode == MODE_COMPUTER && current_turn != player_color)
         ai_thinking = 1;
 
     return 0;
@@ -709,6 +707,18 @@ static void start_game(void)
     ai_thinking = 0;
     anim_active = 0;
     game_over_reason = 0;
+
+    /* randomize player color in vs Computer mode */
+    if (game_mode == MODE_COMPUTER)
+        player_color = (rand() & 1) ? WHITE_TURN : BLACK_TURN;
+    else
+        player_color = WHITE_TURN;
+    board_flipped = (player_color == BLACK_TURN);
+
+    /* if player is black, AI moves first */
+    if (game_mode == MODE_COMPUTER && player_color == BLACK_TURN)
+        ai_thinking = 1;
+
     state = STATE_PLAYING;
 }
 
@@ -723,17 +733,8 @@ static void update_menu(void)
 
     if ((new6 & kb_Enter) || (new1 & kb_2nd))
     {
-        if (menu_cursor == 0)
-        {
-            game_mode = MODE_HUMAN;
-            start_game();
-        }
-        else
-        {
-            game_mode = MODE_COMPUTER;
-            diff_cursor = 4; /* default difficulty 5 */
-            state = STATE_DIFFICULTY;
-        }
+        game_mode = (menu_cursor == 0) ? MODE_HUMAN : MODE_COMPUTER;
+        start_game();
         return;
     }
 
@@ -744,78 +745,6 @@ static void update_menu(void)
     }
 
     draw_menu();
-}
-
-/* ========== State: Difficulty Select ========== */
-
-static void draw_difficulty(void)
-{
-    int i, bx, bw;
-
-    gfx_FillScreen(PAL_MENU_BG);
-
-    gfx_SetTextScale(2, 2);
-    gfx_SetTextFGColor(PAL_WHITE_PC);
-    gfx_PrintStringXY("Difficulty", 72, 40);
-
-    /* 10 boxes horizontally */
-    bw = 24;
-    for (i = 0; i < 10; i++)
-    {
-        bx = 8 + i * 28;
-
-        if (i == diff_cursor)
-        {
-            gfx_SetColor(PAL_MENU_HL);
-            gfx_FillRectangle_NoClip(bx, 90, bw, bw);
-            gfx_SetTextFGColor(PAL_MENU_BG);
-        }
-        else
-        {
-            gfx_SetColor(PAL_PIECE_OL);
-            gfx_FillRectangle_NoClip(bx, 90, bw, bw);
-            gfx_SetTextFGColor(PAL_TEXT);
-        }
-
-        gfx_SetTextScale(2, 2);
-        if (i < 9)
-            gfx_SetTextXY(bx + 4, 94);
-        else
-            gfx_SetTextXY(bx + 1, 94);
-
-        gfx_PrintInt(i + 1, i < 9 ? 1 : 2);
-    }
-
-    gfx_SetTextScale(1, 1);
-    gfx_SetTextFGColor(PAL_PIECE_OL);
-    gfx_PrintStringXY("left/right: choose  enter: start  clear: back", 4, 222);
-
-    gfx_SwapDraw();
-}
-
-static void update_difficulty(void)
-{
-    uint8_t new7 = cur_g7 & ~prev_g7;
-    uint8_t new6 = cur_g6 & ~prev_g6;
-    uint8_t new1 = cur_g1 & ~prev_g1;
-
-    if ((new7 & kb_Right) && diff_cursor < 9) diff_cursor++;
-    if ((new7 & kb_Left) && diff_cursor > 0) diff_cursor--;
-
-    if ((new6 & kb_Enter) || (new1 & kb_2nd))
-    {
-        ai_difficulty = diff_cursor + 1;
-        start_game();
-        return;
-    }
-
-    if (new6 & kb_Clear)
-    {
-        state = STATE_MENU;
-        return;
-    }
-
-    draw_difficulty();
 }
 
 /* ========== State: Playing ========== */
@@ -876,7 +805,7 @@ static void finish_move(void)
     has_last_move = 1;
 
     /* check pawn promotion */
-    is_ai_move = (game_mode == MODE_COMPUTER && current_turn == BLACK_TURN);
+    is_ai_move = (game_mode == MODE_COMPUTER && current_turn != player_color);
 
     if (pending_move.flags & ENGINE_FLAG_PROMOTION)
     {
@@ -884,10 +813,11 @@ static void finish_move(void)
         {
             /* AI promotion — apply the piece from engine move flags */
             uint8_t pt = pending_move.flags & ENGINE_FLAG_PROMO_MASK;
-            if (pt == ENGINE_FLAG_PROMO_Q) board[to_r][to_c] = B_QUEEN;
-            else if (pt == ENGINE_FLAG_PROMO_R) board[to_r][to_c] = B_ROOK;
-            else if (pt == ENGINE_FLAG_PROMO_B) board[to_r][to_c] = B_BISHOP;
-            else board[to_r][to_c] = B_KNIGHT;
+            int8_t ai_color = -player_color;
+            if (pt == ENGINE_FLAG_PROMO_Q) board[to_r][to_c] = (ai_color == WHITE_TURN) ? W_QUEEN : B_QUEEN;
+            else if (pt == ENGINE_FLAG_PROMO_R) board[to_r][to_c] = (ai_color == WHITE_TURN) ? W_ROOK : B_ROOK;
+            else if (pt == ENGINE_FLAG_PROMO_B) board[to_r][to_c] = (ai_color == WHITE_TURN) ? W_BISHOP : B_BISHOP;
+            else board[to_r][to_c] = (ai_color == WHITE_TURN) ? W_KNIGHT : B_KNIGHT;
             /* fall through to apply_engine_move */
         }
         else
@@ -925,11 +855,17 @@ static void draw_anim_frame(void)
         return;
     }
 
-    /* compute interpolated pixel position */
-    from_px = BOARD_X + anim_from_c * SQ_SIZE;
-    from_py = BOARD_Y + anim_from_r * SQ_SIZE;
-    to_px = BOARD_X + anim_to_c * SQ_SIZE;
-    to_py = BOARD_Y + anim_to_r * SQ_SIZE;
+    /* compute interpolated pixel position (map logical to display coords) */
+    {
+        int dfc = board_flipped ? 7 - anim_from_c : anim_from_c;
+        int dfr = board_flipped ? 7 - anim_from_r : anim_from_r;
+        int dtc = board_flipped ? 7 - anim_to_c : anim_to_c;
+        int dtr = board_flipped ? 7 - anim_to_r : anim_to_r;
+        from_px = BOARD_X + dfc * SQ_SIZE;
+        from_py = BOARD_Y + dfr * SQ_SIZE;
+        to_px = BOARD_X + dtc * SQ_SIZE;
+        to_py = BOARD_Y + dtr * SQ_SIZE;
+    }
 
     cur_px = from_px + (int)((long)(to_px - from_px) * elapsed / duration);
     cur_py = from_py + (int)((long)(to_py - from_py) * elapsed / duration);
@@ -994,7 +930,7 @@ static void update_playing(void)
                 /* no legal move — game should be over */
                 uint8_t status = engine_get_status();
                 if (status == ENGINE_STATUS_CHECKMATE)
-                    winner = WHITE_TURN;
+                    winner = player_color;
                 else
                     winner = 0;
                 game_over_reason = status ? status : ENGINE_STATUS_STALEMATE;
@@ -1013,11 +949,21 @@ static void update_playing(void)
         return;
     }
 
-    /* cursor movement */
-    if (new7 & kb_Up)    cur_r = (cur_r > 0) ? cur_r - 1 : 0;
-    if (new7 & kb_Down)  cur_r = (cur_r < 7) ? cur_r + 1 : 7;
-    if (new7 & kb_Left)  cur_c = (cur_c > 0) ? cur_c - 1 : 0;
-    if (new7 & kb_Right) cur_c = (cur_c < 7) ? cur_c + 1 : 7;
+    /* cursor movement — flip directions when board is flipped */
+    if (board_flipped)
+    {
+        if (new7 & kb_Up)    cur_r = (cur_r < 7) ? cur_r + 1 : 7;
+        if (new7 & kb_Down)  cur_r = (cur_r > 0) ? cur_r - 1 : 0;
+        if (new7 & kb_Left)  cur_c = (cur_c < 7) ? cur_c + 1 : 7;
+        if (new7 & kb_Right) cur_c = (cur_c > 0) ? cur_c - 1 : 0;
+    }
+    else
+    {
+        if (new7 & kb_Up)    cur_r = (cur_r > 0) ? cur_r - 1 : 0;
+        if (new7 & kb_Down)  cur_r = (cur_r < 7) ? cur_r + 1 : 7;
+        if (new7 & kb_Left)  cur_c = (cur_c > 0) ? cur_c - 1 : 0;
+        if (new7 & kb_Right) cur_c = (cur_c < 7) ? cur_c + 1 : 7;
+    }
 
     /* enter/2nd — select or move */
     if ((new6 & kb_Enter) || (new1 & kb_2nd))
@@ -1211,7 +1157,6 @@ int main(void)
         switch (state)
         {
             case STATE_MENU:       update_menu();       break;
-            case STATE_DIFFICULTY: update_difficulty();  break;
             case STATE_PLAYING:    update_playing();     break;
             case STATE_PROMOTION:  update_promotion();   break;
             case STATE_GAMEOVER:   update_gameover();    break;
