@@ -1,0 +1,21 @@
+{
+  "pairs": 2000,
+  "games": 4000,
+  "movetime_sec": 0.03,
+  "max_fullmoves": 180,
+  "round4b_constrained_score": 2000.5,
+  "round4b_constrained_wdl": {
+    "w": 1621,
+    "d": 759,
+    "l": 1620
+  },
+  "round4b_constrained_pct": 0.500125,
+  "elo_diff_round4b_constrained_minus_round1": 0.08685889819024399,
+  "elo_95ci": [
+    -9.607510466721951,
+    9.781363549333664
+  ],
+  "seed": 50505,
+  "engine_round1": "chess/engine/build/uci_round1_1m",
+  "engine_round4b_constrained": "chess/engine/build/uci_round4b_constrained"
+}

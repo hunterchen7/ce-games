@@ -4,19 +4,15 @@ This folder contains an end-to-end pipeline to tune `chess/engine/src/eval.c` us
 
 ## What gets tuned
 
-Material and PST tables remain fixed.
-The tuner learns scalar multipliers for these handcrafted eval groups:
+The tuner now learns a larger mg/eg parameter set:
 
-- bishop pair
-- tempo
-- doubled pawns
-- isolated pawns
-- connected pawns
-- passed pawns
-- rook open/semi-open files
-- pawn shield
-- knight mobility
-- bishop mobility
+- piece-table row scales per piece type (pawn/knight/bishop/rook/queen/king) for mg and eg
+- bishop pair, tempo, doubled/isolated pawns, rook file bonuses, pawn shield (all mg/eg where applicable)
+- connected pawn bonuses split by rank and phase
+- passed pawn bonuses split by rank and phase
+- knight/bishop mobility split by bucket and phase
+
+This is a scale-based Texel tuning pass (`scale = 1.0` reproduces the baseline).
 
 ## 1) Fetch online data
 
@@ -85,15 +81,29 @@ python3 chess/engine/tuning/texel_tune.py \
   --iters 60
 ```
 
-Full run:
+Full run (1M example):
 
 ```bash
 python3 chess/engine/tuning/texel_tune.py \
-  --dataset chess/engine/tuning/data/texel_positions.csv \
-  --feature-cache chess/engine/tuning/results/features.npz \
-  --out chess/engine/tuning/results/texel_full.json \
-  --max-positions 60000 \
+  --dataset chess/engine/tuning/data/texel_positions_1m.csv \
+  --feature-cache chess/engine/tuning/results/features_1m_r4_expanded.npz \
+  --out chess/engine/tuning/results/texel_1m_round4_expanded.json \
+  --max-positions 1000000 \
   --iters 400
+```
+
+Constrained run (recommended for stability):
+
+```bash
+python3 chess/engine/tuning/texel_tune.py \
+  --dataset chess/engine/tuning/data/texel_positions_1m.csv \
+  --feature-cache chess/engine/tuning/results/features_1m_r4_expanded.npz \
+  --out chess/engine/tuning/results/texel_1m_round4b_constrained.json \
+  --max-positions 1000000 \
+  --iters 150 \
+  --l2 0.003 \
+  --scale-min 0.75 \
+  --scale-max 1.30
 ```
 
 ## 4) Apply tuned values to eval.c
@@ -104,8 +114,8 @@ python3 chess/engine/tuning/apply_texel_params.py \
   --eval-c chess/engine/src/eval.c
 ```
 
-`texel_tune.py` now writes `base_values` into the JSON, so applying is absolute
-against the training baseline and does not stack if re-run.
+`texel_tune.py` writes `base_values` and `base_tables` to the JSON so apply is
+absolute against the training baseline and does not stack if re-run.
 
 ## 5) Verify build/tests
 
