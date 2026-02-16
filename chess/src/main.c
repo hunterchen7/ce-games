@@ -772,7 +772,7 @@ static const char *difficulty_labels[DIFFICULTY_ITEMS] = {
     "Medium", "Hard", "Expert", "Grandmaster"
 };
 static const char *difficulty_subtexts[DIFFICULTY_ITEMS] = {
-    "5 seconds", "10 seconds", "15 seconds", "30 seconds"
+    "5s think time", "10s think time", "15s think time", "30s think time"
 };
 static const uint32_t difficulty_times[DIFFICULTY_ITEMS] = {
     5000, 10000, 15000, 30000

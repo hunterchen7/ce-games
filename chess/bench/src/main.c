@@ -33,11 +33,27 @@
 #include "tt.h"
 #include "engine.h"
 
-/* ========== Time Function (48 MHz hardware timer) ========== */
+/* ========== Time Function (48 MHz hardware timer, overflow-safe) ========== */
+
+/* 32-bit timer at 48 MHz wraps every ~89478 ms (2^32/48000).
+   Track overflows so long searches report correct elapsed time. */
+static uint32_t bench_time_base;
+static uint32_t bench_last_raw;
 
 static uint32_t bench_time_ms(void)
 {
-    return timer_GetSafe(1, TIMER_UP) / 48000UL;
+    uint32_t raw = timer_GetSafe(1, TIMER_UP) / 48000UL;
+    if (raw < bench_last_raw)
+        bench_time_base += 89478UL;
+    bench_last_raw = raw;
+    return bench_time_base + raw;
+}
+
+static void bench_time_reset(void)
+{
+    timer_Set(1, 0);
+    bench_time_base = 0;
+    bench_last_raw = 0;
 }
 
 /* ========== FEN Parser (into board_t directly) ========== */
@@ -287,7 +303,7 @@ int main(void)
     gfx_ZeroScreen();
     gfx_SetTextFGColor(255);
 
-    /* Enable hardware timer 1: 48 MHz CPU clock, count up */
+    /* Enable hardware timer 1: 48 MHz CPU clock for cycle measurements */
     timer_Enable(1, TIMER_CPU, TIMER_NOINT, TIMER_UP);
 
     out("=== Chess Engine Benchmark ===");
@@ -449,7 +465,7 @@ int main(void)
                    (unsigned long)cycles, (unsigned long)ms);
     }
 
-    /* Search all 5 positions at d3 and d4 */
+    /* Search all 50 positions at d4 */
     out("-- Search d4 (50 pos) --");
     total_cycles = 0;
     for (i = 0; i < NUM_POS; i++) {
@@ -471,6 +487,42 @@ int main(void)
     sprintf(buf, "Avg: %lu cy/search",
             (unsigned long)(total_cycles / NUM_POS));
     out(buf);
+
+    /* ======== 6. Timed Search (50 positions x 10s, 15s, 30s) ======== */
+    {
+        static const uint32_t time_limits[] = { 10000, 15000, 30000 };
+        uint32_t total_nodes;
+        int t;
+        for (t = 0; t < 3; t++) {
+            sprintf(buf, "-- Search %lus (50 pos) --",
+                    (unsigned long)(time_limits[t] / 1000));
+            out(buf);
+            total_nodes = 0;
+            for (i = 0; i < NUM_POS; i++) {
+                parse_fen_board(fens[i], &b);
+                search_history_clear();
+                tt_clear();
+                limits.max_depth = 15;
+                limits.max_time_ms = time_limits[t];
+                limits.max_nodes = 0;
+                limits.time_fn = bench_time_ms;
+                bench_time_reset();
+                sr = search_go(&b, &limits);
+                ms = timer_GetSafe(1, TIMER_UP) / 48000UL;
+                total_nodes += sr.nodes;
+                sprintf(buf, "P%d: n=%lu d=%u %lums",
+                        i, (unsigned long)sr.nodes,
+                        (unsigned)sr.depth, (unsigned long)ms);
+                out(buf);
+                dbg_printf("P%d: nodes=%lu depth=%u ms=%lu\n",
+                           i, (unsigned long)sr.nodes,
+                           (unsigned)sr.depth, (unsigned long)ms);
+            }
+            sprintf(buf, "Total: %lu nodes", (unsigned long)total_nodes);
+            out(buf);
+            dbg_printf("Total: %lu nodes\n", (unsigned long)total_nodes);
+        }
+    }
 
     out("=== Done ===");
 

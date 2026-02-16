@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
-Tournament: our engine (1800 node limit) vs Stockfish at multiple Elo levels.
+Tournament: our engine vs Stockfish at multiple Elo levels.
 30 games per level, 0.1s/move, 5 concurrent matches.
+
+Usage:
+  python3 tournament.py                         # default (uci binary, SF 2600-3000)
+  python3 tournament.py --engine uci_4000 --elos 1700-2300 --pgn tournament_4000.pgn
 """
 
 import os
@@ -9,6 +13,7 @@ import sys
 import math
 import datetime
 import threading
+import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import chess
 import chess.engine
@@ -16,11 +21,8 @@ import chess.pgn
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BUILD_DIR = os.path.join(BASE_DIR, "build")
-OUR_ENGINE = os.path.join(BUILD_DIR, "uci")
-OUR_ENGINE_ARGS = ["-book", os.path.join(BASE_DIR, "..", "books", "book_xxl.bin")]
 STOCKFISH = "/opt/homebrew/bin/stockfish"
 
-SF_ELOS = [2600, 2700, 2800, 2900, 3000]
 GAMES_PER_MATCH = 30
 MOVETIME = 0.1
 MAX_WORKERS = 5
@@ -34,13 +36,13 @@ def log(msg):
         print(msg, flush=True)
 
 
-def play_game(our_path, sf_path, sf_elo, our_is_white):
+def play_game(our_path, our_args, sf_path, sf_elo, our_is_white):
     board = chess.Board()
     game = chess.pgn.Game()
     game.headers["Event"] = f"Tournament vs SF-{sf_elo}"
     game.headers["Date"] = datetime.date.today().strftime("%Y.%m.%d")
 
-    our_eng = chess.engine.SimpleEngine.popen_uci([our_path] + OUR_ENGINE_ARGS)
+    our_eng = chess.engine.SimpleEngine.popen_uci([our_path] + our_args)
     sf_eng = chess.engine.SimpleEngine.popen_uci(sf_path)
     sf_eng.configure({"Threads": 1, "UCI_LimitStrength": True, "UCI_Elo": sf_elo})
 
@@ -100,6 +102,26 @@ def elo_diff(pct):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="TI84Chess vs Stockfish tournament")
+    parser.add_argument("--engine", default="uci",
+                        help="Engine binary name in build/ (default: uci)")
+    parser.add_argument("--elos", default="2600-3000",
+                        help="SF Elo range as MIN-MAX (default: 2600-3000)")
+    parser.add_argument("--step", type=int, default=100,
+                        help="Elo step size (default: 100)")
+    parser.add_argument("--pgn", default=None,
+                        help="PGN output filename (default: tournament_<engine>.pgn)")
+    parser.add_argument("--no-book", action="store_true",
+                        help="Run without opening book")
+    args = parser.parse_args()
+
+    OUR_ENGINE = os.path.join(BUILD_DIR, args.engine)
+    OUR_ENGINE_ARGS = [] if args.no_book else ["-book", os.path.join(BASE_DIR, "..", "books", "book_xxl.bin")]
+    elo_min, elo_max = map(int, args.elos.split("-"))
+    SF_ELOS = list(range(elo_min, elo_max + 1, args.step))
+    pgn_name = args.pgn or f"tournament_{args.engine}.pgn"
+    pgn_path = os.path.join(BASE_DIR, pgn_name)
+
     if not os.path.isfile(OUR_ENGINE):
         print(f"Missing engine: {OUR_ENGINE}")
         sys.exit(1)
@@ -108,13 +130,12 @@ def main():
         sys.exit(1)
 
     total = len(SF_ELOS) * GAMES_PER_MATCH
-    print(f"Tournament: TI84Chess (0.1s, no node limit, XXL book) vs Stockfish")
+    print(f"Tournament: TI84Chess ({args.engine}, 0.1s/move, XXL book) vs Stockfish")
     print(f"SF levels: {SF_ELOS}")
     print(f"{GAMES_PER_MATCH} games per level = {total} total games")
     print(f"Time control: {MOVETIME}s/move, {MAX_WORKERS} concurrent")
     print()
 
-    pgn_path = os.path.join(BASE_DIR, "tournament.pgn")
     with open(pgn_path, "w"):
         pass
 
@@ -133,7 +154,7 @@ def main():
 
         for i in range(GAMES_PER_MATCH):
             our_is_white = i < half
-            g = play_game(OUR_ENGINE, STOCKFISH, sf_elo, our_is_white)
+            g = play_game(OUR_ENGINE, OUR_ENGINE_ARGS, STOCKFISH, sf_elo, our_is_white)
             sc = score_for_our(g.headers["Result"], our_is_white)
             if sc == 1.0:
                 wins += 1
@@ -163,7 +184,7 @@ def main():
 
     print(f"\nPGNs saved to: {pgn_path}")
     print(f"\n{'='*60}")
-    print(f"{'TOURNAMENT RESULTS — TI84Chess (0.1s) vs Stockfish':^60}")
+    print(f"{'TOURNAMENT RESULTS — TI84Chess (' + args.engine + ', 0.1s) vs Stockfish':^60}")
     print(f"{'='*60}")
     print(f"  {'SF Elo':<10} {'W':>4} {'D':>4} {'L':>4}  {'Score':>8}  {'Pct':>6}  {'Elo diff':>10}")
     print(f"  {'-'*52}")

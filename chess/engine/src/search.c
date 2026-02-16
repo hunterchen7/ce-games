@@ -105,7 +105,7 @@ static void check_time(void)
         return;
     }
     if (search_time_fn && search_deadline) {
-        if ((search_nodes & 1023) == 0) {
+        if ((search_nodes & 255) == 0) {
             if (search_time_fn() >= search_deadline)
                 search_stopped = 1;
         }
