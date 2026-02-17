@@ -71,6 +71,7 @@ int8_t engine_to_ui_piece(uint8_t piece)
 static void board_compute_hash(board_t *b)
 {
     uint32_t h = 0;
+    uint32_t ph = 0;
     uint16_t l = 0;
     int sq;
     uint8_t piece, pidx, sq64;
@@ -82,6 +83,8 @@ static void board_compute_hash(board_t *b)
         pidx = zobrist_piece_index(piece);
         sq64 = SQ_TO_SQ64(sq);
         h ^= zobrist_piece[pidx][sq64];
+        if (PIECE_TYPE(piece) == PIECE_PAWN)
+            ph ^= zobrist_piece[pidx][sq64];
         l ^= lock_piece[pidx][sq64];
     }
 
@@ -99,6 +102,7 @@ static void board_compute_hash(board_t *b)
         l ^= lock_side;
     }
 
+    b->pawn_hash = ph;
     b->hash = h;
     b->lock = l;
 }
@@ -254,6 +258,7 @@ void board_make(board_t *b, move_t m, undo_t *u)
     u->ep_square = b->ep_square;
     u->halfmove = b->halfmove;
     u->fullmove = b->fullmove;
+    u->pawn_hash = b->pawn_hash;
     u->hash = b->hash;
     u->lock = b->lock;
     u->moved_piece = piece;
@@ -268,6 +273,8 @@ void board_make(board_t *b, move_t m, undo_t *u)
     /* Remove piece from origin (hash + eval) */
     b->hash ^= zobrist_piece[pidx][from64];
     b->lock ^= lock_piece[pidx][from64];
+    if (type == PIECE_PAWN)
+        b->pawn_hash ^= zobrist_piece[pidx][from64];
     b->mg[side] -= mg_table[eidx][pst_from];
     b->eg[side] -= eg_table[eidx][pst_from];
 
@@ -285,6 +292,8 @@ void board_make(board_t *b, move_t m, undo_t *u)
 
             b->hash ^= zobrist_piece[cap_pidx][cap64];
             b->lock ^= lock_piece[cap_pidx][cap64];
+            if (PIECE_TYPE(cap_piece) == PIECE_PAWN)
+                b->pawn_hash ^= zobrist_piece[cap_pidx][cap64];
             b->mg[opp] -= mg_table[cap_eidx][cap_pst];
             b->eg[opp] -= eg_table[cap_eidx][cap_pst];
             b->phase -= phase_weight[cap_eidx];
@@ -306,6 +315,8 @@ void board_make(board_t *b, move_t m, undo_t *u)
 
         b->hash ^= zobrist_piece[cap_pidx][to64];
         b->lock ^= lock_piece[cap_pidx][to64];
+        if (PIECE_TYPE(captured) == PIECE_PAWN)
+            b->pawn_hash ^= zobrist_piece[cap_pidx][to64];
         b->mg[opp] -= mg_table[cap_eidx][cap_pst];
         b->eg[opp] -= eg_table[cap_eidx][cap_pst];
         b->phase -= phase_weight[cap_eidx];
@@ -325,6 +336,8 @@ void board_make(board_t *b, move_t m, undo_t *u)
     /* Place piece at destination (hash + eval) */
     b->hash ^= zobrist_piece[pidx][to64];
     b->lock ^= lock_piece[pidx][to64];
+    if (type == PIECE_PAWN)
+        b->pawn_hash ^= zobrist_piece[pidx][to64];
     b->mg[side] += mg_table[eidx][pst_to];
     b->eg[side] += eg_table[eidx][pst_to];
 
@@ -348,6 +361,7 @@ void board_make(board_t *b, move_t m, undo_t *u)
         /* Remove pawn hash at destination, add promoted piece hash */
         b->hash ^= zobrist_piece[pidx][to64];
         b->lock ^= lock_piece[pidx][to64];
+        b->pawn_hash ^= zobrist_piece[pidx][to64];
         b->hash ^= zobrist_piece[promo_pidx][to64];
         b->lock ^= lock_piece[promo_pidx][to64];
 
@@ -586,6 +600,7 @@ void board_unmake(board_t *b, move_t m, const undo_t *u)
     b->ep_square = u->ep_square;
     b->halfmove = u->halfmove;
     b->fullmove = u->fullmove;
+    b->pawn_hash = u->pawn_hash;
     b->hash = u->hash;
     b->lock = u->lock;
 }

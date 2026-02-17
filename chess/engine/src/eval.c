@@ -230,57 +230,199 @@ static const int8_t bishop_offsets[] = { -17, -15, 15, 17 };
 
 /* ========== Evaluation Helpers ========== */
 
-/* Build pawn file arrays and pawn attack bitmap in one pass.
-   w_pawns/b_pawns: [file] = bitmask of ranks with pawns (bit 0 = row 0).
-   pawn_atk: [0x88 sq] = bit 0: attacked by white pawn, bit 1: attacked by black pawn. */
-static void build_pawn_info(const board_t *b,
-                            uint8_t w_pawns[8], uint8_t b_pawns[8],
-                            uint8_t pawn_atk[128])
+#ifndef PAWN_CACHE_SIZE
+#define PAWN_CACHE_SIZE 32
+#endif
+
+#if (PAWN_CACHE_SIZE & (PAWN_CACHE_SIZE - 1)) != 0
+#error "PAWN_CACHE_SIZE must be a power of two"
+#endif
+
+#define PAWN_CACHE_MASK (PAWN_CACHE_SIZE - 1)
+
+typedef struct {
+    uint32_t key;           /* board pawn_hash */
+    int16_t pawn_mg;        /* pawn-only mg contribution (white - black) */
+    int16_t pawn_eg;        /* pawn-only eg contribution (white - black) */
+    uint8_t w_pawns[8];     /* [file] -> rank bitmask */
+    uint8_t b_pawns[8];     /* [file] -> rank bitmask */
+    uint8_t pawn_atk[128];  /* bit0 white attacks, bit1 black attacks */
+} pawn_cache_entry_t;
+
+static pawn_cache_entry_t pawn_cache[PAWN_CACHE_SIZE];
+
+/* Build pawn-only derived data and scores once per pawn structure. */
+static void build_pawn_cache(const board_t *b, pawn_cache_entry_t *e)
 {
     uint8_t i, sq, row, col, piece, a;
+    int16_t mg = 0;
+    int16_t eg = 0;
 
-    memset(w_pawns, 0, 8);
-    memset(b_pawns, 0, 8);
-    memset(pawn_atk, 0, 128);
+    memset(e->w_pawns, 0, sizeof(e->w_pawns));
+    memset(e->b_pawns, 0, sizeof(e->b_pawns));
+    memset(e->pawn_atk, 0, sizeof(e->pawn_atk));
 
-    /* White pawns */
+    /* White pawns: file masks + pawn attack map */
     for (i = 0; i < b->piece_count[WHITE]; i++) {
         sq = b->piece_list[WHITE][i];
         piece = b->squares[sq];
-        if (PIECE_TYPE(piece) == PIECE_PAWN) {
-            row = SQ_TO_ROW(sq);
-            col = SQ_TO_COL(sq);
-            w_pawns[col] |= (uint8_t)(1u << row);
-            /* White pawns attack up-left (sq-17) and up-right (sq-15) */
-            a = sq - 17; if (SQ_VALID(a)) pawn_atk[a] |= 1;
-            a = sq - 15; if (SQ_VALID(a)) pawn_atk[a] |= 1;
-        }
+        if (PIECE_TYPE(piece) != PIECE_PAWN) continue;
+        row = SQ_TO_ROW(sq);
+        col = SQ_TO_COL(sq);
+        e->w_pawns[col] |= (uint8_t)(1u << row);
+        a = sq - 17; if (SQ_VALID(a)) e->pawn_atk[a] |= 1;
+        a = sq - 15; if (SQ_VALID(a)) e->pawn_atk[a] |= 1;
     }
 
-    /* Black pawns */
+    /* Black pawns: file masks + pawn attack map */
     for (i = 0; i < b->piece_count[BLACK]; i++) {
         sq = b->piece_list[BLACK][i];
         piece = b->squares[sq];
-        if (PIECE_TYPE(piece) == PIECE_PAWN) {
-            row = SQ_TO_ROW(sq);
-            col = SQ_TO_COL(sq);
-            b_pawns[col] |= (uint8_t)(1u << row);
-            /* Black pawns attack down-left (sq+17) and down-right (sq+15) */
-            a = sq + 17; if (SQ_VALID(a)) pawn_atk[a] |= 2;
-            a = sq + 15; if (SQ_VALID(a)) pawn_atk[a] |= 2;
-        }
+        if (PIECE_TYPE(piece) != PIECE_PAWN) continue;
+        row = SQ_TO_ROW(sq);
+        col = SQ_TO_COL(sq);
+        e->b_pawns[col] |= (uint8_t)(1u << row);
+        a = sq + 17; if (SQ_VALID(a)) e->pawn_atk[a] |= 2;
+        a = sq + 15; if (SQ_VALID(a)) e->pawn_atk[a] |= 2;
     }
+
+    /* White pawn structure terms */
+    for (i = 0; i < b->piece_count[WHITE]; i++) {
+        uint8_t rel_rank;
+        piece = b->squares[b->piece_list[WHITE][i]];
+        if (PIECE_TYPE(piece) != PIECE_PAWN) continue;
+        sq = b->piece_list[WHITE][i];
+        row = SQ_TO_ROW(sq);
+        col = SQ_TO_COL(sq);
+        rel_rank = 7 - row;
+
+#ifndef NO_PAWNS
+        if (e->w_pawns[col] & (uint8_t)~(1u << row)) {
+            mg -= DOUBLED_MG;
+            eg -= DOUBLED_EG;
+        }
+        {
+            uint8_t adj = 0;
+            if (col > 0) adj |= e->w_pawns[col - 1];
+            if (col < 7) adj |= e->w_pawns[col + 1];
+            if (!adj) {
+                mg -= ISOLATED_MG;
+                eg -= ISOLATED_EG;
+            }
+        }
+        {
+            uint8_t supported = 0;
+            uint8_t s1 = sq + 17;
+            uint8_t s2 = sq + 15;
+            if (SQ_VALID(s1) && b->squares[s1] == MAKE_PIECE(COLOR_WHITE, PIECE_PAWN)) supported = 1;
+            if (SQ_VALID(s2) && b->squares[s2] == MAKE_PIECE(COLOR_WHITE, PIECE_PAWN)) supported = 1;
+            if (supported && rel_rank >= 2 && rel_rank <= 7) {
+                uint8_t ri = rel_rank - 2;
+                if (ri < 6) {
+                    mg += connected_bonus_mg[ri];
+                    eg += connected_bonus_eg[ri];
+                }
+            }
+        }
+#endif /* NO_PAWNS */
+
+#ifndef NO_PASSED
+        {
+            uint8_t passed = 1;
+            int8_t f;
+            uint8_t ahead = (uint8_t)((1u << row) - 1);
+            for (f = (int8_t)col - 1; f <= (int8_t)col + 1; f++) {
+                if (f < 0 || f > 7) continue;
+                if (e->b_pawns[f] & ahead) { passed = 0; break; }
+            }
+            if (passed && rel_rank >= 2) {
+                uint8_t ri = rel_rank - 2;
+                if (ri < 6) {
+                    mg += passed_mg[ri];
+                    eg += passed_eg[ri];
+                }
+            }
+        }
+#endif /* NO_PASSED */
+    }
+
+    /* Black pawn structure terms */
+    for (i = 0; i < b->piece_count[BLACK]; i++) {
+        uint8_t rel_rank;
+        piece = b->squares[b->piece_list[BLACK][i]];
+        if (PIECE_TYPE(piece) != PIECE_PAWN) continue;
+        sq = b->piece_list[BLACK][i];
+        row = SQ_TO_ROW(sq);
+        col = SQ_TO_COL(sq);
+        rel_rank = row;
+
+#ifndef NO_PAWNS
+        if (e->b_pawns[col] & (uint8_t)~(1u << row)) {
+            mg += DOUBLED_MG;
+            eg += DOUBLED_EG;
+        }
+        {
+            uint8_t adj = 0;
+            if (col > 0) adj |= e->b_pawns[col - 1];
+            if (col < 7) adj |= e->b_pawns[col + 1];
+            if (!adj) {
+                mg += ISOLATED_MG;
+                eg += ISOLATED_EG;
+            }
+        }
+        {
+            uint8_t supported = 0;
+            uint8_t s1 = sq - 17;
+            uint8_t s2 = sq - 15;
+            if (SQ_VALID(s1) && b->squares[s1] == MAKE_PIECE(COLOR_BLACK, PIECE_PAWN)) supported = 1;
+            if (SQ_VALID(s2) && b->squares[s2] == MAKE_PIECE(COLOR_BLACK, PIECE_PAWN)) supported = 1;
+            if (supported && rel_rank >= 2 && rel_rank <= 7) {
+                uint8_t ri = rel_rank - 2;
+                if (ri < 6) {
+                    mg -= connected_bonus_mg[ri];
+                    eg -= connected_bonus_eg[ri];
+                }
+            }
+        }
+#endif /* NO_PAWNS */
+
+#ifndef NO_PASSED
+        {
+            uint8_t passed = 1;
+            int8_t f;
+            uint8_t ahead = (uint8_t)(~((1u << (row + 1)) - 1));
+            for (f = (int8_t)col - 1; f <= (int8_t)col + 1; f++) {
+                if (f < 0 || f > 7) continue;
+                if (e->w_pawns[f] & ahead) { passed = 0; break; }
+            }
+            if (passed && rel_rank >= 2) {
+                uint8_t ri = rel_rank - 2;
+                if (ri < 6) {
+                    mg -= passed_mg[ri];
+                    eg -= passed_eg[ri];
+                }
+            }
+        }
+#endif /* NO_PASSED */
+    }
+
+    e->pawn_mg = mg;
+    e->pawn_eg = eg;
+    e->key = b->pawn_hash;
 }
 
 /* ========== Main Evaluation ========== */
 
 int evaluate(const board_t *b)
 {
-    static uint8_t pawn_atk[128];
+    const pawn_cache_entry_t *pc;
+    const uint8_t *w_pawns;
+    const uint8_t *b_pawns;
+    const uint8_t *pawn_atk;
+    pawn_cache_entry_t *slot;
     int mg, eg, phase;
     int score;
-    uint8_t i, sq, row, col, type;
-    uint8_t w_pawns[8], b_pawns[8];
+    uint8_t i, sq, col, type;
     EP_VARS;
 
 #ifdef SEARCH_PROFILE
@@ -301,73 +443,29 @@ int evaluate(const board_t *b)
     else                   { mg -= TEMPO_MG; eg -= TEMPO_EG; }
 #endif
 
-    /* ---- Build pawn file arrays + attack bitmap ---- */
+    /* ---- Probe/build pawn cache ---- */
     EP_B();
-    build_pawn_info(b, w_pawns, b_pawns, pawn_atk);
+    slot = &pawn_cache[b->pawn_hash & PAWN_CACHE_MASK];
+    if (slot->key != b->pawn_hash)
+        build_pawn_cache(b, slot);
+    pc = slot;
+    w_pawns = pc->w_pawns;
+    b_pawns = pc->b_pawns;
+    pawn_atk = pc->pawn_atk;
+    mg += pc->pawn_mg;
+    eg += pc->pawn_eg;
     EP_E(build_cy);
 
-    /* ---- Pawn structure + Rook files + Pawn shield ---- */
+    /* ---- Rook file bonuses ---- */
     EP_B();
     {
         /* Iterate white pieces */
         for (i = 0; i < b->piece_count[WHITE]; i++) {
             sq = b->piece_list[WHITE][i];
             type = PIECE_TYPE(b->squares[sq]);
-            row = SQ_TO_ROW(sq);
             col = SQ_TO_COL(sq);
-
-            if (type == PIECE_PAWN) {
-                uint8_t rel_rank = 7 - row; /* white pawn: row 6=rank2, row 1=rank7 */
-                uint8_t ri; /* index into passed/connected arrays */
-
-#ifndef NO_PAWNS
-                /* Doubled: another white pawn on same file (any other rank) */
-                if (w_pawns[col] & ~(1u << row))
-                    { mg -= DOUBLED_MG; eg -= DOUBLED_EG; }
-
-                /* Isolated: no friendly pawns on adjacent files */
-                {
-                    uint8_t adj = 0;
-                    if (col > 0) adj |= w_pawns[col - 1];
-                    if (col < 7) adj |= w_pawns[col + 1];
-                    if (!adj) { mg -= ISOLATED_MG; eg -= ISOLATED_EG; }
-                }
-
-                /* Connected: supported by a friendly pawn diagonally behind */
-                {
-                    uint8_t supported = 0;
-                    uint8_t s1 = sq + 17; /* row+1, col+1 */
-                    uint8_t s2 = sq + 15; /* row+1, col-1 */
-                    if (SQ_VALID(s1) && b->squares[s1] == MAKE_PIECE(COLOR_WHITE, PIECE_PAWN)) supported = 1;
-                    if (SQ_VALID(s2) && b->squares[s2] == MAKE_PIECE(COLOR_WHITE, PIECE_PAWN)) supported = 1;
-                    if (supported && rel_rank >= 2 && rel_rank <= 7) {
-                        ri = rel_rank - 2;
-                        if (ri < 6) { mg += connected_bonus_mg[ri]; eg += connected_bonus_eg[ri]; }
-                    }
-                }
-#endif /* NO_PAWNS */
-
-#ifndef NO_PASSED
-                /* Passed pawn: no enemy pawns on same or adjacent files ahead */
-                {
-                    uint8_t passed = 1;
-                    int8_t f;
-                    /* Mask for rows ahead of white pawn: bits 0..(row-1) */
-                    uint8_t ahead = (uint8_t)((1u << row) - 1);
-                    for (f = (int8_t)col - 1; f <= (int8_t)col + 1; f++) {
-                        if (f < 0 || f > 7) continue;
-                        if (b_pawns[f] & ahead) { passed = 0; break; }
-                    }
-                    if (passed && rel_rank >= 2) {
-                        ri = rel_rank - 2;
-                        if (ri < 6) { mg += passed_mg[ri]; eg += passed_eg[ri]; }
-                    }
-                }
-#endif /* NO_PASSED */
-            }
-
 #ifndef NO_ROOK_FILES
-            else if (type == PIECE_ROOK) {
+            if (type == PIECE_ROOK) {
                 /* Open file: no pawns of either color */
                 if (!w_pawns[col] && !b_pawns[col]) {
                     mg += ROOK_OPEN_MG; eg += ROOK_OPEN_EG;
@@ -384,61 +482,9 @@ int evaluate(const board_t *b)
         for (i = 0; i < b->piece_count[BLACK]; i++) {
             sq = b->piece_list[BLACK][i];
             type = PIECE_TYPE(b->squares[sq]);
-            row = SQ_TO_ROW(sq);
             col = SQ_TO_COL(sq);
-
-            if (type == PIECE_PAWN) {
-                uint8_t rel_rank = row; /* black pawn: row 1=rank7 (their 2nd), row 6=rank2 (their 7th) */
-                uint8_t ri;
-
-#ifndef NO_PAWNS
-                /* Doubled */
-                if (b_pawns[col] & ~(1u << row))
-                    { mg += DOUBLED_MG; eg += DOUBLED_EG; }
-
-                /* Isolated */
-                {
-                    uint8_t adj = 0;
-                    if (col > 0) adj |= b_pawns[col - 1];
-                    if (col < 7) adj |= b_pawns[col + 1];
-                    if (!adj) { mg += ISOLATED_MG; eg += ISOLATED_EG; }
-                }
-
-                /* Connected */
-                {
-                    uint8_t supported = 0;
-                    uint8_t s1 = sq - 17; /* row-1, col-1 */
-                    uint8_t s2 = sq - 15; /* row-1, col+1 */
-                    if (SQ_VALID(s1) && b->squares[s1] == MAKE_PIECE(COLOR_BLACK, PIECE_PAWN)) supported = 1;
-                    if (SQ_VALID(s2) && b->squares[s2] == MAKE_PIECE(COLOR_BLACK, PIECE_PAWN)) supported = 1;
-                    if (supported && rel_rank >= 2 && rel_rank <= 7) {
-                        ri = rel_rank - 2;
-                        if (ri < 6) { mg -= connected_bonus_mg[ri]; eg -= connected_bonus_eg[ri]; }
-                    }
-                }
-#endif /* NO_PAWNS */
-
-#ifndef NO_PASSED
-                /* Passed pawn for black: no white pawns ahead (higher rows) */
-                {
-                    uint8_t passed = 1;
-                    int8_t f;
-                    /* Mask for rows ahead of black pawn: bits (row+1)..7 */
-                    uint8_t ahead = (uint8_t)(~((1u << (row + 1)) - 1));
-                    for (f = (int8_t)col - 1; f <= (int8_t)col + 1; f++) {
-                        if (f < 0 || f > 7) continue;
-                        if (w_pawns[f] & ahead) { passed = 0; break; }
-                    }
-                    if (passed && rel_rank >= 2) {
-                        ri = rel_rank - 2;
-                        if (ri < 6) { mg -= passed_mg[ri]; eg -= passed_eg[ri]; }
-                    }
-                }
-#endif /* NO_PASSED */
-            }
-
 #ifndef NO_ROOK_FILES
-            else if (type == PIECE_ROOK) {
+            if (type == PIECE_ROOK) {
                 if (!b_pawns[col] && !w_pawns[col]) {
                     mg -= ROOK_OPEN_MG; eg -= ROOK_OPEN_EG;
                 }
