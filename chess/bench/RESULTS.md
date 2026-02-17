@@ -14,6 +14,24 @@ Benchmarked on eZ80 @ 48 MHz (cycle-accurate emulator).
 | 4   | `0868f82` | Precompute check/pin info                  |
 | 5   | `b8d7cf9` | Track bishop counts incrementally          |
 
+## TI-84 CE Cycle Optimization Track (2026-02-17)
+
+50-position profile benchmark (`-- Profile 1000n (50 pos) --`) using the calc debug harness.
+All comparisons below are full P0-P49 passes (same node total).
+
+| Step | Commit    | Change                                     | Nodes  | Total Cycles | Cy/Node | Eval Cycles  | Build Pawns Cycles | NPS (`n/ms`) |
+| ---- | --------- | ------------------------------------------ | ------ | ------------ | ------- | ------------ | ------------------ | ------------ |
+| 2    | `2ae29bf` | Streamline pawn-cache miss path            | 28,558 | 264,225,312  | 9,252   | 1,292,096,501 | 397,162,101        | 300.743      |
+| 3    | `(this step)` | 2-way set-associative pawn cache probing   | 28,558 | 226,390,038  | 7,927   | 1,254,261,218 | 353,252,767        | 303.263      |
+
+Step 3 vs Step 2 deltas:
+
+- `total_cy`: **-14.32%**
+- `cy/node`: **-14.32%**
+- `build_pawns` cycles: **-11.06%**
+- `eval` total cycles: **-2.93%**
+- throughput (`n/ms`): **+0.84%**
+
 ## Texel Tuning Elo (Desktop Paired H2H)
 
 Paired match setup:

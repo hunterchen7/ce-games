@@ -238,7 +238,17 @@ static const int8_t bishop_offsets[] = { -17, -15, 15, 17 };
 #error "PAWN_CACHE_SIZE must be a power of two"
 #endif
 
-#define PAWN_CACHE_MASK (PAWN_CACHE_SIZE - 1)
+#define PAWN_CACHE_WAYS 2
+#if (PAWN_CACHE_SIZE % PAWN_CACHE_WAYS) != 0
+#error "PAWN_CACHE_SIZE must be divisible by PAWN_CACHE_WAYS"
+#endif
+
+#define PAWN_CACHE_SETS (PAWN_CACHE_SIZE / PAWN_CACHE_WAYS)
+#if (PAWN_CACHE_SETS & (PAWN_CACHE_SETS - 1)) != 0
+#error "PAWN_CACHE_SETS must be a power of two"
+#endif
+
+#define PAWN_CACHE_SET_MASK (PAWN_CACHE_SETS - 1)
 
 typedef struct {
     uint32_t key;           /* board pawn_hash */
@@ -250,6 +260,7 @@ typedef struct {
 } pawn_cache_entry_t;
 
 static pawn_cache_entry_t pawn_cache[PAWN_CACHE_SIZE];
+static uint8_t pawn_cache_victim[PAWN_CACHE_SETS];
 
 /* Build pawn-only derived data and scores once per pawn structure. */
 static void build_pawn_cache(const board_t *b, pawn_cache_entry_t *e)
@@ -430,9 +441,20 @@ int evaluate(const board_t *b)
 
     /* ---- Probe/build pawn cache ---- */
     EP_B();
-    slot = &pawn_cache[b->pawn_hash & PAWN_CACHE_MASK];
-    if (slot->key != b->pawn_hash)
-        build_pawn_cache(b, slot);
+    {
+        uint8_t set = (uint8_t)(b->pawn_hash & PAWN_CACHE_SET_MASK);
+        pawn_cache_entry_t *set_slots = &pawn_cache[(uint8_t)(set * PAWN_CACHE_WAYS)];
+        if (set_slots[0].key == b->pawn_hash) {
+            slot = &set_slots[0];
+        } else if (set_slots[1].key == b->pawn_hash) {
+            slot = &set_slots[1];
+        } else {
+            uint8_t victim = pawn_cache_victim[set];
+            slot = &set_slots[victim];
+            pawn_cache_victim[set] = (uint8_t)(victim ^ 1u);
+            build_pawn_cache(b, slot);
+        }
+    }
     pc = slot;
     w_pawns = pc->w_pawns;
     b_pawns = pc->b_pawns;
