@@ -82,6 +82,7 @@ A chess engine written in C for the TI-84 Plus CE's eZ80 processor (48 MHz, 256 
 
 | Platform         | Time/Move | Estimated Elo | Method                    |
 | ---------------- | --------- | ------------- | ------------------------- |
+| eZ80 (48 MHz)    | 2s        | ~1355         | 50 games vs SF-1320       |
 | eZ80 (48 MHz)    | 5s        | ~1700         | Node-limited vs Stockfish |
 | eZ80 (48 MHz)    | 10s       | ~1800         | Node-limited vs Stockfish |
 | eZ80 (48 MHz)    | 15s       | ~1950         | Node-limited vs Stockfish |
