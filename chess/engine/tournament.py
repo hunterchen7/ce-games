@@ -15,6 +15,7 @@ import math
 import datetime
 import threading
 import argparse
+import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import chess
 import chess.engine
@@ -32,7 +33,8 @@ print_lock = threading.Lock()
 pgn_lock = threading.Lock()
 
 # Set by main() based on --nodes flag
-LIMIT = None
+OUR_LIMIT = None
+SF_LIMIT = None
 LIMIT_DESC = None
 
 
@@ -65,9 +67,11 @@ def play_game(our_path, our_args, sf_path, sf_elo, our_is_white):
 
     try:
         while not board.is_game_over(claim_draw=True) and board.fullmove_number <= 200:
-            eng = w_eng if board.turn == chess.WHITE else b_eng
+            is_our_turn = (board.turn == chess.WHITE) == our_is_white
+            eng = our_eng if is_our_turn else sf_eng
+            limit = OUR_LIMIT if is_our_turn else SF_LIMIT
             try:
-                result = eng.play(board, LIMIT)
+                result = eng.play(board, limit)
             except chess.engine.EngineTerminatedError:
                 game.headers["Result"] = "0-1" if board.turn == chess.WHITE else "1-0"
                 return game
@@ -107,7 +111,7 @@ def elo_diff(pct):
 
 
 def main():
-    global GAMES_PER_MATCH, LIMIT, LIMIT_DESC
+    global GAMES_PER_MATCH, OUR_LIMIT, SF_LIMIT, LIMIT_DESC
 
     parser = argparse.ArgumentParser(description="TI84Chess vs Stockfish tournament")
     parser.add_argument("--engine", default="uci",
@@ -128,7 +132,25 @@ def main():
                         help="Path to opening book .bin file (default: books/book_xxl.bin)")
     args = parser.parse_args()
 
-    OUR_ENGINE = os.path.join(BUILD_DIR, args.engine)
+    # Build engine with correct NODE_LIMIT if --nodes specified
+    if args.nodes:
+        engine_name = f"uci_{args.nodes}n"
+        OUR_ENGINE = os.path.join(BUILD_DIR, engine_name)
+        print(f"Building {engine_name} with NODE_LIMIT={args.nodes}...")
+        ret = subprocess.run(
+            ["make", "uci", f"CFLAGS=-Wall -Wextra -O2 -std=c11 -DNODE_LIMIT={args.nodes}"],
+            cwd=BASE_DIR, capture_output=True, text=True
+        )
+        if ret.returncode != 0:
+            print(f"Build failed:\n{ret.stderr}")
+            sys.exit(1)
+        # Rename to avoid overwriting the default uci binary
+        default_uci = os.path.join(BUILD_DIR, "uci")
+        os.rename(default_uci, OUR_ENGINE)
+        print(f"Built {OUR_ENGINE}")
+    else:
+        OUR_ENGINE = os.path.join(BUILD_DIR, args.engine)
+
     if args.no_book:
         OUR_ENGINE_ARGS = []
     else:
@@ -139,12 +161,15 @@ def main():
         GAMES_PER_MATCH = args.games
     SF_ELOS = list(range(elo_min, elo_max + 1, args.step))
 
-    # Set up search limit
+    # Set up search limits
+    # Node limit is compiled into our engine; give it generous time to hit the limit
+    # Stockfish always gets a normal time limit
+    SF_LIMIT = chess.engine.Limit(time=MOVETIME)
     if args.nodes:
-        LIMIT = chess.engine.Limit(nodes=args.nodes)
+        OUR_LIMIT = chess.engine.Limit(time=10.0)  # generous; internal NODE_LIMIT stops search
         LIMIT_DESC = f"{args.nodes}n"
     else:
-        LIMIT = chess.engine.Limit(time=MOVETIME)
+        OUR_LIMIT = chess.engine.Limit(time=MOVETIME)
         LIMIT_DESC = f"{MOVETIME}s"
 
     # PGN output path: pgn/<date>/<name>.pgn
