@@ -78,7 +78,7 @@ static uint16_t pos_history_irreversible;
 
 /* Search globals */
 static uint32_t search_nodes;
-static uint8_t  search_stopped;
+static volatile uint8_t  search_stopped;
 static uint32_t search_deadline;
 static uint32_t search_max_nodes;
 static time_ms_fn search_time_fn;
@@ -138,15 +138,14 @@ static uint8_t is_repetition(uint32_t hash)
 
 static void check_time(void)
 {
-    if (search_max_nodes && search_nodes >= search_max_nodes) {
-        search_stopped = 1;
-        return;
-    }
     if (search_time_fn && search_deadline) {
         if ((search_nodes & 255) == 0) {
             if (search_time_fn() >= search_deadline)
                 search_stopped = 1;
         }
+    }
+    if (search_max_nodes && search_nodes >= search_max_nodes) {
+        search_stopped = 1;
     }
 }
 

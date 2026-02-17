@@ -471,7 +471,7 @@ Simulates eZ80 playing strength (~1800 nodes per move based on 5s search bench).
 
 ### Node-limited (4000 nodes, 0.1s/move, no book)
 
-PGN: [`chess/engine/tournament_4000_nobook.pgn`](../../chess/engine/tournament_4000_nobook.pgn)
+PGN: [`tournament_4000_nobook.pgn`](../engine/pgn/2026-02-15/tournament_4000_nobook.pgn)
 
 Simulates ~10s search on eZ80 (~3,932 nodes per move based on 10s search bench).
 
@@ -487,7 +487,7 @@ Simulates ~10s search on eZ80 (~3,932 nodes per move based on 10s search bench).
 
 ### Node-limited (6000 nodes, 0.1s/move, no book)
 
-PGN: [`chess/engine/tournament_6000_nobook.pgn`](../../chess/engine/tournament_6000_nobook.pgn), [`chess/engine/tournament_6000_1950.pgn`](../../chess/engine/tournament_6000_1950.pgn)
+PGN: [`tournament_6000_nobook.pgn`](../engine/pgn/2026-02-15/tournament_6000_nobook.pgn), [`tournament_6000_1950.pgn`](../engine/pgn/2026-02-15/tournament_6000_1950.pgn)
 
 Simulates ~15s search on eZ80 (~5,992 nodes per move based on 15s search bench).
 
@@ -504,7 +504,7 @@ Simulates ~15s search on eZ80 (~5,992 nodes per move based on 15s search bench).
 
 ### Node-limited (12000 nodes, 0.1s/move, no book)
 
-PGN: [`chess/engine/tournament_12000_nobook.pgn`](../../chess/engine/tournament_12000_nobook.pgn), [`chess/engine/tournament_12000_2150.pgn`](../../chess/engine/tournament_12000_2150.pgn), [`chess/engine/tournament_12000_1900.pgn`](../../chess/engine/tournament_12000_1900.pgn)
+PGN: [`tournament_12000_nobook.pgn`](../engine/pgn/2026-02-15/tournament_12000_nobook.pgn), [`tournament_12000_2150.pgn`](../engine/pgn/2026-02-15/tournament_12000_2150.pgn), [`tournament_12000_1900.pgn`](../engine/pgn/2026-02-15/tournament_12000_1900.pgn)
 
 Simulates ~30s search on eZ80 (~10,425 nodes per move based on 30s search bench).
 
@@ -519,9 +519,9 @@ Simulates ~30s search on eZ80 (~10,425 nodes per move based on 30s search bench)
 
 **Estimated eZ80 Elo: ~2100** (55% vs SF-2100, 40% vs SF-2200)
 
-### "Unleashed" (0.1s/move, no node limit, XXL book)
+### "Unleashed" (0.1s/move, no node limit, XXL book) (2025-02-15)
 
-PGN: [`chess/engine/tournament.pgn`](../../chess/engine/tournament.pgn)
+PGN: [`tournament.pgn`](../engine/pgn/2026-02-15/tournament.pgn)
 
 Desktop Arm64 search strength — shows the engine's algorithmic ceiling. (m5 macbook pro)
 
@@ -544,6 +544,30 @@ Desktop Arm64 search strength — shows the engine's algorithmic ceiling. (m5 ma
 | 3000   | 0   | 7   | 23  | 3.5/30  | 12% | -352     |
 
 **Estimated desktop Elo: ~2650** (50% mark between SF-2600 and SF-2700)
+
+### with texel tuning (0.1s/move, no node limit, XXL book) (2026-02-16)
+
+Desktop Arm64, post-Texel tuning, before int-type optimizations (`e50c681`). (M5 MacBook Pro)
+
+| SF Elo | W   | D   | L   | Score   | Pct | Elo diff |
+| ------ | --- | --- | --- | ------- | --- | -------- |
+| 2600   | 24  | 14  | 12  | 31.0/50 | 62% | +85      |
+
+**Estimated desktop Elo: ~2685** (62% vs SF-2600)
+
+### with int-type optimizations (after texel tuning) (0.1s/move, no node limit, XXL book) (2026-02-16)
+
+Desktop Arm64, post-Texel tuning + int-type optimizations (widened search locals/params to native `int`, narrowed `phase`/`phase_weight` to `uint8_t`). (M5 MacBook Pro)
+
+| SF Elo | W   | D   | L   | Score    | Pct | Elo diff |
+| ------ | --- | --- | --- | -------- | --- | -------- |
+| 2600   | 48  | 20  | 21  | 58.0/89  | 65% | +109     |
+| 2700   | 28  | 42  | 30  | 49.0/100 | 49% | -7       |
+
+SF-2600: 89/100 games completed (11 lost to binary deletion mid-run).
+PGN: [`tournament_post_opt.pgn`](../engine/pgn/2026-02-16/tournament_post_opt.pgn), [`tournament_post_opt_2700.pgn`](../engine/pgn/2026-02-16/tournament_post_opt_2700.pgn)
+
+**Estimated desktop Elo: ~2700** (65% vs SF-2600, 49% vs SF-2700)
 
 ## Notes
 
@@ -626,3 +650,131 @@ Hand-crafted eval weights before Texel tuning, WITH eval code optimizations (paw
 | 10s        |      181,077 |        197,911 | +9.3% |
 
 The larger improvement at 10s is likely due to: (a) faster eval allowing deeper searches within the time window, and (b) reduced time overshoot with faster eval (time checks occur every 1024 nodes).
+
+## Node-Time Benchmark (50 positions, 2026-02-16)
+
+Time (ms) to reach N nodes per position on the eZ80 (48 MHz, cycle-accurate emulator).
+Post eval-optimization + Texel tuning. `max_depth = 15`, node-limited search, TT cleared between each run.
+
+| Pos | 2000n ms | 4000n ms | 6000n ms | 8000n ms | 10000n ms |
+| --- | -------: | -------: | -------: | -------: | --------: |
+| P0  |     6055 |    11871 |    16163 |    20886 |     26829 |
+| P1  |     7279 |    14415 |    21582 |    28847 |     35901 |
+| P2  |     3229 |     6462 |     9397 |    12762 |     15903 |
+| P3  |     6498 |    12724 |    18823 |    25082 |     31010 |
+| P4  |     6037 |    11776 |    18663 |    25086 |     32010 |
+| P5  |     7355 |    14165 |    21183 |    28197 |     35092 |
+| P6  |     2666 |     5505 |     8614 |    11779 |     14023 |
+| P7  |     2663 |     5434 |     8737 |    11902 |     15126 |
+| P8  |     2852 |     5648 |     8785 |    12270 |     15391 |
+| P9  |     1981 |     4114 |     6138 |     8188 |     10176 |
+| P10 |     2095 |     4176 |     6341 |     8343 |     10485 |
+| P11 |     4160 |     8249 |    11307 |    15002 |     19206 |
+| P12 |     5064 |    11020 |    15557 |    20884 |     26458 |
+| P13 |     2237 |     4401 |     6494 |     8773 |     11054 |
+| P14 |     2513 |     5338 |     8983 |    12672 |     15687 |
+| P15 |     2540 |     4766 |     6769 |     9922 |     12188 |
+| P16 |     2534 |     4826 |     7286 |     9985 |     12348 |
+| P17 |      n/a |      n/a |      n/a |      n/a |       n/a |
+| P18 |     2725 |     6245 |     9861 |    13427 |     17106 |
+| P19 |     4021 |     8159 |    12574 |    16979 |     20755 |
+| P20 |     2438 |     5820 |     8656 |    11429 |     14344 |
+| P21 |     6870 |    13896 |    20221 |    26663 |     33648 |
+| P22 |     2638 |     5487 |     8268 |    10980 |     13800 |
+| P23 |     2334 |     4760 |     7348 |     9675 |     12583 |
+| P24 |     2675 |     5184 |     8205 |    10565 |     13190 |
+| P25 |     6000 |    11791 |    17714 |    23654 |     29200 |
+| P26 |     5807 |    11168 |    14896 |    19074 |     24634 |
+| P27 |     6255 |    11260 |    16781 |    22453 |     28258 |
+| P28 |     6670 |    12062 |    18933 |    23619 |     28686 |
+| P29 |     6024 |    11794 |    17750 |    23700 |     29672 |
+| P30 |     4277 |     8287 |    12598 |    17037 |     21300 |
+| P31 |     3501 |     6930 |    10348 |    13727 |     17135 |
+| P32 |     4095 |     7562 |    11500 |    15194 |     18918 |
+| P33 |     4863 |     9601 |    14151 |    18925 |     23712 |
+| P34 |     3314 |     6755 |    10027 |    12995 |     16271 |
+| P35 |     3918 |     7761 |    11772 |    15610 |     19083 |
+| P36 |     4882 |     9563 |    13813 |    17963 |     23328 |
+| P37 |     4522 |     9203 |    13301 |    17098 |     22044 |
+| P38 |     4161 |     8171 |    12171 |    16317 |     20421 |
+| P39 |     6688 |    12838 |    19011 |    25419 |     31596 |
+| P40 |     5369 |    10428 |    15607 |    21892 |     27716 |
+| P41 |     4023 |     7673 |    11994 |    15565 |     18466 |
+| P42 |     4262 |     8442 |    12503 |    16351 |     19936 |
+| P43 |     4090 |    10750 |    17180 |    22600 |     27048 |
+| P44 |     3135 |     5969 |     8662 |    11643 |     13925 |
+| P45 |     4060 |     7685 |    11972 |    16085 |     19583 |
+| P46 |     3128 |     6339 |     9561 |    12779 |     16005 |
+| P47 |     2884 |     5822 |     8955 |    12080 |     15138 |
+| P48 |     5129 |     9337 |    14832 |    19199 |     24097 |
+| P49 |     2154 |     4489 |     6665 |    11921 |     16091 |
+
+- Growth is roughly linear — per-node cost ranges from ~1.0 ms (simple endgames) to ~3.6 ms (complex middlegames)
+- P17 ("Self stalemate") hangs with node-limit-only search (no time function) — suspected search edge case
+- Average ms/node across 49 positions: ~2.7 ms/node
+
+---
+
+## Desktop Time-Limited Search (50 positions x 3 time limits)
+
+**Platform**: macOS, Apple Silicon (M-series), gcc -O2, wall-clock time via `mach_absolute_time()`
+**Search**: max_depth=15, time_fn=bench_time_ms, TT cleared per search
+
+| Pos     | 10ms nodes  | 50ms nodes   | 100ms nodes  |
+| ------- | ----------- | ------------ | ------------ |
+| P0      | 29348       | 219721       | 501779       |
+| P1      | 16647       | 175127       | 173810       |
+| P2      | 78614       | 205433       | 838151       |
+| P3      | 23819       | 165027       | 175992       |
+| P4      | 13876       | 94856        | 344800       |
+| P5      | 36086       | 147382       | 151346       |
+| P6      | 87840       | 437633       | 419601       |
+| P7      | 37610       | 237112       | 661546       |
+| P8      | 88673       | 188036       | 1145712      |
+| P9      | 180086      | 448325       | 1573819      |
+| P10     | 152063      | 348082       | 1353402      |
+| P11     | 20205       | 236559       | 245281       |
+| P12     | 30634       | 113158       | 324103       |
+| P13     | 70087       | 405067       | 337258       |
+| P14     | 60442       | 140319       | 938163       |
+| P15     | 94305       | 88081        | 895631       |
+| P16     | 103730      | 703866       | 1574547      |
+| P17     | 6055        | 3988         | 3984         |
+| P18     | 54402       | 401804       | 419943       |
+| P19     | 48509       | 307888       | 324613       |
+| P20     | 50883       | 358857       | 431754       |
+| P21     | 35197       | 33610        | 34958        |
+| P22     | 39273       | 264552       | 937526       |
+| P23     | 67296       | 366229       | 556650       |
+| P24     | 39553       | 392139       | 575837       |
+| P25     | 19467       | 133641       | 134950       |
+| P26     | 12423       | 125374       | 128763       |
+| P27     | 17989       | 68678        | 275845       |
+| P28     | 37681       | 99262        | 245364       |
+| P29     | 34281       | 86720        | 262813       |
+| P30     | 72667       | 275784       | 426802       |
+| P31     | 93970       | 302690       | 896301       |
+| P32     | 66893       | 230072       | 580102       |
+| P33     | 43959       | 312606       | 665539       |
+| P34     | 69851       | 162415       | 195255       |
+| P35     | 11923       | 146910       | 419604       |
+| P36     | 41147       | 98066        | 482885       |
+| P37     | 35643       | 275752       | 518246       |
+| P38     | 62631       | 108627       | 108732       |
+| P39     | 24563       | 167771       | 167834       |
+| P40     | 43157       | 193177       | 166736       |
+| P41     | 37557       | 151176       | 175038       |
+| P42     | 22510       | 96123        | 355423       |
+| P43     | 30048       | 197225       | 175423       |
+| P44     | 61307       | 297136       | 307246       |
+| P45     | 50563       | 301659       | 220412       |
+| P46     | 86373       | 218999       | 241556       |
+| P47     | 62397       | 273014       | 309885       |
+| P48     | 13858       | 159279       | 239477       |
+| P49     | 28319       | 326486       | 316410       |
+| **Avg** | **50928**   | **225829**   | **459136**   |
+| **Tot** | **2546410** | **11291493** | **22956847** |
+
+- Average throughput: ~5.1M nodes/sec @ 10ms, ~4.5M nodes/sec @ 50ms, ~4.6M nodes/sec @ 100ms
+- P17 ("Self stalemate") converges quickly (~4k nodes) regardless of time limit — fully solved early
+- Some positions show non-monotonic 50ms→100ms growth (e.g. P1, P6, P13) — due to TT being cleared between each run and iterative deepening completing different iterations
