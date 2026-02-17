@@ -48,6 +48,7 @@
 #define PAL_LEGAL       16
 #define PAL_CUR_LEGAL   17
 #define PAL_CUR_ILLEGAL 18
+#define PAL_SUBTEXT     19
 
 /* ========== Piece Constants ========== */
 
@@ -65,6 +66,7 @@
 #define B_QUEEN  (-5)
 #define B_KING   (-6)
 
+#undef  PIECE_TYPE
 #define PIECE_TYPE(p)  ((p) > 0 ? (p) : -(p))
 #define PIECE_IS_WHITE(p) ((p) > 0)
 
@@ -136,8 +138,8 @@ static uint8_t game_over_reason; /* ENGINE_STATUS_* value */
 
 /* menu state */
 static int menu_cursor;
-static int difficulty_cursor;  /* 0=Medium, 1=Hard, 2=Expert */
-static uint32_t think_time_ms; /* AI think time based on difficulty */
+static int difficulty_cursor;  /* 0=Easy, 1=Medium, 2=Hard, 3=Expert, 4=Master */
+static uint32_t think_time_ms; /* AI think time (fallback limit) */
 static int color_cursor;       /* 0=White, 1=Black, 2=Random */
 
 /* keyboard */
@@ -191,6 +193,7 @@ static void setup_palette(void)
     gfx_palette[PAL_LEGAL]     = gfx_RGBTo1555(100, 180, 100);
     gfx_palette[PAL_CUR_LEGAL]  = gfx_RGBTo1555(80, 200, 80);
     gfx_palette[PAL_CUR_ILLEGAL]= gfx_RGBTo1555(220, 60, 60);
+    gfx_palette[PAL_SUBTEXT]    = gfx_RGBTo1555(150, 150, 150);
 }
 
 /* ========== Board Init ========== */
@@ -443,7 +446,13 @@ static void draw_sidebar(void)
 
     /* game mode */
     gfx_SetTextFGColor(PAL_TEXT);
-    gfx_PrintStringXY(game_mode == MODE_HUMAN ? "vs Human" : "vs CPU", SIDEBAR_X + 4, 6);
+    if (game_mode == MODE_HUMAN) {
+        gfx_PrintStringXY("vs. Human", SIDEBAR_X + 4, 6);
+    } else {
+        char cpu_buf[12];
+        sprintf(cpu_buf, "vs. CPU %d", difficulty_cursor + 1);
+        gfx_PrintStringXY(cpu_buf, SIDEBAR_X + 4, 6);
+    }
 
     /* separator */
     gfx_SetColor(PAL_PIECE_OL);
@@ -497,45 +506,6 @@ static void draw_sidebar(void)
     gfx_PrintStringXY("Mode", SIDEBAR_X + 2, 168);
     gfx_PrintStringXY(" Resign", SIDEBAR_X + 2, 180);
 
-    /* book debug info */
-    {
-        engine_book_info_t bi;
-        char buf[20];
-        void *vat = NULL;
-        int av_count = 0;
-        char *first_av = NULL;
-        uint8_t handle;
-
-        /* count AppVars visible to fileioc */
-        while (ti_Detect(&vat, "")) {
-            av_count++;
-            if (av_count == 1)
-                first_av = ti_Detect(&vat, ""); /* grab 2nd to show a name */
-        }
-
-        /* try opening CHBKRN directly */
-        handle = ti_Open("CHBKRN", "r");
-        if (handle) ti_Close(handle);
-
-        engine_get_book_info(&bi);
-        gfx_SetColor(PAL_PIECE_OL);
-        gfx_HorizLine_NoClip(SIDEBAR_X + 2, 196, SIDEBAR_W - 4);
-        gfx_SetTextFGColor(PAL_TEXT);
-
-        sprintf(buf, "AV:%d h:%d", av_count, handle);
-        gfx_PrintStringXY(buf, SIDEBAR_X + 2, 202);
-
-        if (bi.ready) {
-            sprintf(buf, "BK:%lu", (unsigned long)bi.total_entries);
-            gfx_PrintStringXY(buf, SIDEBAR_X + 2, 214);
-        } else {
-            gfx_PrintStringXY("BK:NONE", SIDEBAR_X + 2, 214);
-        }
-        if (engine_last_move_was_book()) {
-            gfx_SetTextFGColor(PAL_LEGAL);
-            gfx_PrintStringXY("(book)", SIDEBAR_X + 2, 226);
-        }
-    }
 }
 
 /* render board + sidebar to back buffer (no swap) */
@@ -618,24 +588,19 @@ static void draw_gameover(void)
 {
     const char *msg;
     const char *reason = "";
+    int box_x, box_y, box_w, box_h;
+    int msg_w, reason_w, hint_w;
 
-    gfx_FillScreen(PAL_BG);
+    /* draw the board with final position */
+    render_playing();
 
-    gfx_SetTextScale(3, 3);
-    gfx_SetTextFGColor(PAL_MENU_HL);
-
+    /* determine text */
     if (winner == WHITE_TURN)
         msg = "White wins!";
     else if (winner == BLACK_TURN)
         msg = "Black wins!";
     else
         msg = "Draw";
-
-    gfx_PrintStringXY(msg, (SCREEN_W - (int)strlen(msg) * 24) / 2, 60);
-
-    /* show reason */
-    gfx_SetTextScale(1, 1);
-    gfx_SetTextFGColor(PAL_TEXT);
 
     switch (game_over_reason)
     {
@@ -646,10 +611,42 @@ static void draw_gameover(void)
         case ENGINE_STATUS_DRAW_MAT:  reason = "Insufficient material"; break;
         default:                      reason = "Resignation"; break;
     }
-    gfx_PrintStringXY(reason,
-        (SCREEN_W - (int)strlen(reason) * 8) / 2, 100);
 
-    gfx_PrintStringXY("Enter: Return to menu", 72, 160);
+    /* measure text widths */
+    gfx_SetTextScale(2, 2);
+    msg_w = gfx_GetStringWidth(msg);
+    gfx_SetTextScale(1, 1);
+    reason_w = gfx_GetStringWidth(reason);
+    hint_w = gfx_GetStringWidth("Enter: menu");
+
+    /* compute overlay box size */
+    box_w = msg_w;
+    if (reason_w > box_w) box_w = reason_w;
+    if (hint_w > box_w) box_w = hint_w;
+    box_w += 24;
+    box_h = 60;
+    box_x = (SIDEBAR_X - box_w) / 2;
+    box_y = (SCREEN_H - box_h) / 2;
+
+    /* draw overlay box */
+    gfx_SetColor(PAL_PROMO_BG);
+    gfx_FillRectangle_NoClip(box_x, box_y, box_w, box_h);
+    gfx_SetColor(PAL_PIECE_OL);
+    gfx_Rectangle_NoClip(box_x, box_y, box_w, box_h);
+
+    /* winner text */
+    gfx_SetTextScale(2, 2);
+    gfx_SetTextFGColor(PAL_MENU_HL);
+    gfx_PrintStringXY(msg, box_x + (box_w - msg_w) / 2, box_y + 6);
+
+    /* reason */
+    gfx_SetTextScale(1, 1);
+    gfx_SetTextFGColor(PAL_TEXT);
+    gfx_PrintStringXY(reason, box_x + (box_w - reason_w) / 2, box_y + 28);
+
+    /* hint */
+    gfx_SetTextFGColor(PAL_PIECE_OL);
+    gfx_PrintStringXY("Enter: menu", box_x + (box_w - hint_w) / 2, box_y + 44);
 
     gfx_SwapDraw();
 }
@@ -819,7 +816,7 @@ static void update_menu(void)
         else
         {
             game_mode = MODE_COMPUTER;
-            difficulty_cursor = 0; /* default to Medium */
+            difficulty_cursor = 1; /* default to Medium */
             state = STATE_DIFFICULTY_SELECT;
         }
         return;
@@ -836,16 +833,19 @@ static void update_menu(void)
 
 /* ========== State: Difficulty Select ========== */
 
-#define DIFFICULTY_ITEMS 3
+#define DIFFICULTY_ITEMS 5
 
 static const char *difficulty_labels[DIFFICULTY_ITEMS] = {
-    "Medium", "Hard", "Expert"
+    "Easy", "Medium", "Hard", "Expert", "Master"
 };
 static const char *difficulty_subtexts[DIFFICULTY_ITEMS] = {
-    "5s think time", "10s think time", "15s think time"
+    "~2s think time", "~5s think time", "~10s think time", "~15s think time", "~30s think time"
 };
 static const uint32_t difficulty_times[DIFFICULTY_ITEMS] = {
-    5000, 10000, 15000
+    5000, 10000, 15000, 20000, 45000
+};
+static const uint32_t difficulty_nodes[DIFFICULTY_ITEMS] = {
+    500, 2000, 4000, 6000, 12000
 };
 
 static void draw_difficulty_select(void)
@@ -877,14 +877,14 @@ static void draw_difficulty_select(void)
 
         for (i = 0; i < DIFFICULTY_ITEMS; i++)
         {
-            y = 62 + i * 38;
+            y = 58 + i * 30;
             bar_w = max_w + 12;
             bar_x = item_x - 6;
 
             if (difficulty_cursor == i)
             {
                 gfx_SetColor(PAL_MENU_HL);
-                gfx_FillRectangle_NoClip(bar_x, y - 2, bar_w, 32);
+                gfx_FillRectangle_NoClip(bar_x, y - 2, bar_w, 26);
                 gfx_SetTextScale(2, 2);
                 gfx_SetTextFGColor(PAL_MENU_BG);
             }
@@ -900,8 +900,8 @@ static void draw_difficulty_select(void)
             if (difficulty_cursor == i)
                 gfx_SetTextFGColor(PAL_MENU_BG);
             else
-                gfx_SetTextFGColor(PAL_TEXT);
-            gfx_PrintStringXY(difficulty_subtexts[i], item_x, y + 18);
+                gfx_SetTextFGColor(PAL_SUBTEXT);
+            gfx_PrintStringXY(difficulty_subtexts[i], item_x, y + 16);
         }
     }
 
@@ -924,6 +924,9 @@ static void update_difficulty_select(void)
     if ((new6 & kb_Enter) || (new1 & kb_2nd))
     {
         think_time_ms = difficulty_times[difficulty_cursor];
+        engine_set_max_nodes(difficulty_nodes[difficulty_cursor]);
+        engine_set_use_book(difficulty_cursor > 0);
+        engine_set_eval_noise(difficulty_cursor == 0 ? 1 : 0);
         color_cursor = 2; /* default to Random */
         state = STATE_COLOR_SELECT;
         return;

@@ -20,6 +20,7 @@ typedef struct {
     uint32_t max_time_ms; /* 0 = no limit */
     uint32_t max_nodes;   /* 0 = no limit */
     time_ms_fn time_fn;   /* NULL = no time checks */
+    int      eval_noise;  /* random noise +-N added to root scores (0 = off) */
 } search_limits_t;
 
 /* Initialize search state (call once at startup or new game) */

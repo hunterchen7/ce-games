@@ -86,6 +86,20 @@ static uint32_t search_deadline;
 static uint32_t search_max_nodes;
 static time_ms_fn search_time_fn;
 static move_t   search_best_root_move;
+static int      search_eval_noise;     /* max random noise added at root (0 = off) */
+static uint32_t search_rng_state;
+
+/* Simple xorshift PRNG — returns value in [-noise, +noise] */
+static int search_rand_noise(void)
+{
+    uint32_t x = search_rng_state;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    search_rng_state = x;
+    if (search_eval_noise == 0) return 0;
+    return (int)(x % (2 * (unsigned)search_eval_noise + 1)) - search_eval_noise;
+}
 
 /* Quiescence search depth limit */
 #define QS_MAX_DEPTH 8
@@ -845,6 +859,10 @@ static int negamax(board_t *b, int8_t depth, int alpha, int beta,
 
             if (search_stopped) { move_sp = base; return 0; }
 
+            /* Add random noise at root in early opening for variety */
+            if (ply == 0 && search_eval_noise && b->fullmove <= 6)
+                score += search_rand_noise();
+
             if (score > best_score) {
                 best_score = score;
                 best_move = m;
@@ -923,9 +941,15 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
         search_deadline = 0;
     }
     search_max_nodes = limits->max_nodes;
+    search_eval_noise = limits->eval_noise;
+    if (search_eval_noise) {
+        search_rng_state = b->hash ^ 0xDEAD;
+        if (search_time_fn)
+            search_rng_state ^= search_time_fn();
+    }
 
     max_depth = limits->max_depth;
-    if (max_depth == 0 && limits->max_time_ms == 0) max_depth = 1;
+    if (max_depth == 0 && limits->max_time_ms == 0 && limits->max_nodes == 0) max_depth = 1;
     if (max_depth == 0) max_depth = MAX_PLY - 1;
 
     result.best_move = MOVE_NONE;

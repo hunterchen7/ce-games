@@ -95,6 +95,8 @@ uint8_t engine_make_move(engine_move_t move);
 /* ---- AI ---- */
 
 void engine_set_max_nodes(uint32_t n);
+void engine_set_use_book(uint8_t enabled);
+void engine_set_eval_noise(int noise);
 engine_move_t engine_think(uint8_t max_depth, uint32_t max_time_ms);
 
 /* ---- Benchmark ---- */

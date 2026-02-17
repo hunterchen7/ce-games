@@ -310,10 +310,22 @@ uint8_t engine_make_move(engine_move_t em)
 /* ========== AI ========== */
 
 static uint32_t engine_max_nodes = 0;
+static uint8_t  engine_use_book  = 1;
+static int      engine_eval_noise = 0;
 
 void engine_set_max_nodes(uint32_t n)
 {
     engine_max_nodes = n;
+}
+
+void engine_set_use_book(uint8_t enabled)
+{
+    engine_use_book = enabled;
+}
+
+void engine_set_eval_noise(int noise)
+{
+    engine_eval_noise = noise;
 }
 
 engine_move_t engine_think(uint8_t max_depth, uint32_t max_time_ms)
@@ -324,7 +336,7 @@ engine_move_t engine_think(uint8_t max_depth, uint32_t max_time_ms)
     move_t book_move;
 
     /* Try the opening book first — instant response */
-    if (book_probe(&engine_board, &book_move)) {
+    if (engine_use_book && book_probe(&engine_board, &book_move)) {
         last_was_book = 1;
         return internal_to_engine_move(book_move);
     }
@@ -334,6 +346,7 @@ engine_move_t engine_think(uint8_t max_depth, uint32_t max_time_ms)
     limits.max_time_ms = max_time_ms;
     limits.max_nodes = engine_max_nodes;
     limits.time_fn = engine_hooks.time_ms;
+    limits.eval_noise = engine_eval_noise;
 
     result = search_go(&engine_board, &limits);
 
@@ -359,6 +372,7 @@ engine_bench_result_t engine_bench(uint8_t max_depth, uint32_t max_time_ms)
     limits.max_time_ms = max_time_ms;
     limits.max_nodes = 0; /* no node limit for benchmarking */
     limits.time_fn = engine_hooks.time_ms;
+    limits.eval_noise = 0;
 
     result = search_go(&engine_board, &limits);
     br.nodes = result.nodes;
