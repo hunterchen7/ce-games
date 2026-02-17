@@ -569,6 +569,18 @@ PGN: [`tournament_post_opt.pgn`](../engine/pgn/2026-02-16/tournament_post_opt.pg
 
 **Estimated desktop Elo: ~2700** (65% vs SF-2600, 49% vs SF-2700)
 
+### with int-type optimizations (after texel tuning) (0.01s/move, no node limit, XXL book) (2026-02-16)
+
+Desktop Arm64, post-Texel tuning + int-type optimizations. Bullet time control. (M5 MacBook Pro)
+
+| SF Elo | W   | D   | L   | Score    | Pct | Elo diff |
+| ------ | --- | --- | --- | -------- | --- | -------- |
+| 2600   | 26  | 43  | 31  | 47.5/100 | 48% | -17      |
+
+PGN: [`tournament_post_opt_2600_10ms.pgn`](../engine/pgn/2026-02-16/tournament_post_opt_2600_10ms.pgn)
+
+**Estimated desktop Elo at 10ms/move: ~2583** (48% vs SF-2600)
+
 ## Notes
 
 - **Staged movegen** shows no change in movegen/perft benchmarks because it only reorders moves (captures first, then quiets). The benefit is in alpha-beta search where it improves move ordering and pruning.
@@ -675,7 +687,7 @@ Post eval-optimization + Texel tuning. `max_depth = 15`, node-limited search, TT
 | P14 |     2513 |     5338 |     8983 |    12672 |     15687 |
 | P15 |     2540 |     4766 |     6769 |     9922 |     12188 |
 | P16 |     2534 |     4826 |     7286 |     9985 |     12348 |
-| P17 |      n/a |      n/a |      n/a |      n/a |       n/a |
+| P17 |     2788 |     5119 |     6438 |     5472 |      5469 |
 | P18 |     2725 |     6245 |     9861 |    13427 |     17106 |
 | P19 |     4021 |     8159 |    12574 |    16979 |     20755 |
 | P20 |     2438 |     5820 |     8656 |    11429 |     14344 |
@@ -710,8 +722,9 @@ Post eval-optimization + Texel tuning. `max_depth = 15`, node-limited search, TT
 | P49 |     2154 |     4489 |     6665 |    11921 |     16091 |
 
 - Growth is roughly linear — per-node cost ranges from ~1.0 ms (simple endgames) to ~3.6 ms (complex middlegames)
-- P17 ("Self stalemate") hangs with node-limit-only search (no time function) — suspected search edge case
-- Average ms/node across 49 positions: ~2.7 ms/node
+- P17 ("Self stalemate") previously hung due to `SEARCH_PROFILE` timer reads (`timer_GetSafe`) causing issues in deep searches of trivial positions — fixed by adding `volatile _prof_active` flag to disable profiling during node-time benchmark
+- P17 tree exhausts at ~5100 nodes, so 8000/10000 limits produce identical results
+- Average ms/node across 50 positions: ~2.7 ms/node
 
 ---
 

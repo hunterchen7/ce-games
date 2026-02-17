@@ -59,6 +59,7 @@ typedef struct {
 
 void search_profile_reset(void);
 const search_profile_t *search_profile_get(void);
+void search_profile_set_active(uint8_t on);
 
 #endif /* SEARCH_PROFILE */
 

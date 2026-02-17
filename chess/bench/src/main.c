@@ -648,6 +648,67 @@ int main(void)
         }
     }
 
+    /* ======== 8. Node-Time Benchmark (50 positions x 5 node limits) ======== */
+    {
+        static const uint32_t node_limits[] = { 2000, 4000, 6000, 8000, 10000 };
+        #define NUM_NLIMITS 5
+        uint32_t times[NUM_NLIMITS];
+        uint32_t totals[NUM_NLIMITS];
+        int n;
+
+        search_profile_set_active(0);  /* disable profiling timer reads */
+        out("-- Node-Time Bench --");
+        dbg_printf("\n=== NODE-TIME BENCHMARK (50 pos) ===\n");
+        dbg_printf("| Pos | 2000n ms | 4000n ms | 6000n ms | 8000n ms | 10000n ms |\n");
+        dbg_printf("|-----|----------|----------|----------|----------|-----------|\n");
+
+        for (n = 0; n < NUM_NLIMITS; n++)
+            totals[n] = 0;
+
+        for (i = 0; i < NUM_POS; i++) {
+            for (n = 0; n < NUM_NLIMITS; n++) {
+                parse_fen_board(fens[i], &b);
+                search_history_clear();
+                tt_clear();
+                limits.max_depth = 15;
+                limits.max_time_ms = 0;
+                limits.max_nodes = node_limits[n];
+                limits.time_fn = NULL;
+                timer_Set(1, 0);
+                sr = search_go(&b, &limits);
+                times[n] = timer_GetSafe(1, TIMER_UP) / 48000UL;
+                totals[n] += times[n];
+            }
+            dbg_printf("| P%-2d | %8lu | %8lu | %8lu | %8lu | %9lu |\n",
+                       i,
+                       (unsigned long)times[0], (unsigned long)times[1],
+                       (unsigned long)times[2], (unsigned long)times[3],
+                       (unsigned long)times[4]);
+            sprintf(buf, "P%d: %lu %lu %lu %lu %lu",
+                    i,
+                    (unsigned long)times[0], (unsigned long)times[1],
+                    (unsigned long)times[2], (unsigned long)times[3],
+                    (unsigned long)times[4]);
+            out(buf);
+        }
+
+        dbg_printf("| Avg | %8lu | %8lu | %8lu | %8lu | %9lu |\n",
+                   (unsigned long)(totals[0] / NUM_POS),
+                   (unsigned long)(totals[1] / NUM_POS),
+                   (unsigned long)(totals[2] / NUM_POS),
+                   (unsigned long)(totals[3] / NUM_POS),
+                   (unsigned long)(totals[4] / NUM_POS));
+        sprintf(buf, "Avg: %lu %lu %lu %lu %lu",
+                (unsigned long)(totals[0] / NUM_POS),
+                (unsigned long)(totals[1] / NUM_POS),
+                (unsigned long)(totals[2] / NUM_POS),
+                (unsigned long)(totals[3] / NUM_POS),
+                (unsigned long)(totals[4] / NUM_POS));
+        out(buf);
+        #undef NUM_NLIMITS
+        search_profile_set_active(1);  /* re-enable profiling */
+    }
+
     out("=== Done ===");
 
     timer_Disable(1);

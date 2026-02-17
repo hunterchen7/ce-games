@@ -11,10 +11,13 @@
 #include <string.h>
 
 static search_profile_t _sp;
+static volatile uint8_t _prof_active = 1;
 
 static inline uint32_t _prof_now(void) {
     return timer_GetSafe(1, TIMER_UP);
 }
+
+void search_profile_set_active(uint8_t on) { _prof_active = on; }
 
 void search_profile_reset(void) {
     memset(&_sp, 0, sizeof(_sp));
@@ -29,9 +32,9 @@ const search_profile_t *search_profile_get(void) {
    PROF_C(f): increment counter _sp.f.
    PROF_VARS: declare the local timer variable. */
 #define PROF_VARS  uint32_t _pt
-#define PROF_B()   (_pt = _prof_now())
-#define PROF_E(f)  (_sp.f += _prof_now() - _pt)
-#define PROF_C(f)  (_sp.f++)
+#define PROF_B()   do { if (_prof_active) _pt = _prof_now(); } while(0)
+#define PROF_E(f)  do { if (_prof_active) _sp.f += _prof_now() - _pt; } while(0)
+#define PROF_C(f)  do { if (_prof_active) _sp.f++; } while(0)
 
 #else
 

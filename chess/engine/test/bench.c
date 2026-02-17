@@ -89,7 +89,10 @@ static void board_set_fen(board_t *b, const char *fen)
                 b->squares[sq] = piece;
                 if (PIECE_TYPE(piece) == PIECE_KING) b->king_sq[s] = sq;
                 b->piece_list[s][idx] = sq;
+                b->piece_index[sq] = idx;
                 b->piece_count[s] = idx + 1;
+                if (PIECE_TYPE(piece) == PIECE_BISHOP)
+                    b->bishop_count[s]++;
             }
             c++;
         }
@@ -500,6 +503,47 @@ int main(void)
         }
         printf(" %u nodes, %.1f ms total\n",
                total_nodes, total_elapsed / 1e6);
+    }
+
+    /* ======== 6. Time-Limited Search (50 positions x 3 time limits) ======== */
+    {
+        static const uint32_t time_limits[] = { 10, 50, 100 };
+        #define NUM_TLIMITS 3
+        uint32_t nodes[NUM_TLIMITS];
+        uint32_t totals[NUM_TLIMITS];
+        int t;
+
+        printf("\n-- Time-Limited Search (50 pos) --\n");
+        printf("| Pos | 10ms nodes | 50ms nodes | 100ms nodes |\n");
+        printf("|-----|------------|------------|-------------|\n");
+
+        for (t = 0; t < NUM_TLIMITS; t++)
+            totals[t] = 0;
+
+        for (i = 0; i < NUM_POS; i++) {
+            for (t = 0; t < NUM_TLIMITS; t++) {
+                board_set_fen(&b, fens[i]);
+                search_history_clear();
+                tt_clear();
+                memset(&limits, 0, sizeof(limits));
+                limits.max_depth = 15;
+                limits.max_time_ms = time_limits[t];
+                limits.time_fn = bench_time_ms;
+                sr = search_go(&b, &limits);
+                nodes[t] = sr.nodes;
+                totals[t] += sr.nodes;
+            }
+            printf("| P%-2d | %10u | %10u | %11u |\n",
+                   i, nodes[0], nodes[1], nodes[2]);
+        }
+
+        printf("| Avg | %10u | %10u | %11u |\n",
+               totals[0] / NUM_POS,
+               totals[1] / NUM_POS,
+               totals[2] / NUM_POS);
+        printf("| Tot | %10u | %10u | %11u |\n",
+               totals[0], totals[1], totals[2]);
+        #undef NUM_TLIMITS
     }
 
     printf("\n=== Done ===\n");
