@@ -4,11 +4,11 @@ A collection of games for the TI-84 Plus CE, built with the [CE C/C++ Toolchain]
 
 ## Games
 
-| Game   | Description                                              | Demo                                                                                               |
-| ------ | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Chess  | Full chess engine with opening book, 3 difficulty levels |                                                                                                    |
-| Pong   | Pong vs AI with 5 levels, and an "infinite" level        | ![pong](https://github.com/user-attachments/assets/0fdd6ba5-6432-4df9-9a56-f2642f49f33e)           |
-| Sudoku | Easy, medium and hard mode with timer, pencil and more   | ![sudoku_full_3x](https://github.com/user-attachments/assets/5406b210-ce41-425a-bb80-80a494b6996d) |
+| Game   | Description                                               | Demo                                                                                               |
+| ------ | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Chess  | chess GUI & engine with opening book, 3 difficulty levels | ![chess](https://github.com/user-attachments/assets/5d1e533f-046a-443c-8e35-a56e92c74ca3)          |
+| Pong   | Pong vs AI with 5 levels, and an "infinite" level         | ![pong](https://github.com/user-attachments/assets/0fdd6ba5-6432-4df9-9a56-f2642f49f33e)           |
+| Sudoku | Easy, medium and hard mode with timer, pencil and more    | ![sudoku_full_3x](https://github.com/user-attachments/assets/5406b210-ce41-425a-bb80-80a494b6996d) |
 
 ## Prerequisites
 
