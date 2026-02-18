@@ -114,41 +114,46 @@ def move_to_uci_str(move_int):
 
 def trim_hybrid(book, max_entries, max_moves_per_pos):
     """
-    Hybrid trimming: BFS from start + fill with highest-weight positions.
+    Hybrid trimming: depth-aware BFS from start + fill with highest-weight.
 
-    Phase 1: BFS from the starting position to get connected opening lines.
+    Phase 1: BFS from the starting position.  Shallow positions (depth ≤ 8
+             ply) get up to max_moves_per_pos alternatives for variety.
+             Deeper positions get 1 move each for maximum depth coverage.
     Phase 2: Fill remaining space with the highest-weight positions from
              the full book (these can still be hit via transposition).
 
     Returns a list of (key, move_int, weight) tuples.
     """
+    SHALLOW_DEPTH = 8  # ply — positions at depth ≤ this get full alternatives
+
     result = []
     used_keys_moves = set()  # (key, move_int) pairs already added
 
     # --- Phase 1: BFS from starting position ---
+    # Track depth so we can give shallow positions more alternatives.
     visited = set()
     start = chess.Board()
     start_key = chess.polyglot.zobrist_hash(start)
     queue = deque()
     queue.append((start.copy(), 0))
     visited.add(start_key)
+    shallow_keys = []   # positions at depth ≤ SHALLOW_DEPTH (BFS order)
+    deep_keys = []      # positions at depth > SHALLOW_DEPTH (BFS order)
 
-    while queue and len(result) < max_entries:
+    while queue:
         board, depth = queue.popleft()
         key = chess.polyglot.zobrist_hash(board)
 
         if key not in book:
             continue
 
-        moves = book[key][:max_moves_per_pos]
-        space_left = max_entries - len(result)
-        if len(moves) > space_left:
-            moves = moves[:space_left]
+        if depth <= SHALLOW_DEPTH:
+            shallow_keys.append(key)
+        else:
+            deep_keys.append(key)
 
-        for move_int, weight in moves:
-            result.append((key, move_int, weight))
-            used_keys_moves.add((key, move_int))
-
+        # Queue children from ALL source moves to discover the full tree
+        for move_int, weight in book[key]:
             try:
                 chess_move = polyglot_move_to_chess(board, move_int)
                 if chess_move in board.legal_moves:
@@ -161,7 +166,31 @@ def trim_hybrid(book, max_entries, max_moves_per_pos):
             except Exception:
                 pass
 
+    # Add shallow positions with full alternatives (up to max_moves_per_pos)
+    for key in shallow_keys:
+        for move_int, weight in book[key][:max_moves_per_pos]:
+            if len(result) >= max_entries:
+                break
+            if (key, move_int) not in used_keys_moves:
+                result.append((key, move_int, weight))
+                used_keys_moves.add((key, move_int))
+        if len(result) >= max_entries:
+            break
+
+    # Add deep positions with 1 move each
+    for key in deep_keys:
+        if len(result) >= max_entries:
+            break
+        moves = book[key]
+        if moves:
+            move_int, weight = moves[0]
+            if (key, move_int) not in used_keys_moves:
+                result.append((key, move_int, weight))
+                used_keys_moves.add((key, move_int))
+
     bfs_count = len(result)
+    print(f"  Shallow (≤{SHALLOW_DEPTH} ply): {len(shallow_keys):,} positions"
+          f"  Deep (>{SHALLOW_DEPTH} ply): {len(deep_keys):,} positions")
 
     # --- Phase 2: Fill with highest-weight positions ---
     # Collect all entries not yet added, sorted by weight descending
@@ -179,7 +208,8 @@ def trim_hybrid(book, max_entries, max_moves_per_pos):
         result.append((key, move_int, weight))
 
     fill_count = len(result) - bfs_count
-    print(f"  Phase 1 (BFS):  {bfs_count:,} entries")
+    total_discovered = len(shallow_keys) + len(deep_keys)
+    print(f"  Phase 1 (BFS):  {bfs_count:,} entries ({total_discovered:,} positions discovered)")
     print(f"  Phase 2 (fill): {fill_count:,} entries")
 
     return result
