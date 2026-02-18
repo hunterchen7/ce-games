@@ -96,7 +96,9 @@ uint8_t engine_make_move(engine_move_t move);
 
 void engine_set_max_nodes(uint32_t n);
 void engine_set_use_book(uint8_t enabled);
+void engine_set_book_max_ply(uint8_t ply); /* 0 = unlimited */
 void engine_set_eval_noise(int noise);
+void engine_set_move_variance(int cp); /* pick randomly among moves within N cp of best */
 engine_move_t engine_think(uint8_t max_depth, uint32_t max_time_ms);
 
 /* ---- Benchmark ---- */

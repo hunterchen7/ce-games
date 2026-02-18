@@ -87,7 +87,14 @@ static uint32_t search_max_nodes;
 static time_ms_fn search_time_fn;
 static move_t   search_best_root_move;
 static int      search_eval_noise;     /* max random noise added at root (0 = off) */
+static int      search_move_variance;  /* cp threshold for random root move pick */
 static uint32_t search_rng_state;
+
+/* Root move candidates for move_variance */
+#define MAX_ROOT_CANDIDATES 16
+static move_t   root_moves[MAX_ROOT_CANDIDATES];
+static int16_t  root_scores[MAX_ROOT_CANDIDATES];
+static uint8_t  root_count;
 
 /* Simple xorshift PRNG — returns value in [-noise, +noise] */
 static int search_rand_noise(void)
@@ -891,9 +898,16 @@ static int negamax(board_t *b, int8_t depth, int alpha, int beta,
 
             if (search_stopped) { move_sp = base; return 0; }
 
-            /* Add random noise at root in early opening for variety */
-            if (ply == 0 && search_eval_noise && b->fullmove <= 6)
+            /* Add random noise at root for weaker play */
+            if (ply == 0 && search_eval_noise)
                 score += search_rand_noise();
+
+            /* Record root move scores for move_variance selection */
+            if (ply == 0 && search_move_variance && root_count < MAX_ROOT_CANDIDATES) {
+                root_moves[root_count] = m;
+                root_scores[root_count] = (int16_t)score;
+                root_count++;
+            }
 
             if (score > best_score) {
                 best_score = score;
@@ -974,11 +988,10 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
     }
     search_max_nodes = limits->max_nodes;
     search_eval_noise = limits->eval_noise;
-    if (search_eval_noise) {
-        search_rng_state = b->hash ^ 0xDEAD;
-        if (search_time_fn)
-            search_rng_state ^= search_time_fn();
-    }
+    search_move_variance = limits->move_variance;
+    search_rng_state = b->hash ^ 0xDEAD;
+    if (search_time_fn)
+        search_rng_state ^= search_time_fn();
 
     max_depth = limits->max_depth;
     if (max_depth == 0 && limits->max_time_ms == 0 && limits->max_nodes == 0) max_depth = 1;
@@ -992,6 +1005,7 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
     for (d = 1; d <= (int8_t)max_depth; d++) {
         int asp_alpha, asp_beta;
         search_best_root_move = MOVE_NONE;
+        root_count = 0;
 
         /* Aspiration windows: narrow search around previous score */
         if (d > 1 && result.best_move.from != SQ_NONE) {
@@ -1007,6 +1021,7 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
         /* Re-search with full window on fail */
         if (!search_stopped && (score <= asp_alpha || score >= asp_beta)) {
             search_best_root_move = MOVE_NONE;
+            root_count = 0;
             score = negamax(b, d, -SCORE_INF, SCORE_INF, 0, 1, 0);
         }
 
@@ -1040,6 +1055,42 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
         result.score = 0;
         result.depth = 0;
         result.nodes = search_nodes;
+    }
+
+    /* Move variance: pick randomly among root moves within threshold of best */
+    if (search_move_variance && root_count > 1) {
+        int16_t best = -30000;
+        uint8_t i, n_candidates = 0;
+        int16_t threshold;
+
+        for (i = 0; i < root_count; i++)
+            if (root_scores[i] > best) best = root_scores[i];
+
+        threshold = best - (int16_t)search_move_variance;
+
+        /* Count candidates within threshold */
+        for (i = 0; i < root_count; i++)
+            if (root_scores[i] >= threshold) n_candidates++;
+
+        if (n_candidates > 1) {
+            uint32_t x = search_rng_state;
+            uint8_t pick;
+            x ^= x << 13; x ^= x >> 17; x ^= x << 5;
+            search_rng_state = x;
+            pick = (uint8_t)(x % n_candidates);
+
+            n_candidates = 0;
+            for (i = 0; i < root_count; i++) {
+                if (root_scores[i] >= threshold) {
+                    if (n_candidates == pick) {
+                        result.best_move = root_moves[i];
+                        result.score = root_scores[i];
+                        break;
+                    }
+                    n_candidates++;
+                }
+            }
+        }
     }
 
     return result;

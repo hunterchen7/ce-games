@@ -10,6 +10,24 @@
 #include "book.h"
 #include "piece_sprites.h"
 
+#define VERSION "0.3"
+
+#if BOOK_TIER == 0
+#define BOOK_TAG ""
+#elif BOOK_TIER == 1
+#define BOOK_TAG " S"
+#elif BOOK_TIER == 2
+#define BOOK_TAG " M"
+#elif BOOK_TIER == 3
+#define BOOK_TAG " L"
+#elif BOOK_TIER == 4
+#define BOOK_TAG " XL"
+#elif BOOK_TIER == 5
+#define BOOK_TAG " XXL"
+#endif
+
+#define VERSION_STR "v" VERSION BOOK_TAG
+
 /* ========== Screen & Layout ========== */
 
 #define SCREEN_W 320
@@ -706,9 +724,13 @@ static void draw_menu(void)
         }
     }
 
-    /* help */
+    /* version + book tag */
     gfx_SetTextScale(1, 1);
     gfx_SetTextFGColor(PAL_PIECE_OL);
+    text_w = gfx_GetStringWidth(VERSION_STR);
+    gfx_PrintStringXY(VERSION_STR, SCREEN_W - text_w - 4, 4);
+
+    /* help */
     gfx_PrintStringXY("arrows: move  enter: select  clear: quit", 12, 222);
 
     gfx_SwapDraw();
@@ -839,14 +861,12 @@ static const char *difficulty_labels[DIFFICULTY_ITEMS] = {
     "Easy", "Medium", "Hard", "Expert", "Master"
 };
 static const char *difficulty_subtexts[DIFFICULTY_ITEMS] = {
-    "~2s think time", "~5s think time", "~10s think time", "~15s think time", "~30s think time"
+    "~1s think time", "~5s think time", "~10s think time", "~15s think time", "~30s think time"
 };
 static const uint32_t difficulty_times[DIFFICULTY_ITEMS] = {
-    5000, 10000, 15000, 20000, 45000
+    1000, 5000, 10000, 15000, 30000
 };
-static const uint32_t difficulty_nodes[DIFFICULTY_ITEMS] = {
-    500, 2000, 4000, 6000, 12000
-};
+/* Node limits removed — difficulty is purely time-based */
 
 static void draw_difficulty_select(void)
 {
@@ -924,9 +944,11 @@ static void update_difficulty_select(void)
     if ((new6 & kb_Enter) || (new1 & kb_2nd))
     {
         think_time_ms = difficulty_times[difficulty_cursor];
-        engine_set_max_nodes(difficulty_nodes[difficulty_cursor]);
-        engine_set_use_book(difficulty_cursor > 0);
-        engine_set_eval_noise(difficulty_cursor == 0 ? 1 : 0);
+        engine_set_max_nodes(difficulty_cursor == 0 ? 250 : 30000);
+        engine_set_use_book(1);
+        engine_set_book_max_ply(difficulty_cursor == 0 ? 3 : 0);
+        engine_set_eval_noise(0);
+        engine_set_move_variance(difficulty_cursor == 0 ? 30 : 15);
         color_cursor = 2; /* default to Random */
         state = STATE_COLOR_SELECT;
         return;
