@@ -124,6 +124,13 @@ Ratings are estimated by playing against Stockfish's `UCI_LimitStrength` mode (s
 - 5 tiers (Small to XXL), up to 131K entries
 - Probed from Flash with zero RAM cost
 
+**Difficulty & Move Variance:**
+
+- Easy mode uses `move_variance` to randomly select among root moves within N centipawns of the best
+- Wider PVS window at root ensures accurate candidate scoring without picking blunders
+- variance=5 gives natural-looking move variety with no measurable Elo loss
+- Higher variance values (10-15) trade more Elo for greater unpredictability
+
 **Board Representation:**
 
 - 0x88 board with piece lists and incremental Zobrist hashing
@@ -136,7 +143,7 @@ Ratings are estimated by playing against Stockfish's `UCI_LimitStrength` mode (s
 - Legal move indicators (dots for quiet moves, corner marks for captures)
 - Last move highlighting, check indicator
 - Board flips when playing Black
-- 3 difficulty levels: Medium (5s), Hard (10s), Expert (15s)
+- 4 difficulty levels: Easy (2s), Medium (5s), Hard (10s), Expert (15s)
 - Play as White, Black, or Random
 
 ### Controls

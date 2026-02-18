@@ -95,6 +95,10 @@ static uint32_t search_rng_state;
 static move_t   root_moves[MAX_ROOT_CANDIDATES];
 static int16_t  root_scores[MAX_ROOT_CANDIDATES];
 static uint8_t  root_count;
+/* Pending candidates for current (possibly incomplete) iteration */
+static move_t   root_moves_pending[MAX_ROOT_CANDIDATES];
+static int16_t  root_scores_pending[MAX_ROOT_CANDIDATES];
+static uint8_t  root_count_pending;
 
 /* Simple xorshift PRNG — returns value in [-noise, +noise] */
 static int search_rand_noise(void)
@@ -872,27 +876,40 @@ static int negamax(board_t *b, int8_t depth, int alpha, int beta,
             search_history_push(b->hash);
 
             /* PVS + Late move reductions.
-               At root with move_variance, use full window for all moves
-               so root scores are accurate (PVS null-window fail-lows
-               return alpha for any worse move, making them look equal). */
+               At root with move_variance: widen PVS window by variance cp
+               so moves within the variance range get accurate scores.
+               Standard null-window clips everything to alpha, making bad
+               moves look identical to the best. */
             new_depth = depth - 1;
-            if (legal_moves == 1 ||
-                (ply == 0 && search_move_variance)) {
-                /* First move or root with variance: full window */
+            {
+            uint8_t got_accurate = 0;
+            int pvs_floor = (ply == 0 && search_move_variance)
+                ? (alpha - search_move_variance) : alpha;
+            if (legal_moves == 1) {
+                /* First move: full window */
                 score = -negamax(b, new_depth, -beta, -alpha, ply + 1, 1, ext);
+                got_accurate = 1;
             } else if (!in_check && legal_moves > 4 && depth >= 3 &&
                        !(m.flags & FLAG_CAPTURE) && !(m.flags & FLAG_PROMOTION)) {
-                /* LMR: reduced null-window search */
-                score = -negamax(b, new_depth - 1, -alpha - 1, -alpha, ply + 1, 1, ext);
+                /* LMR: reduced search, wider window at root for variance */
+                score = -negamax(b, new_depth - 1, -alpha - 1, -pvs_floor, ply + 1, 1, ext);
                 /* Re-search at full depth + full window if it beats alpha */
-                if (score > alpha && !search_stopped)
+                if (score > alpha && !search_stopped) {
                     score = -negamax(b, new_depth, -beta, -alpha, ply + 1, 1, ext);
+                    got_accurate = 1;
+                } else if (score > pvs_floor) {
+                    got_accurate = 1;
+                }
             } else {
-                /* PVS: null-window search */
-                score = -negamax(b, new_depth, -alpha - 1, -alpha, ply + 1, 1, ext);
+                /* PVS: wider window at root for variance */
+                score = -negamax(b, new_depth, -alpha - 1, -pvs_floor, ply + 1, 1, ext);
                 /* Re-search with full window if it beats alpha but not beta */
-                if (score > alpha && score < beta && !search_stopped)
+                if (score > alpha && score < beta && !search_stopped) {
                     score = -negamax(b, new_depth, -beta, -alpha, ply + 1, 1, ext);
+                    got_accurate = 1;
+                } else if (score > pvs_floor) {
+                    got_accurate = 1;
+                }
             }
 
             search_history_pop();
@@ -906,11 +923,16 @@ static int negamax(board_t *b, int8_t depth, int alpha, int beta,
             if (ply == 0 && search_eval_noise)
                 score += search_rand_noise();
 
-            /* Record root move scores for move_variance selection */
-            if (ply == 0 && search_move_variance && root_count < MAX_ROOT_CANDIDATES) {
-                root_moves[root_count] = m;
-                root_scores[root_count] = (int16_t)score;
-                root_count++;
+            /* Record root move scores for move_variance selection.
+               Only record moves with accurate scores (first move or
+               PVS/LMR re-search).  Null-window fail-lows return alpha
+               for ANY worse move, making them look equal to the best. */
+            if (ply == 0 && search_move_variance && root_count_pending < MAX_ROOT_CANDIDATES
+                && got_accurate) {
+                root_moves_pending[root_count_pending] = m;
+                root_scores_pending[root_count_pending] = (int16_t)score;
+                root_count_pending++;
+            }
             }
 
             if (score > best_score) {
@@ -1009,14 +1031,10 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
     for (d = 1; d <= (int8_t)max_depth; d++) {
         int asp_alpha, asp_beta;
         search_best_root_move = MOVE_NONE;
-        root_count = 0;
+        root_count_pending = 0;
 
-        /* Aspiration windows: narrow search around previous score.
-           Disabled when move_variance is active — aspiration bounds
-           clip all worse moves to the same score, preventing accurate
-           root move comparison for random selection. */
-        if (d > 1 && result.best_move.from != SQ_NONE
-            && !search_move_variance) {
+        /* Aspiration windows: narrow search around previous score */
+        if (d > 1 && result.best_move.from != SQ_NONE) {
             asp_alpha = result.score - 25;
             asp_beta  = result.score + 25;
         } else {
@@ -1029,7 +1047,7 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
         /* Re-search with full window on fail */
         if (!search_stopped && (score <= asp_alpha || score >= asp_beta)) {
             search_best_root_move = MOVE_NONE;
-            root_count = 0;
+            root_count_pending = 0;
             score = negamax(b, d, -SCORE_INF, SCORE_INF, 0, 1, 0);
         }
 
@@ -1048,12 +1066,18 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
             break;
         }
 
-        /* Completed iteration — save result */
+        /* Completed iteration — save result and commit root candidates */
         if (search_best_root_move.from != SQ_NONE) {
+            uint8_t ci;
             result.best_move = search_best_root_move;
             result.score = score;
             result.depth = (uint8_t)d;
             result.nodes = search_nodes;
+            root_count = root_count_pending;
+            for (ci = 0; ci < root_count; ci++) {
+                root_moves[ci] = root_moves_pending[ci];
+                root_scores[ci] = root_scores_pending[ci];
+            }
         }
     }
 
