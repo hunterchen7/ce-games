@@ -102,6 +102,31 @@ Inner loop overhead in compiler-generated eZ80 assembly (all sentinel loops):
 
 Estimated remaining gain from inline asm for all sentinel loops: **<0.5%** total (loops average only 2-3 iterations per ray).
 
+#### Desktop Cross-Check: eZ80-Specific vs Desktop Impact
+
+Built and benchmarked the engine natively (gcc -O2, Apple Silicon M5) to measure whether the sentinel optimization helps or hurts on modern hardware.
+
+**Component micro-benchmarks** (1000 iterations/position, avg across 50 positions):
+
+| Component | Baseline (ns) | Optimized (ns) | Change |
+|-----------|--------------|----------------|--------|
+| Movegen | 53 | 97 | **+83% slower** |
+| is_square_attacked | 11 | 23 | **+109% slower** |
+| Eval | 25 | 44 | **+76% slower** |
+| Make/Unmake | 10 | 24 | **+140% slower** |
+| board_t size | 320 B | 448 B | +128 B |
+
+**Search benchmarks** (deterministic node counts — same search tree):
+
+| Metric | Baseline | Optimized | Change |
+|--------|----------|-----------|--------|
+| Depth 5, 50 pos (ms) | 109.2 | 104.5 | -4.3% |
+| Time-limited 100ms total nodes | 24,062,543 | 22,046,856 | **-8.4%** |
+
+**Conclusion**: The sentinel optimization is a **net negative on desktop**. Modern x86/ARM CPUs have excellent branch predictors that handle `SQ_VALID()` checks essentially for free, so eliminating those branches provides no benefit. Meanwhile, the 128-byte increase to `board_t` (256 vs 128 byte squares array) worsens cache line utilization in tight loops. The time-limited search confirms an ~8% throughput regression.
+
+This validates that the sentinel approach is specifically an **eZ80 microarchitecture win** — the eZ80 has no branch predictor and pays full cost for conditional branches, making branch elimination worth the memory trade-off. On desktop, the opposite is true: branches are cheap but cache misses from a larger struct are not.
+
 ### Step 5 vs Step 4 Per-Position Breakdown (P0-P49)
 
 Profile mode: `-- Profile 1000n (50 pos)`, same node cap per position (`max_nodes=1000`).
