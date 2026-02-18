@@ -130,6 +130,8 @@ def main():
                         help="Run without opening book")
     parser.add_argument("--book", default=None,
                         help="Path to opening book .bin file (default: books/book_xxl.bin)")
+    parser.add_argument("--variance", type=int, default=None,
+                        help="Move variance in centipawns (0 = off)")
     args = parser.parse_args()
 
     # Build engine with correct NODE_LIMIT if --nodes specified
@@ -156,6 +158,8 @@ def main():
     else:
         book_path = args.book or os.path.join(BASE_DIR, "..", "books", "book_xxl.bin")
         OUR_ENGINE_ARGS = ["-book", book_path]
+    if args.variance is not None:
+        OUR_ENGINE_ARGS += ["-variance", str(args.variance)]
     elo_min, elo_max = map(int, args.elos.split("-"))
     if args.games:
         GAMES_PER_MATCH = args.games

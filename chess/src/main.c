@@ -859,9 +859,11 @@ static const char *difficulty_subtexts[DIFFICULTY_ITEMS] = {
     "~1s think time", "~5s think time", "~10s think time", "~15s think time", "~30s think time"
 };
 static const uint32_t difficulty_times[DIFFICULTY_ITEMS] = {
-    1000, 5000, 10000, 15000, 30000
+    900, 4500, 9000, 13500, 27000
 };
-/* Node limits removed — difficulty is purely time-based */
+static const int difficulty_variance[DIFFICULTY_ITEMS] = {
+    30, 5, 3, 2, 0
+};
 
 static void draw_difficulty_select(void)
 {
@@ -943,7 +945,7 @@ static void update_difficulty_select(void)
         engine_set_use_book(1);
         engine_set_book_max_ply(difficulty_cursor == 0 ? 3 : 0);
         engine_set_eval_noise(0);
-        engine_set_move_variance(difficulty_cursor == 0 ? 30 : 0);
+        engine_set_move_variance(difficulty_variance[difficulty_cursor]);
         color_cursor = 2; /* default to Random */
         state = STATE_COLOR_SELECT;
         return;

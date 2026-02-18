@@ -460,19 +460,22 @@ int main(int argc, char *argv[])
     hooks.time_ms = uci_time_ms;
     engine_init(&hooks);
 
-#ifndef NODE_LIMIT
-#define NODE_LIMIT 2000
-#endif
+    /* Node limit: 0 = unlimited (time-based), or set via -DNODE_LIMIT=N */
+#ifdef NODE_LIMIT
     engine_set_max_nodes(NODE_LIMIT);
+#endif
 
-    /* Load opening book if provided via -book flag or default path */
+    /* Parse command-line flags */
     {
         const char *book_path = NULL;
         int i;
         for (i = 1; i < argc - 1; i++) {
             if (strcmp(argv[i], "-book") == 0) {
                 book_path = argv[i + 1];
-                break;
+                i++;
+            } else if (strcmp(argv[i], "-variance") == 0) {
+                engine_set_move_variance(atoi(argv[i + 1]));
+                i++;
             }
         }
         if (book_path && book_load(book_path)) {

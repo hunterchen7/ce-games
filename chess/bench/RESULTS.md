@@ -998,3 +998,42 @@ Post eval-optimization + Texel tuning. `max_depth = 15`, node-limited search, TT
 - Average throughput: ~5.1M nodes/sec @ 10ms, ~4.5M nodes/sec @ 50ms, ~4.6M nodes/sec @ 100ms
 - P17 ("Self stalemate") converges quickly (~4k nodes) regardless of time limit — fully solved early
 - Some positions show non-monotonic 50ms→100ms growth (e.g. P1, P6, P13) — due to TT being cleared between each run and iterative deepening completing different iterations
+
+## Move Variance (Easy Mode) — Elo Impact (2026-02-17)
+
+Native x86 UCI engine vs Stockfish, 0.1s/move, 30 games per matchup, with opening book.
+
+### Bug: PVS null-window masks bad moves
+
+The `move_variance` feature selects randomly among root moves within N centipawns of the best.
+However, PVS null-window search returns `alpha` for **any** move that fails low — whether it's
+1cp worse or 300cp worse. This made all root candidates score identically, allowing catastrophic
+moves like Qxa2 (queen hangs to Rxa2) to be selected.
+
+### Fix: Wider PVS window at root
+
+When `move_variance > 0`, the root PVS uses a window of width `variance + 1` instead of a
+null-window (width 1). This gives accurate scores for moves within the variance range while
+still quickly pruning terrible moves. PVS and aspiration windows remain fully intact for all
+non-root nodes and when variance = 0.
+
+### Approach comparison (variance=15 vs SF-2600)
+
+| Approach | W-D-L | Score | Elo diff |
+|----------|-------|-------|----------|
+| Original bug (all moves score identical) | — | — | queen hangs possible |
+| Full-window root (disabled PVS + aspiration) | +0=0-30 | 0% | **-708** |
+| Wider PVS window at root | +3=9-18 | 25% | **-191** |
+
+### Variance sweep (wider PVS, vs SF-2600)
+
+| Variance | W-D-L | Score | Elo diff |
+|----------|-------|-------|----------|
+| 0 (baseline, vs SF-2700) | +8=8-14 | 40% | -70 |
+| 5 | +10=10-10 | 50% | **0** |
+| 10 | +4=10-16 | 30% | **-147** |
+| 15 | +3=9-18 | 25% | **-191** |
+
+- variance=5 shows **zero Elo loss** vs SF-2600 while still providing move variety
+- Cost scales roughly with variance value (wider root PVS window = less pruning)
+- variance=0 baseline is consistent with prior measurements (-47 to -70 range vs SF-2700)

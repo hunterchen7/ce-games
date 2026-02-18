@@ -1,0 +1,140 @@
+[Event "Tournament vs SF-2600"]
+[Site "?"]
+[Date "2026.02.17"]
+[Round "?"]
+[White "TI84Chess-0.1s"]
+[Black "SF-2600"]
+[Result "1/2-1/2"]
+
+1. e4 c5 2. Nc3 e5 3. Bc4 Nc6 4. Nf3 Be7 5. O-O Nf6 6. d3 h6 7. a3 O-O 8. Be3 d6 9. h3 Be6 10. Bxe6 fxe6 11. b4 d5 12. b5 Na5 13. Nxe5 d4 14. Ng6 Rf7 15. Ne5 Rf8 16. Ng6 Qd7 17. Nxf8 Rxf8 18. e5 Ne8 19. Bd2 dxc3 20. Bxc3 b6 21. Bxa5 bxa5 22. c4 Rf5 23. Qe2 Rf4 24. Qe3 g5 25. Rad1 Ng7 26. Qe2 Nf5 27. g3 Nd4 28. Qh5 Rf7 29. f4 Nf5 30. fxg5 Qd4+ 31. Rf2 Bxg5 32. Qg6+ Kf8 33. g4 Be3 34. Rf1 Bxf2+ 35. Rxf2 Qa1+ 36. Rf1 Qxe5 37. gxf5 Rg7 38. fxe6+ Kg8 39. Qxg7+ Qxg7+ 40. Kh1 Qe5 41. Rf3 Qxe6 42. Rg3+ Kf7 43. Kg2 Qe2+ 44. Kg1 Kf6 45. a4 h5 46. h4 Qd2 47. Rf3+ Ke6 48. Rg3 Kf6 49. Rf3+ Kg7 50. Rg3+ 1/2-1/2
+
+[Event "Tournament vs SF-2600"]
+[Site "?"]
+[Date "2026.02.17"]
+[Round "?"]
+[White "TI84Chess-0.1s"]
+[Black "SF-2600"]
+[Result "1-0"]
+
+1. e4 e6 2. d4 d5 3. Nc3 Be7 4. Nf3 dxe4 5. Nxe4 Nf6 6. Bd3 O-O 7. Nxf6+ Bxf6 8. c3 Nd7 9. O-O Re8 10. Re1 e5 11. dxe5 Bxe5 12. Qc2 Bf6 13. Rxe8+ Qxe8 14. Bf4 Nf8 15. Re1 Qd8 16. Be5 Bg4 17. Bxf6 Qxf6 18. Be4 c6 19. Qb3 Bxf3 20. Bxf3 b6 21. Qa4 Rd8 22. Qxa7 Qf4 23. Qxb6 Rd6 24. h3 g6 25. Qb8 Kg7 26. g3 Qf6 27. Qc7 Rd2 28. Re2 Ne6 29. Qxc6 Rd8 30. Kg2 Nf4+ 31. gxf4 Rd6 32. Qc4 Qh4 33. Bd5 Qf6 34. Re8 Qf5 35. Qd4+ Rf6 36. Qc5 g5 37. Qf8+ Kg6 38. Be4 h6 39. fxg5 Qxe4+ 40. Rxe4 hxg5 41. Qg8+ Kh6 42. h4 Rd6 43. Qh8+ Kg6 44. h5+ Kf5 45. Qe5# 1-0
+
+[Event "Tournament vs SF-2600"]
+[Site "?"]
+[Date "2026.02.17"]
+[Round "?"]
+[White "TI84Chess-0.1s"]
+[Black "SF-2600"]
+[Result "1/2-1/2"]
+
+1. e4 e5 2. Nf3 d5 3. Nxe5 dxe4 4. Bc4 Nh6 5. Qh5 Qe7 6. d4 exd3 7. Bxh6 g6 8. Bxf7+ Qxf7 9. Nxf7 gxh5 10. Nxh8 Bxh6 11. Kd1 Kf8 12. cxd3 Bf5 13. Nd2 Kg8 14. Rc1 Nc6 15. Rc5 Rf8 16. d4 Kxh8 17. d5 Nb4 18. Rxc7 Nd3 19. Rf1 Nxb2+ 20. Kc1 Nd3+ 21. Kd1 Nb2+ 22. Kc1 Bf4 23. d6 Bxd6 24. Rxb7 Na4 25. f3 Bd3 26. Rh1 Rc8+ 27. Kd1 Nc3+ 28. Ke1 Re8+ 29. Ne4 h4 30. Rb3 Bxe4 31. fxe4 Nxe4 32. Rd3 Nc5+ 33. Kd2 Nxd3 34. Kxd3 Bc5 35. Rc1 Bb6 36. Rc2 h3 37. gxh3 Re3+ 38. Kc4 Ra3 39. Rd2 Ra4+ 40. Kb5 Rd4 41. Rxd4 Bxd4 42. a4 Bb6 43. a5 Bg1 44. Ka6 Bf2 45. Kb5 Kg7 46. a6 Kh6 47. Kc4 Kg6 48. Kd5 Kf5 49. Kc4 Bb6 50. Kd5 Bf2 51. Kc4 h5 52. Kd3 Bb6 53. Ke2 Bc5 54. Kf3 h4 55. Kg2 Ke4 56. Kh1 Bf2 57. Kg2 Bc5 58. Kh1 Bb6 59. Kg2 1/2-1/2
+
+[Event "Tournament vs SF-2600"]
+[Site "?"]
+[Date "2026.02.17"]
+[Round "?"]
+[White "TI84Chess-0.1s"]
+[Black "SF-2600"]
+[Result "1-0"]
+
+1. e4 c5 2. Nc3 Nc6 3. Nf3 e5 4. Bc4 Be7 5. O-O Nf6 6. d3 O-O 7. h3 d6 8. Be3 Bd7 9. Rc1 h6 10. a3 Be6 11. Bxe6 fxe6 12. Re1 a5 13. Nb5 a4 14. Bd2 Nd7 15. c3 Na5 16. Qxa4 Rxf3 17. gxf3 Nf6 18. d4 c4 19. dxe5 Nb3 20. Qxc4 dxe5 21. Qxb3 Kh7 22. Rcd1 Ra6 23. Bxh6 Qe8 24. Be3 Nd5 25. exd5 Qf7 26. d6 Qxf3 27. dxe7 Qe4 28. e8=Q Qf3 29. Qc2+ e4 30. Qxe4+ g6 31. Q4xg6# 1-0
+
+[Event "Tournament vs SF-2600"]
+[Site "?"]
+[Date "2026.02.17"]
+[Round "?"]
+[White "TI84Chess-0.1s"]
+[Black "SF-2600"]
+[Result "1-0"]
+
+1. e4 e5 2. Nf3 d6 3. d4 Nd7 4. c3 g6 5. Bc4 c6 6. Qb3 Qe7 7. O-O h6 8. dxe5 Nxe5 9. Nxe5 dxe5 10. Rd1 a5 11. Be3 a4 12. Bxf7+ Qxf7 13. Rd8+ Ke7 14. Bc5+ Kf6 15. Qxf7+ Kxf7 16. Rxf8+ Kg7 17. Re8 b6 18. Bxb6 Nf6 19. Rxe5 Nd7 20. Bc7 Kf7 21. Ra5 Rxa5 22. Bxa5 Nc5 23. Nd2 Nd3 24. b3 Bd7 25. Rd1 Bg4 26. f3 Be6 27. bxa4 Ra8 28. Nb3 Bc4 29. h4 g5 30. hxg5 hxg5 31. g3 Kg7 32. Bb6 Rxa4 33. Bd4+ Kf7 34. Rxd3 Rxa2 35. Nc5 Ke7 36. Re3 Ra1+ 37. Kg2 Rf1 38. e5 Rb1 39. e6 g4 40. fxg4 Bd5+ 41. Kf2 Rb2+ 42. Ke1 Bc4 43. g5 Rg2 44. g6 Kd8 45. Bf6+ Ke8 46. g7 Rg1+ 47. Kf2 Rf1+ 48. Kg2 Rxf6 49. g8=Q+ Ke7 50. Qg7+ Kd8 51. Qd7# 1-0
+
+[Event "Tournament vs SF-2600"]
+[Site "?"]
+[Date "2026.02.17"]
+[Round "?"]
+[White "TI84Chess-0.1s"]
+[Black "SF-2600"]
+[Result "1-0"]
+
+1. e4 e6 2. d4 Be7 3. Nc3 d5 4. Nf3 h6 5. Bd3 Bb4 6. exd5 Nf6 7. dxe6 Bxc3+ 8. bxc3 Qe7 9. Rb1 Qxe6+ 10. Ne5 Qxa2 11. Bd2 Be6 12. Rxb7 Qd5 13. Qb1 O-O 14. O-O c5 15. Bc4 Qd6 16. Bxe6 Qxe6 17. Re1 Qd5 18. Qb3 Qxb3 19. cxb3 Rc8 20. dxc5 a5 21. Rxf7 Nc6 22. Bxh6 Ne8 23. Nxc6 Kxf7 24. Ne5+ Kf8 25. Be3 Rd8 26. c6 Kg8 27. Bb6 Rdb8 28. Nc4 a4 29. bxa4 Rxa4 30. c7 Rc8 31. Rd1 Nxc7 32. Nd6 Rca8 33. Bxc7 Ra1 34. Rf1 R1a7 35. Bb6 Ra4 36. c4 R8a6 37. c5 Rd4 38. Re1 g6 39. Bd8 Rdxd6 40. cxd6 g5 41. Bc7 Kf7 42. d7 Ra8 43. d8=Q Rxd8 44. Bxd8 Kg6 45. g4 Kf7 46. Bxg5 Kg6 47. f4 Kh7 48. f5 Kg8 49. f6 Kh7 50. Re7+ Kh8 51. Bh6 Kg8 52. f7+ Kh8 53. f8=Q# 1-0
+
+[Event "Tournament vs SF-2600"]
+[Site "?"]
+[Date "2026.02.17"]
+[Round "?"]
+[White "TI84Chess-0.1s"]
+[Black "SF-2600"]
+[Result "0-1"]
+
+1. e4 e5 2. Nf3 Nc6 3. d4 Nxd4 4. Nxe5 Nc6 5. Nxc6 bxc6 6. Nc3 Bd6 7. Bc4 Nf6 8. O-O Qe7 9. Qf3 Rb8 10. Rd1 O-O 11. Rb1 h6 12. Be3 Be5 13. Bf4 d5 14. exd5 Bg4 15. Qe3 Bxd1 16. Rxd1 Ng4 17. Qg3 Bxf4 18. Qxf4 Nf6 19. b3 cxd5 20. Nxd5 Nxd5 21. Bxd5 Qe2 22. Qc1 Rfe8 23. Bf3 Qa6 24. Qd2 Qxa2 25. Qc3 Qa6 26. Qxc7 Rbc8 27. Qd7 Qa5 28. Kf1 Rcd8 29. b4 Qa6+ 30. b5 Qa5 31. Qxe8+ Rxe8 32. c4 Qa2 33. Rc1 Qa3 34. Rd1 Qc3 35. Be2 Qb2 36. Bd3 Kh8 37. h3 Qb3 38. Rd2 Qc3 39. Rd1 g6 40. g3 Qb3 41. Rd2 Rd8 42. Ke2 Rc8 43. h4 Qc3 44. Rd1 Qb3 45. Rd2 Rd8 46. f4 Qb4 47. Rd1 Qc3 48. Ke3 Qa3 49. Ke2 h5 50. Ke3 Qa2 51. Kf3 Qb3 52. Ke2 Qa2+ 53. Kf3 Qa3 54. Ke3 Qb2 55. Kf3 Qa2 56. c5 Qd5+ 57. Kf2 Qd4+ 58. Ke2 Qb2+ 59. Kf3 Qc3 60. Ke2 Qb2+ 61. Kf3 g5 62. hxg5 Qa3 63. Ke2 Qb3 64. Rd2 Re8+ 65. Kf3 Qd5+ 66. Kf2 Rd8 67. c6 Qc5+ 68. Ke2 h4 69. gxh4 Qc1 70. c7 Rc8 71. Rc2 Qxf4 72. h5 Qxg5 73. Kf2 Qf6+ 74. Ke2 Rxc7 75. Rxc7 Qe5+ 76. Kf3 Qxc7 77. Be2 Qc5 78. Kg2 Qe3 79. Bf3 Qe1 80. Kh3 Qe3 81. Kg2 Qg5+ 82. Kf2 Qxb5 83. Be2 Qxe2+ 84. Kxe2 Kg7 85. Kd3 a6 86. Kc3 Kh6 87. Kd4 a5 88. Kc4 a4 89. Kc3 f5 90. Kd4 Kg5 91. h6 Kg6 92. Kc3 Kh7 93. Kd4 Kxh6 94. Kc4 f4 95. Kd4 a3 96. Kc3 a2 97. Kb2 a1=Q+ 98. Kxa1 f3 99. Kb2 Kh5 100. Kc3 f2 101. Kd3 f1=Q+ 102. Ke4 Qg2+ 103. Ke5 Qa8 104. Ke6 Qe8+ 105. Kf6 Qe4 106. Kf7 Kg5 107. Kg7 Qd3 108. Kf8 Qd8+ 109. Kg7 Qc8 110. Kf7 Kf5 111. Ke7 Qc6 112. Kf7 Qb7+ 113. Kf8 Qc7 114. Ke8 Ke6 115. Kf8 Qf7# 0-1
+
+[Event "Tournament vs SF-2600"]
+[Site "?"]
+[Date "2026.02.17"]
+[Round "?"]
+[White "TI84Chess-0.1s"]
+[Black "SF-2600"]
+[Result "1-0"]
+
+1. e4 e5 2. Nf3 Nc6 3. d4 d6 4. d5 Nb4 5. c3 Na6 6. Bg5 Qd7 7. Bxa6 bxa6 8. O-O Rb8 9. Qc2 h6 10. Be3 Be7 11. Na3 f5 12. Nc4 fxe4 13. Qxe4 Qg4 14. Qxg4 Bxg4 15. Nfd2 Rb5 16. f4 exf4 17. Rxf4 Bh5 18. Bd4 Nf6 19. Bxf6 gxf6 20. Re1 Kd7 21. Ne4 Bf7 22. Nxf6+ Kd8 23. a4 Rxd5 24. Nxd5 Bxd5 25. Ne3 Be6 26. Re4 Ba2 27. a5 Kd7 28. Nd5 Bg5 29. c4 c6 30. Nb4 Bb3 31. h4 d5 32. cxd5 cxd5 33. Nxd5 Bd8 34. Rd4 Bxa5 35. Re3 Rb8 36. Nb4+ Kc7 37. Nxa6+ Kb6 38. Nxb8 Bc4 39. Rxc4 Kb5 40. Ree4 Bd8 41. Rcd4 Bxh4 42. Rxh4 Kb6 43. Rxh6+ Kb5 44. Na6 Ka5 45. Nc7 a6 46. Rxa6# 1-0
+
+[Event "Tournament vs SF-2600"]
+[Site "?"]
+[Date "2026.02.17"]
+[Round "?"]
+[White "TI84Chess-0.1s"]
+[Black "SF-2600"]
+[Result "1-0"]
+
+1. e4 c5 2. Nc3 a6 3. Nf3 Nc6 4. d4 cxd4 5. Nxd4 d6 6. Nxc6 bxc6 7. Bc4 e6 8. Qe2 Nf6 9. O-O d5 10. Rd1 Nxe4 11. Nxe4 Qh4 12. Bg5 Qxh2+ 13. Kxh2 Bd7 14. Qd2 h5 15. Be2 f6 16. Be3 Rb8 17. c4 h4 18. cxd5 cxd5 19. Nc5 f5 20. Nxd7 Kxd7 21. Qd4 Ke8 22. Qe5 Kf7 23. Qxb8 h3 24. gxh3 d4 25. Rxd4 Kg6 26. Rg1+ Kf6 27. Qd8+ Be7 28. Qxh8 Bd6+ 29. Rxd6 Ke7 30. Qd8+ Kf7 31. Rd7# 1-0
+
+[Event "Tournament vs SF-2600"]
+[Site "?"]
+[Date "2026.02.17"]
+[Round "?"]
+[White "TI84Chess-0.1s"]
+[Black "SF-2600"]
+[Result "0-1"]
+
+1. e4 e6 2. d4 d5 3. Nc3 Nf6 4. e5 Nfd7 5. Nf3 a6 6. Bd3 Be7 7. Bf4 h6 8. O-O c5 9. dxc5 Nc6 10. a3 Nxc5 11. Rc1 g5 12. Bg3 Nxd3 13. cxd3 Qa5 14. d4 Qd8 15. h3 Bd7 16. Qb3 b5 17. Qc2 Kf8 18. b4 Kg7 19. Qd3 Qb6 20. Rc2 Rhc8 21. Rfc1 a5 22. Qxb5 Qa7 23. Qe2 Nxd4 24. Nxd4 Qxd4 25. b5 Rab8 26. a4 Rc4 27. Rd1 Qc5 28. Rdc1 Rc8 29. Qe1 Qa3 30. b6 Qb3 31. Qd1 Qxb6 32. h4 gxh4 33. Bh2 Qd4 34. Qxd4 Rxd4 35. Rb1 Rb4 36. Rd1 Bxa4 37. Nxd5 Bxc2 38. Nxe7 Rcc4 39. Rc1 Bb1 40. Rf1 Bc2 41. Rc1 Bh7 42. Rd1 Bd3 43. f4 Rb1 44. Rxb1 Bxb1 45. f5 Bxf5 46. Nxf5+ exf5 47. e6 Rc1+ 48. Kf2 Rc2+ 49. Kg1 Re2 50. exf7 Kf8 51. Kh1 Ra2 52. Bd6+ Kxf7 53. Kh2 Rd2 54. Bc5 Rd5 55. Bf2 a4 56. Be1 a3 57. Bb4 Rd3 58. Bxa3 Rxa3 59. Kg1 Kg6 60. Kf1 Ra2 61. Kg1 Ra1+ 62. Kf2 Ra3 63. Kf1 Kg5 64. Kg1 Ra2 65. Kh2 Ra6 66. Kg1 Ra2 67. Kh2 Ra1 68. g3 Ra2+ 69. Kh3 Rb2 70. gxh4+ Kf4 71. h5 Kf3 72. Kh4 Kf4 73. Kh3 Rd2 74. Kh4 Rh2# 0-1
+
+[Event "Tournament vs SF-2600"]
+[Site "?"]
+[Date "2026.02.17"]
+[Round "?"]
+[White "TI84Chess-0.1s"]
+[Black "SF-2600"]
+[Result "1/2-1/2"]
+
+1. e4 e5 2. Nf3 Bc5 3. Nxe5 Nf6 4. d4 Bb6 5. Nc3 c6 6. Nc4 O-O 7. e5 Nd5 8. Nxd5 cxd5 9. Nxb6 axb6 10. Qh5 d6 11. exd6 Re8+ 12. Be2 Qxd6 13. O-O Nc6 14. c3 Bd7 15. Re1 b5 16. b4 g6 17. Qh6 Ne7 18. g4 Qc6 19. Bd2 Nc8 20. Bf3 Rxe1+ 21. Bxe1 f5 22. g5 Nd6 23. a3 f4 24. Qh4 Be6 25. Bd2 Qd7 26. Qxf4 Ne4 27. Bxe4 dxe4 28. Qxe4 Bd5 29. Qh4 Re8 30. Re1 Re6 31. Qf4 Qe8 32. Re5 Bc6 33. h4 Rxe5 34. Qxe5 Qf7 35. Qb8+ Qf8 36. Qxf8+ Kxf8 37. Kf1 Bd5 38. Bf4 Ke7 39. Ke2 Kd7 40. Be5 Ke6 41. Bb8 Bc4+ 42. Ke3 Ba2 43. Be5 Kf5 44. f3 Bd5 45. Bg3 Ke6 46. Bc7 Bb3 47. Be5 Bc2 48. Kd2 Bb3 49. Bh2 Bc4 50. Bb8 Bd5 51. Ke3 Ba2 52. Ke2 Kd5 53. Kd1 Bb1 54. Kc1 Ba2 55. Bf4 Ke6 56. Kd2 Bc4 57. Ke3 Bb3 58. Ke2 Bc2 59. Kd2 Ba4 60. Bc7 Bb3 61. Ke2 Ba2 62. Be5 Bb3 63. Bg3 Bc4+ 64. Kf2 Bd3 65. Bf4 Bb1 66. Ke3 Bc2 67. Bb8 Bb3 68. Ba7 Kd5 69. Kd2 Kc6 70. Bb8 Be6 71. Be5 Bb3 72. Kd3 Ba2 73. Ke4 Bb1+ 74. Ke3 Kd5 75. Bg3 Ba2 76. Kd2 Kc4 77. Bc7 Bb1 78. Bh2 Bd3 79. d5 Bb1 80. d6 Bf5 81. Be5 Bc8 82. Ke3 Bd7 83. Ke4 Bc6+ 84. Kf4 Kd5 85. h5 Ke6 86. h6 Kd5 87. Bd4 Bd7 88. Bc5 Ke6 89. Ke4 Bc6+ 90. Ke3 Kd5 91. f4 Bd7 92. Kf2 Bf5 93. Ke1 Bg4 94. Kd2 Ke4 95. Bd4 Bc8 96. Be5 Kd5 97. Kc2 Bd7 98. Kb3 Be6 99. Kb2 Bg4 100. Ka1 Bd7 101. Kb1 Bf5+ 102. Kc1 Bc8 103. Kd1 Bf5 104. Ke2 Bh3 105. Kf3 Be6 106. Kg3 Ke4 107. Kf2 Bd7 108. Ke2 Be6 109. Kf1 Kd3 110. Kg2 Bc8 111. Kg3 Bf5 112. Kf2 Be6 113. Kf3 Bd5+ 114. Kg3 Be6 115. Kh2 Ke4 116. Kg2 Bc8 117. Kf1 Ke3 118. Ke1 b6 119. Kd1 Kd3 120. Kc1 Bd7 121. Bd4 Ke4 122. Bxb6 Kxf4 123. Bd8 Ke5 124. Be7 Kd5 125. Kc2 Bf5+ 126. Kb2 Bd7 127. Kb3 Be8 128. Kc2 Kc4 129. Bd8 Bc6 130. Bb6 Kd5 131. Bc7 Bd7 132. Kc1 Bf5 133. Bb8 Kc4 134. Kb2 Be6 135. Kc2 Bf5+ 136. Kd2 Bd7 137. Ba7 Be8 138. Kc2 Bd7 139. Bc5 Kd5 140. Kd3 Bf5+ 141. Kd2 Bh3 142. Kc1 Be6 143. Kb2 Kc4 144. Bb6 Bd7 145. Bd8 Kd3 146. Bf6 Be8 147. Be5 Ke4 148. Bg7 Kd3 149. Kc1 Ke4 150. Bf8 Kd3 151. Kb2 Bc6 152. Be7 Bd7 153. c4 Kxc4 154. Bd8 Kd5 155. Bc7 Kd4 156. Kb3 Kd3 157. Bd8 Be8 158. Bf6 Bd7 159. Bc3 Be6+ 160. Kb2 Kc4 161. Bf6 Bg4 162. Bd8 Bc8 163. Bc7 Bg4 164. Bb8 Bc8 165. Kc2 Bd7 166. Kd2 Kd5 167. Kc3 Be8 168. Kd3 Bd7 169. Bc7 Bf5+ 170. Kc3 Bc8 171. Kc2 Kc4 172. Kd2 Bg4 173. Ke3 Kd5 174. Kf4 Be6 175. Bb8 Bd7 176. Ke3 Bf5 177. Kf3 Kd4 178. Ba7+ Kd5 179. Bc5 Be4+ 180. Ke3 Bf5 181. Kf4 Bc8 182. Kg3 Be6 183. Kf3 Bf5 184. Kf2 Bh3 185. Ke2 Bf5 186. Kf1 Bg4 187. Ke1 Bf5 188. Kd1 Bc8 189. Kd2 Bg4 190. Kd3 Be6 191. Kc3 Bg4 192. Kb3 Bc8 193. a4 bxa4+ 194. Kxa4 Bd7+ 195. Ka5 Kc6 196. Ka6 Bg4 197. Be3 Be2+ 198. Ka5 Bf1 199. Bf4 Bc4 200. Bg3 Bf1 1/2-1/2
+
+[Event "Tournament vs SF-2600"]
+[Site "?"]
+[Date "2026.02.17"]
+[Round "?"]
+[White "TI84Chess-0.1s"]
+[Black "SF-2600"]
+[Result "0-1"]
+
+1. e4 e6 2. d4 d5 3. Nc3 Nf6 4. e5 Nfd7 5. Nf3 c5 6. Bg5 Qa5 7. Bb5 a6 8. Bxd7+ Kxd7 9. a3 c4 10. O-O Nc6 11. h3 h6 12. Bd2 Qc7 13. b3 b5 14. bxc4 bxc4 15. Bc1 Qa5 16. Ne2 Qa4 17. Rb1 Ke8 18. Rb6 Rb8 19. Rxb8 Nxb8 20. Nc3 Qc6 21. Qd2 Qb7 22. Qf4 Nc6 23. Qg3 Ne7 24. Qh2 g5 25. Qg3 Nf5 26. Qg4 Qb6 27. h4 Be7 28. hxg5 hxg5 29. Bxg5 Rg8 30. Rb1 Qa5 31. Ne2 Bxg5 32. Nxg5 Qd2 33. Nf3 Rxg4 34. Nxd2 Nxd4 35. Nxd4 Rxd4 36. Nf3 Rg4 37. c3 Kd7 38. a4 Kc7 39. a5 Bb7 40. g3 Re4 41. Kg2 d4 42. cxd4 Rg4 43. Rb6 Bd5 44. Rxa6 c3 45. Ra7+ Kc6 46. Ra8 Kb7 47. Rf8 Rxd4 48. Rxf7+ Ka6 49. Kh2 c2 50. Nxd4 c1=Q 51. g4 Qf1 52. Kg3 Qg1+ 53. Kh3 Qe1 54. Nc2 Qh1+ 55. Kg3 Bg2 56. f3 Qh3+ 57. Kf2 Kxa5 58. Ne3 Bh1 59. Nc4+ Kb5 60. Nd6+ Kc6 61. Rf4 Qg2+ 62. Ke3 Qg1+ 63. Ke2 Qg2+ 64. Ke3 Qg1+ 65. Ke2 Bg2 66. Rf8 Bf1+ 67. Kd2 Qd4+ 68. Kc2 Bd3+ 69. Kb3 Be2 70. f4 Qe3+ 71. Kc2 Qd3+ 72. Kb2 Qd2+ 73. Kb3 Qd5+ 74. Kc3 Qd3+ 75. Kb2 Qd2+ 76. Kb3 Bd1+ 77. Kc4 Qe2+ 78. Kd4 Qf2+ 79. Kc4 Qc5+ 80. Kd3 Kd5 81. Nf5 Qc2+ 82. Ke3 Qe2# 0-1
+
+[Event "Tournament vs SF-2600"]
+[Site "?"]
+[Date "2026.02.17"]
+[Round "?"]
+[White "TI84Chess-0.1s"]
+[Black "SF-2600"]
+[Result "1/2-1/2"]
+
+1. e4 e5 2. Nf3 Nc6 3. d4 exd4 4. Nxd4 Nf6 5. Nxc6 bxc6 6. e5 Ng8 7. Nc3 Qe7 8. Qd4 f6 9. Bf4 fxe5 10. Qxe5 Qxe5+ 11. Bxe5 Rb8 12. O-O-O d6 13. Bd4 Ne7 14. Bxa7 Ra8 15. Be3 h6 16. Bd3 Nf5 17. Bf4 Bd7 18. Rhe1+ Ne7 19. h4 Kd8 20. h5 Nc8 21. a4 Bg4 22. Be2 Bxe2 23. Rxe2 Rg8 24. Re6 Kd7 25. Rg6 Ne7 26. Rg4 d5 27. Re1 Rb8 28. a5 g5 29. Bd2 Ra8 30. Ra4 Bg7 31. a6 Nf5 32. g4 Nh4 33. a7 Rgf8 34. Rd1 Nf3 35. Ne4 Kc8 36. Nc5 Be5 37. Nd3 Bd6 38. c3 Re8 39. Be3 Re4 40. Rxe4 dxe4 41. Nc5 Rxa7 42. Kc2 Bxc5 43. Bxc5 Ra6 44. Bf8 c5 45. Bxc5 Rf6 46. Ra1 Kd7 47. b4 Nh2 48. Bd4 Rf7 49. Rg1 Kc8 50. Be3 Nf3 51. Rg3 Rd7 52. c4 c6 53. b5 cxb5 54. cxb5 Rd5 55. b6 Kb7 56. Kb3 Kc6 57. Kc3 Rd3+ 58. Kb4 Rd7 59. Ka5 Rd1 60. Ka4 Ne5 61. Kb3 Nf3 62. Kc2 Rh1 63. Kc3 Rb1 64. Rg2 Rh1 65. Kb3 Rb1+ 66. Ka2 Re1 67. Rg3 Rf1 68. Kb2 Ne1 69. Kc3 Nf3 70. Kb4 Rb1+ 71. Kc4 Re1 72. Rh3 Ra1 73. Kb3 Rg1 74. Ka3 Re1 75. Kb2 Re2+ 76. Kb3 Re1 77. Kc3 Rf1 78. Kb2 Re1 79. Kc3 Rf1 80. Kc2 Rg1 81. Kb3 Rf1 82. Rg3 Ra1 83. Kb2 Rh1 84. Kc3 Rf1 85. Bd4 Rc1+ 86. Kb2 Rh1 87. Kc3 Rh2 88. Kc4 Nxd4 89. Kxd4 Rxf2 90. Rb3 Kb7 91. Kxe4 Rf4+ 92. Ke5 Rxg4 93. Kf6 Re4 94. Kg7 Re6 95. Kh7 Rxb6 96. Rf3 Re6 97. Rf7+ Kb6 98. Rg7 Kc5 99. Rg6 Kd6 100. Kxh6 g4 101. Kh7 Ke7 102. Rxg4 Kf7 103. Rf4+ Rf6 104. Rxf6+ Kxf6 105. Kh6 Kf7 106. Kg5 Ke8 107. Kg6 Kf8 108. Kh7 Kf7 109. h6 Kf8 110. Kg6 Kg8 111. Kf5 Kh7 112. Kg5 Kg8 113. Kg4 Kh7 114. Kh5 Kh8 115. Kh4 Kh7 116. Kg3 Kh8 117. Kf4 Kg8 118. Kg5 Kh7 119. Kf5 Kg8 120. Kg6 Kh8 121. Kf6 Kh7 122. Kf7 Kh8 123. Ke6 Kg8 124. h7+ Kxh7 1/2-1/2
+
+[Event "Tournament vs SF-2600"]
+[Site "?"]
+[Date "2026.02.17"]
+[Round "?"]
+[White "TI84Chess-0.1s"]
+[Black "SF-2600"]
+[Result "1/2-1/2"]
+
+1. e4 e5 2. Nf3 Nc6 3. d4 exd4 4. Nxd4 Nf6 5. Nxc6 dxc6 6. Qxd8+ Kxd8 7. Bg5 Ke8 8. Nd2 Be6 9. Bxf6 gxf6 10. Bc4 Bg4 11. h3 Bc8 12. O-O-O b5 13. Be2 Rg8 14. Bf3 Bb7 15. Nb3 a5 16. Rhe1 c5 17. e5 Bh6+ 18. Kb1 Bxf3 19. exf6+ Kf8 20. gxf3 Bf4 21. Nxc5 Rg5 22. Nd7+ Kg8 23. h4 Rf5 24. Re7 Kh8 25. Rxf7 Bd6 26. Rd3 Rg8 27. b3 Rg1+ 28. Kb2 Kg8 29. Re7 Bxe7 30. fxe7 Re1 31. Re3 Rxe3 32. fxe3 Kf7 33. f4 b4 34. Ne5+ Ke8 35. c3 bxc3+ 36. Kxc3 Rh5 37. Nf3 Rc5+ 38. Kd3 a4 39. bxa4 Ra5 40. Nd4 Rxa4 41. Nf5 Rxa2 42. e4 Rf2 43. Ke3 Rf1 44. h5 Ra1 45. h6 Ra4 46. e5 c5 47. Kf3 Kf7 48. Kg3 Ke8 49. Kg4 c4 50. Kg5 c3 51. Ne3 Re4 52. Nc2 Kxe7 53. Kf5 Ra4 54. Kg4 Kd7 55. Ne3 Ke6 56. Kf3 Rd4 57. Ke2 Rxf4 58. Kd3 Kxe5 59. Kxc3 Ke4 60. Nc4 Kf5 61. Ne3+ Ke4 62. Nc4 Rf8 63. Nd6+ Kd5 64. Nb5 Rf3+ 65. Kb4 Ke5 66. Kc5 Rf6 67. Na3 Rxh6 68. Nc4+ Ke4 69. Nd2+ Kf4 70. Nb3 Rg6 71. Nc1 Ke4 72. Ne2 Kf3 73. Nd4+ Ke4 74. Ne2 h5 75. Nc3+ Kf4 76. Nd5+ Kf3 77. Kc4 h4 78. Ne7 Rg5 79. Nc6 h3 80. Nd4+ Kg3 81. Ne2+ Kf3 82. Nd4+ Ke3 83. Ne6 Rg6 84. Nf8 Rg5 85. Ne6 Rf5 86. Ng7 Rf7 87. Ne8 Rf2 88. Kc5 Rf4 89. Nc7 Rf5+ 90. Kd6 h2 91. Nd5+ Kd4 92. Nb4 h1=Q 93. Nc6+ Kc3 94. Ne7 Rg5 95. Kd7 Qe4 96. Kd6 Kc4 97. Nc8 Qd5+ 98. Ke7 Rg7+ 99. Kf6 Rf7+ 100. Kg6 Qe6+ 101. Kg5 Qf5+ 102. Kh4 Qxc8 103. Kh5 Kb4 104. Kh4 Qg8 105. Kh5 Qc8 106. Kh4 Qg8 107. Kh5 1/2-1/2
+
