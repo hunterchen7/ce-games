@@ -33,7 +33,7 @@ search_result_t search_go(board_t *b, const search_limits_t *limits);
 
 /* Position history for repetition detection.
    Must be maintained by the caller across moves. */
-void search_history_push(uint32_t hash);
+void search_history_push(zhash_t hash);
 void search_history_pop(void);
 void search_history_clear(void);
 void search_history_set_irreversible(void);

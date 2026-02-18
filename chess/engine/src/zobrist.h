@@ -3,7 +3,8 @@
 
 #include "types.h"
 
-/* Primary 32-bit hash keys */
+/* Primary hash keys — kept as uint32_t for fast 4-byte array stride.
+   Only the lower 24 bits are used when XOR'd into zhash_t state. */
 extern uint32_t zobrist_piece[12][64];
 extern uint32_t zobrist_castle[16];
 extern uint32_t zobrist_ep_file[8];

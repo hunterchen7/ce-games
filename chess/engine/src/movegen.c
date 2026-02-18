@@ -131,17 +131,17 @@ static uint8_t gen_sliding_moves(const board_t *b, uint8_t sq, uint8_t side,
         int8_t dir = offsets[d];
         uint8_t target = sq + dir;
 
-        while (SQ_VALID(target)) {
-            uint8_t occ = b->squares[target];
-            if (occ == PIECE_NONE) {
-                if (mode != GEN_CAPTURES)
-                    list[count++] = make_move(sq, target, 0);
-            } else {
-                if (is_enemy(occ, side) && mode != GEN_QUIETS)
-                    list[count++] = make_move(sq, target, FLAG_CAPTURE);
-                break;  /* blocked */
-            }
+        /* Walk empty squares (sentinel stops at off-board) */
+        while (b->squares[target] == PIECE_NONE) {
+            if (mode != GEN_CAPTURES)
+                list[count++] = make_move(sq, target, 0);
             target += dir;
+        }
+        /* Check if we stopped on a real piece (not off-board sentinel) */
+        if (SQ_VALID(target)) {
+            uint8_t occ = b->squares[target];
+            if (is_enemy(occ, side) && mode != GEN_QUIETS)
+                list[count++] = make_move(sq, target, FLAG_CAPTURE);
         }
     }
     return count;
@@ -340,16 +340,13 @@ uint8_t is_square_attacked(const board_t *b, uint8_t sq, uint8_t by_side)
     for (i = 0; i < 4; i++) {
         int8_t dir = bishop_offsets[i];
         target = sq + dir;
-        while (SQ_VALID(target)) {
+        while (b->squares[target] == PIECE_NONE) target += dir;
+        if (SQ_VALID(target)) {
             uint8_t p = b->squares[target];
-            if (p != PIECE_NONE) {
-                if (PIECE_COLOR(p) == attacker_color) {
-                    uint8_t t = PIECE_TYPE(p);
-                    if (t == PIECE_BISHOP || t == PIECE_QUEEN) return 1;
-                }
-                break;
+            if (PIECE_COLOR(p) == attacker_color) {
+                uint8_t t = PIECE_TYPE(p);
+                if (t == PIECE_BISHOP || t == PIECE_QUEEN) return 1;
             }
-            target += dir;
         }
     }
 
@@ -357,16 +354,13 @@ uint8_t is_square_attacked(const board_t *b, uint8_t sq, uint8_t by_side)
     for (i = 0; i < 4; i++) {
         int8_t dir = rook_offsets[i];
         target = sq + dir;
-        while (SQ_VALID(target)) {
+        while (b->squares[target] == PIECE_NONE) target += dir;
+        if (SQ_VALID(target)) {
             uint8_t p = b->squares[target];
-            if (p != PIECE_NONE) {
-                if (PIECE_COLOR(p) == attacker_color) {
-                    uint8_t t = PIECE_TYPE(p);
-                    if (t == PIECE_ROOK || t == PIECE_QUEEN) return 1;
-                }
-                break;
+            if (PIECE_COLOR(p) == attacker_color) {
+                uint8_t t = PIECE_TYPE(p);
+                if (t == PIECE_ROOK || t == PIECE_QUEEN) return 1;
             }
-            target += dir;
         }
     }
 

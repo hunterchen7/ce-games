@@ -10,7 +10,7 @@ void tt_clear(void)
     memset(tt, 0, sizeof(tt));
 }
 
-uint8_t tt_probe(uint32_t hash, uint16_t lock,
+uint8_t tt_probe(zhash_t hash, uint16_t lock,
                  int *score, tt_move16_t *best_move,
                  int8_t *depth, uint8_t *flag)
 {
@@ -26,7 +26,7 @@ uint8_t tt_probe(uint32_t hash, uint16_t lock,
     return 1;
 }
 
-void tt_store(uint32_t hash, uint16_t lock,
+void tt_store(zhash_t hash, uint16_t lock,
               int score, tt_move16_t best_move,
               int8_t depth, uint8_t flag)
 {

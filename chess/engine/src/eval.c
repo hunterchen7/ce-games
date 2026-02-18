@@ -251,7 +251,7 @@ static const int8_t bishop_offsets[] = { -17, -15, 15, 17 };
 #define PAWN_CACHE_SET_MASK (PAWN_CACHE_SETS - 1)
 
 typedef struct {
-    uint32_t key;           /* board pawn_hash */
+    zhash_t  key;           /* board pawn_hash */
     int16_t pawn_mg;        /* pawn-only mg contribution (white - black) */
     int16_t pawn_eg;        /* pawn-only eg contribution (white - black) */
     uint8_t w_pawns[8];     /* [file] -> rank bitmask */
@@ -537,12 +537,14 @@ int evaluate(const board_t *b)
                 uint8_t mob = 0, j;
                 for (j = 0; j < 4; j++) {
                     uint8_t dest = sq + bishop_offsets[j];
-                    while (SQ_VALID(dest)) {
-                        uint8_t occ = b->squares[dest];
-                        if (occ != PIECE_NONE && IS_WHITE(occ)) break;
+                    uint8_t occ;
+                    while ((occ = b->squares[dest]) == PIECE_NONE) {
                         if (!(pawn_atk[dest] & 2)) mob++;
-                        if (occ != PIECE_NONE) break;
                         dest += bishop_offsets[j];
+                    }
+                    /* Stopped on piece or off-board sentinel */
+                    if (SQ_VALID(dest) && !IS_WHITE(occ)) {
+                        if (!(pawn_atk[dest] & 2)) mob++;
                     }
                 }
                 if (mob > 13) mob = 13;
@@ -574,12 +576,14 @@ int evaluate(const board_t *b)
                 uint8_t mob = 0, j;
                 for (j = 0; j < 4; j++) {
                     uint8_t dest = sq + bishop_offsets[j];
-                    while (SQ_VALID(dest)) {
-                        uint8_t occ = b->squares[dest];
-                        if (occ != PIECE_NONE && IS_BLACK(occ)) break;
+                    uint8_t occ;
+                    while ((occ = b->squares[dest]) == PIECE_NONE) {
                         if (!(pawn_atk[dest] & 1)) mob++;
-                        if (occ != PIECE_NONE) break;
                         dest += bishop_offsets[j];
+                    }
+                    /* Stopped on piece or off-board sentinel */
+                    if (SQ_VALID(dest) && !IS_BLACK(occ)) {
+                        if (!(pawn_atk[dest] & 1)) mob++;
                     }
                 }
                 if (mob > 13) mob = 13;

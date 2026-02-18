@@ -25,7 +25,7 @@ else
 BOOK_TIER = 0
 endif
 
-CFLAGS = -Wall -Wextra -Oz -I engine/src -DBOOK_TIER=$(BOOK_TIER)
+CFLAGS = -Wall -Wextra -Oz -I engine/src -DBOOK_TIER=$(BOOK_TIER) -DPAWN_CACHE_SIZE=16
 CXXFLAGS = -Wall -Wextra -Oz
 
 EXTRA_C_SOURCES = \

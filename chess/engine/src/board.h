@@ -6,7 +6,7 @@
 /* ========== Board State ========== */
 
 typedef struct {
-    uint8_t  squares[128];       /* 0x88 board array */
+    uint8_t  squares[256];       /* 0x88 board; off-board indices hold OFFBOARD sentinel */
     uint8_t  piece_list[2][16];  /* square index per piece, per side */
     uint8_t  piece_index[128];   /* square -> piece_list index, 0xFF if empty */
     uint8_t  piece_count[2];     /* number of pieces per side */
@@ -17,8 +17,8 @@ typedef struct {
     uint8_t  ep_square;          /* en passant target square, or SQ_NONE */
     uint8_t  halfmove;           /* halfmove clock (50-move rule) */
     uint16_t fullmove;           /* fullmove counter */
-    uint32_t pawn_hash;          /* Zobrist hash of pawns only (for eval cache) */
-    uint32_t hash;               /* Zobrist hash */
+    zhash_t  pawn_hash;          /* Zobrist hash of pawns only (for eval cache) */
+    zhash_t  hash;               /* Zobrist hash */
     uint16_t lock;               /* independent TT lock key */
     /* incremental eval (material + PST combined) */
     int16_t  mg[2];              /* middlegame score per side */
@@ -34,8 +34,8 @@ typedef struct {
     uint8_t  ep_square;   /* previous en passant square */
     uint8_t  halfmove;    /* previous halfmove clock */
     uint16_t fullmove;    /* previous fullmove counter */
-    uint32_t pawn_hash;   /* previous pawn-only Zobrist hash */
-    uint32_t hash;        /* previous Zobrist hash */
+    zhash_t  pawn_hash;   /* previous pawn-only Zobrist hash */
+    zhash_t  hash;        /* previous Zobrist hash */
     uint16_t lock;        /* previous TT lock key */
     uint8_t  moved_piece; /* piece that moved (for unmake) */
     uint8_t  flags;       /* move flags (for unmake of castling/EP) */

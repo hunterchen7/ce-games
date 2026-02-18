@@ -494,7 +494,7 @@ int main(void)
     {
         const search_profile_t *prof;
         const eval_profile_t *eprof;
-        uint32_t total_search_cy = 0;
+        uint64_t total_search_cy = 0;
         uint32_t total_nodes = 0;
 
         out("-- Profile 1000n (50 pos) --");
@@ -521,8 +521,8 @@ int main(void)
 
         dbg_printf("\n=== SEARCH PROFILE (50 pos x 1000 nodes) ===\n");
         dbg_printf("nodes:       %lu\n", (unsigned long)total_nodes);
-        dbg_printf("total_cy:    %lu\n", (unsigned long)total_search_cy);
-        dbg_printf("cy/node:     %lu\n", total_nodes ? (unsigned long)(total_search_cy / total_nodes) : 0UL);
+        dbg_printf("total_cy:    %llu\n", (unsigned long long)total_search_cy);
+        dbg_printf("cy/node:     %llu\n", total_nodes ? (unsigned long long)(total_search_cy / total_nodes) : 0ULL);
         dbg_printf("\n");
         dbg_printf("%-14s %10s %8s %8s %5s\n", "Category", "Cycles", "Cnt", "Cy/call", "Pct");
         dbg_printf("%-14s %10s %8s %8s %5s\n", "--------------", "----------", "--------", "--------", "-----");
@@ -558,17 +558,17 @@ int main(void)
 #undef PROF_ROW
 
         {
-            uint32_t accounted = prof->eval_cy + prof->movegen_cy +
+            uint64_t accounted = (uint64_t)prof->eval_cy + prof->movegen_cy +
                 prof->make_unmake_cy + prof->is_legal_cy +
                 prof->legal_info_cy + prof->moveorder_cy + prof->tt_cy;
-            uint32_t overhead = total_search_cy - accounted;
-            uint32_t pct = total_search_cy ? (uint32_t)(((uint64_t)overhead * 100) / total_search_cy) : 0;
-            dbg_printf("%-14s %10lu %8s %8s %4lu%%\n",
-                       "overhead", (unsigned long)overhead, "-", "-", (unsigned long)pct);
-            sprintf(buf, "overhead: %lu%% (%lu cy)", (unsigned long)pct, (unsigned long)overhead);
+            int64_t overhead = (int64_t)total_search_cy - (int64_t)accounted;
+            int32_t pct = total_search_cy ? (int32_t)((overhead * 100) / (int64_t)total_search_cy) : 0;
+            dbg_printf("%-14s %10lld %8s %8s %4ld%%\n",
+                       "overhead", (long long)overhead, "-", "-", (long)pct);
+            sprintf(buf, "overhead: %ld%% (%lld cy)", (long)pct, (long long)overhead);
             out(buf);
-            sprintf(buf, "total: %lu cy, %lu nodes",
-                    (unsigned long)total_search_cy, (unsigned long)total_nodes);
+            sprintf(buf, "total: %llu cy, %lu nodes",
+                    (unsigned long long)total_search_cy, (unsigned long)total_nodes);
             out(buf);
         }
 

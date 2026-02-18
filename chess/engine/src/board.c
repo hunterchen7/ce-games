@@ -70,8 +70,8 @@ int8_t engine_to_ui_piece(uint8_t piece)
 /* Compute full Zobrist hash and lock from scratch for a board position. */
 static void board_compute_hash(board_t *b)
 {
-    uint32_t h = 0;
-    uint32_t ph = 0;
+    zhash_t h = 0;
+    zhash_t ph = 0;
     uint16_t l = 0;
     int sq;
     uint8_t piece, pidx, sq64;
@@ -111,10 +111,17 @@ static void board_compute_hash(board_t *b)
 
 void board_init(board_t *b)
 {
+    uint8_t i;
     if (!zobrist_is_initialized())
         zobrist_init(0);
 
     memset(b, 0, sizeof(board_t));
+    /* Fill all off-board squares with sentinel so sliding loops
+       stop without needing SQ_VALID per iteration */
+    for (i = 0; i < 128; i++) {
+        if (i & 0x88) b->squares[i] = OFFBOARD;
+    }
+    memset(b->squares + 128, OFFBOARD, 128);
     memset(b->piece_index, PLIST_INVALID, sizeof(b->piece_index));
     b->ep_square = SQ_NONE;
     b->king_sq[WHITE] = SQ_NONE;
