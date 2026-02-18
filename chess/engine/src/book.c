@@ -1,6 +1,6 @@
 #include "book.h"
 
-#if BOOK_TIER != 0
+#ifndef NO_BOOK
 
 #include "movegen.h"
 #include <fileioc.h>
@@ -26,18 +26,13 @@
  *   uint32 learn   (unused)
  */
 
-/* Tier-specific AppVar name prefixes (4 chars + 2-digit number) */
-#if BOOK_TIER == 1
-#define BOOK_PREFIX "CHBS"
-#elif BOOK_TIER == 2
-#define BOOK_PREFIX "CHBM"
-#elif BOOK_TIER == 3
-#define BOOK_PREFIX "CHBL"
-#elif BOOK_TIER == 4
-#define BOOK_PREFIX "CHBX"
-#elif BOOK_TIER == 5
-#define BOOK_PREFIX "CHBY"
-#endif
+/* Tier IDs for detected_tier */
+#define TIER_XXL 0
+#define TIER_XL  1
+#define TIER_L   2
+#define TIER_M   3
+#define TIER_S   4
+#define TIER_NONE 5
 
 #define BOOK_RANDOMS_APPVAR "CHBKRN"
 #define POLY_RANDOM_COUNT   781
@@ -57,6 +52,7 @@ static book_segment_t  segments[MAX_BOOK_SEGMENTS];
 static uint8_t         num_segments;
 static uint32_t        total_entries;        /* sum of all segment counts */
 static uint8_t         book_ready;
+static uint8_t         detected_tier;        /* TIER_XXL..TIER_S, or TIER_NONE */
 uint32_t               book_random_seed;    /* set externally for variety */
 
 /* ========== Polyglot Random Number Indices ==========
@@ -310,31 +306,28 @@ static uint8_t iterate_key_entries(uint64_t key, uint8_t seg_idx,
 
 /* ========== Public API ========== */
 
-uint8_t book_init(void)
+/* Try to load all segments for a given 4-char prefix (e.g. "CHBX").
+   Returns 1 if at least one segment was loaded, 0 otherwise. */
+/* Load all segments matching a given prefix string (e.g. "CHBX").
+   prefix must be exactly 4 chars. Appends to segments[]. */
+static void load_segments(const char *prefix)
 {
     uint8_t handle;
     uint8_t *data_ptr;
     char name[9];
     uint8_t seg;
 
-    num_segments = 0;
-    total_entries = 0;
-    book_ready = 0;
+    name[0] = prefix[0];
+    name[1] = prefix[1];
+    name[2] = prefix[2];
+    name[3] = prefix[3];
 
-    /* Open randoms AppVar */
-    handle = ti_Open(BOOK_RANDOMS_APPVAR, "r");
-    if (!handle)
-        return 0;
-    data_ptr = (uint8_t *)ti_GetDataPtr(handle);
-    poly_randoms = (const uint64_t *)data_ptr;
-    ti_Close(handle);
-    /* Flash pointer remains valid after close */
-
-    /* Open book data segments: CHBS01, CHBS02, ... */
     for (seg = 1; seg <= 99 && num_segments < MAX_BOOK_SEGMENTS; seg++) {
         uint32_t count;
 
-        sprintf(name, "%s%02u", BOOK_PREFIX, seg);
+        name[4] = '0' + (seg / 10);
+        name[5] = '0' + (seg % 10);
+        name[6] = '\0';
         handle = ti_Open(name, "r");
         if (!handle)
             break;
@@ -346,10 +339,59 @@ uint8_t book_init(void)
         if (count == 0)
             continue;
 
-        segments[num_segments].data = data_ptr + 4;  /* skip 4-byte header */
+        segments[num_segments].data = data_ptr + 4;
         segments[num_segments].count = count;
         total_entries += count;
         num_segments++;
+    }
+}
+
+/* Check if a specific AppVar exists */
+static uint8_t appvar_exists(const char *name)
+{
+    uint8_t handle = ti_Open(name, "r");
+    if (handle) {
+        ti_Close(handle);
+        return 1;
+    }
+    return 0;
+}
+
+uint8_t book_init(void)
+{
+    uint8_t handle;
+    uint8_t *data_ptr;
+
+    num_segments = 0;
+    total_entries = 0;
+    book_ready = 0;
+    detected_tier = TIER_NONE;
+
+    /* Open randoms AppVar */
+    handle = ti_Open(BOOK_RANDOMS_APPVAR, "r");
+    if (!handle)
+        return 0;
+    data_ptr = (uint8_t *)ti_GetDataPtr(handle);
+    poly_randoms = (const uint64_t *)data_ptr;
+    ti_Close(handle);
+
+    /* Try each tier from largest to smallest.
+       Use literal AppVar names to avoid any pointer/array issues on eZ80. */
+    if (appvar_exists("CHBY01")) {
+        load_segments("CHBY");
+        detected_tier = TIER_XXL;
+    } else if (appvar_exists("CHBX01")) {
+        load_segments("CHBX");
+        detected_tier = TIER_XL;
+    } else if (appvar_exists("CHBL01")) {
+        load_segments("CHBL");
+        detected_tier = TIER_L;
+    } else if (appvar_exists("CHBM01")) {
+        load_segments("CHBM");
+        detected_tier = TIER_M;
+    } else if (appvar_exists("CHBS01")) {
+        load_segments("CHBS");
+        detected_tier = TIER_S;
     }
 
     if (num_segments == 0)
@@ -438,4 +480,16 @@ void book_close(void)
     total_entries = 0;
 }
 
-#endif /* BOOK_TIER != 0 */
+const char *book_get_tier_name(void)
+{
+    switch (detected_tier) {
+    case TIER_XXL: return "XXL";
+    case TIER_XL:  return "XL";
+    case TIER_L:   return "L";
+    case TIER_M:   return "M";
+    case TIER_S:   return "S";
+    default:       return "";
+    }
+}
+
+#endif /* NO_BOOK */

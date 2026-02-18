@@ -871,10 +871,14 @@ static int negamax(board_t *b, int8_t depth, int alpha, int beta,
             /* Record position for repetition detection */
             search_history_push(b->hash);
 
-            /* PVS + Late move reductions */
+            /* PVS + Late move reductions.
+               At root with move_variance, use full window for all moves
+               so root scores are accurate (PVS null-window fail-lows
+               return alpha for any worse move, making them look equal). */
             new_depth = depth - 1;
-            if (legal_moves == 1) {
-                /* First move: full window */
+            if (legal_moves == 1 ||
+                (ply == 0 && search_move_variance)) {
+                /* First move or root with variance: full window */
                 score = -negamax(b, new_depth, -beta, -alpha, ply + 1, 1, ext);
             } else if (!in_check && legal_moves > 4 && depth >= 3 &&
                        !(m.flags & FLAG_CAPTURE) && !(m.flags & FLAG_PROMOTION)) {
@@ -1007,8 +1011,12 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
         search_best_root_move = MOVE_NONE;
         root_count = 0;
 
-        /* Aspiration windows: narrow search around previous score */
-        if (d > 1 && result.best_move.from != SQ_NONE) {
+        /* Aspiration windows: narrow search around previous score.
+           Disabled when move_variance is active — aspiration bounds
+           clip all worse moves to the same score, preventing accurate
+           root move comparison for random selection. */
+        if (d > 1 && result.best_move.from != SQ_NONE
+            && !search_move_variance) {
             asp_alpha = result.score - 25;
             asp_beta  = result.score + 25;
         } else {
@@ -1094,4 +1102,14 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
     }
 
     return result;
+}
+
+void search_get_root_candidates(move_t *moves, int16_t *scores, uint8_t *count)
+{
+    uint8_t i;
+    *count = root_count;
+    for (i = 0; i < root_count; i++) {
+        moves[i] = root_moves[i];
+        scores[i] = root_scores[i];
+    }
 }

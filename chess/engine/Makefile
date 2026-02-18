@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 -std=c11
+CFLAGS = -Wall -Wextra -O2 -std=c11 -DNO_BOOK
 SRCDIR = src
 TESTDIR = test
 UCIDIR = uci

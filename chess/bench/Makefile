@@ -4,7 +4,7 @@ DESCRIPTION = "Chess engine benchmark"
 COMPRESSED = NO
 HAS_PRINTF = YES
 
-CFLAGS = -Wall -Wextra -Oz -I ../engine/src -DBOOK_TIER=0 -DSEARCH_PROFILE
+CFLAGS = -Wall -Wextra -Oz -I ../engine/src -DNO_BOOK -DSEARCH_PROFILE
 CXXFLAGS = -Wall -Wextra -Oz
 
 EXTRA_C_SOURCES = \

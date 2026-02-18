@@ -10,23 +10,7 @@
 #include "book.h"
 #include "piece_sprites.h"
 
-#define VERSION "0.3"
-
-#if BOOK_TIER == 0
-#define BOOK_TAG ""
-#elif BOOK_TIER == 1
-#define BOOK_TAG " S"
-#elif BOOK_TIER == 2
-#define BOOK_TAG " M"
-#elif BOOK_TIER == 3
-#define BOOK_TAG " L"
-#elif BOOK_TIER == 4
-#define BOOK_TAG " XL"
-#elif BOOK_TIER == 5
-#define BOOK_TAG " XXL"
-#endif
-
-#define VERSION_STR "v" VERSION BOOK_TAG
+#define VERSION "0.4"
 
 /* ========== Screen & Layout ========== */
 
@@ -724,11 +708,22 @@ static void draw_menu(void)
         }
     }
 
-    /* version + book tag */
-    gfx_SetTextScale(1, 1);
-    gfx_SetTextFGColor(PAL_PIECE_OL);
-    text_w = gfx_GetStringWidth(VERSION_STR);
-    gfx_PrintStringXY(VERSION_STR, SCREEN_W - text_w - 4, 4);
+    /* version + detected book tier (probe directly since engine may not be init'd) */
+    {
+        char ver_buf[20];
+        const char *tag = "";
+        uint8_t h;
+        h = ti_Open("CHBY01", "r"); if (h) { ti_Close(h); tag = " XXL"; }
+        if (!tag[0]) { h = ti_Open("CHBX01", "r"); if (h) { ti_Close(h); tag = " XL"; } }
+        if (!tag[0]) { h = ti_Open("CHBL01", "r"); if (h) { ti_Close(h); tag = " L"; } }
+        if (!tag[0]) { h = ti_Open("CHBM01", "r"); if (h) { ti_Close(h); tag = " M"; } }
+        if (!tag[0]) { h = ti_Open("CHBS01", "r"); if (h) { ti_Close(h); tag = " S"; } }
+        sprintf(ver_buf, "v%s%s", VERSION, tag);
+        gfx_SetTextScale(1, 1);
+        gfx_SetTextFGColor(PAL_PIECE_OL);
+        text_w = gfx_GetStringWidth(ver_buf);
+        gfx_PrintStringXY(ver_buf, SCREEN_W - text_w - 4, 4);
+    }
 
     /* help */
     gfx_PrintStringXY("arrows: move  enter: select  clear: quit", 12, 222);
@@ -948,7 +943,7 @@ static void update_difficulty_select(void)
         engine_set_use_book(1);
         engine_set_book_max_ply(difficulty_cursor == 0 ? 3 : 0);
         engine_set_eval_noise(0);
-        engine_set_move_variance(difficulty_cursor == 0 ? 30 : 15);
+        engine_set_move_variance(difficulty_cursor == 0 ? 30 : 0);
         color_cursor = 2; /* default to Random */
         state = STATE_COLOR_SELECT;
         return;

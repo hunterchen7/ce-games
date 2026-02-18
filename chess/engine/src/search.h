@@ -39,6 +39,9 @@ void search_history_pop(void);
 void search_history_clear(void);
 void search_history_set_irreversible(void);
 
+/* Root move candidate data (populated when move_variance > 0) */
+void search_get_root_candidates(move_t *moves, int16_t *scores, uint8_t *count);
+
 /* ========== Search Profiling ========== */
 
 #ifdef SEARCH_PROFILE
