@@ -50,6 +50,58 @@ Step 5 vs Step 4 deltas:
 - `eval` total cycles: **-0.00%**
 - throughput (`n/ms`): **+0.22%**
 
+### Steps 6-7: Low-Level Cycle Optimizations (2026-02-17)
+
+Full-profile benchmark (`total_cy` = real wall-clock cycles, all categories included).
+Baseline re-measured after Steps 2-5 with the updated bench harness.
+
+| Step | Commit    | Change                                     | Nodes  | Total Cy     | Cy/Node | Eval Cy/call | Mobility Cy/call | Binary |
+| ---- | --------- | ------------------------------------------ | ------ | ------------ | ------- | ------------ | ---------------- | ------ |
+| 5*   | `28dfa17` | Baseline (re-measured)                     | 28,011 | 4,375,049,454 | 156,189 | 36,372       | —                | 54,322 |
+| 6    | `200ac0f` | Native 24-bit zhash_t for hash state       | 28,011 | 4,371,506,454 | 156,134 | —            | —                | 53,408 |
+| 7    | `227982a` | Sentinel-based sliding ray optimization    | 28,558 | 4,401,505,600 | 154,125 | 37,968       | 12,097           | 53,474 |
+
+Step 6 vs Step 5* deltas:
+
+- `cy/node`: **-0.04%** (re-measured baseline; commit message reports -0.81% vs initial measurement)
+- `make/unmake cy/call`: 21,218 → 20,412 (**-3.8%**)
+- binary size: 54,322 → 53,408 (**-1.7%**)
+
+Step 7 vs Step 6 deltas:
+
+- `cy/node`: 156,134 → 154,125 (**-1.29%**)
+- binary size: 53,408 → 53,474 (+66 bytes)
+- `eval` cy/call: 37,968 (mobility 12,097 cy/call, 31% of eval)
+
+Step 7 details:
+- Expanded `board_t.squares` from 128 to 256 bytes, off-board filled with `OFFBOARD` (0xFF) sentinel
+- Sliding ray inner loops simplified: `while (squares[target] == PIECE_NONE) target += dir;`
+- Updated: `is_square_attacked`, `gen_sliding_moves`, `compute_legal_info`, bishop mobility in `evaluate`
+- Fixed pre-existing BSS overflow: `-DPAWN_CACHE_SIZE=16` for chess target (bench retains 32)
+
+#### Optimizations Tried and Rejected
+
+| Optimization | Result | Reason |
+| --- | --- | --- |
+| Division-free tapered eval (lookup table for `/24`) | 0% | LLVM already uses multiply-by-reciprocal |
+| 24-bit PRNG (replace xoshiro128) | Skipped | Both PRNGs called <2000 times total |
+| Eval deduplication (parameterized white/black loops) | **-2.3% regression** | Prevents compiler BIT instruction for constant checks |
+| Local pointer caching (`const uint8_t *squares = b->squares`) | 0% | LTO optimizer sees through the alias; identical assembly |
+| `int` promotion for loop-invariant direction | 0% | Same — LTO generates identical code |
+
+#### Generated Assembly Analysis
+
+Inner loop overhead in compiler-generated eZ80 assembly (all sentinel loops):
+
+| Waste pattern | Cycles/iter | Notes |
+| --- | --- | --- |
+| Board pointer reload from stack (`ld hl, (ix+6)`) | 3 | Loop-invariant; only fixable via inline asm |
+| 24-bit zero-extension (`ld de, 0; ld e, b`) | 3-6 | Inherent to architecture (uint8_t → 24-bit addr) |
+| Direction/invariant reload from stack | 3 | Loop-invariant; only fixable via inline asm |
+| **Total overhead per iteration** | **9-18** | On loops that should be ~7-9 cy optimal |
+
+Estimated remaining gain from inline asm for all sentinel loops: **<0.5%** total (loops average only 2-3 iterations per ray).
+
 ### Step 5 vs Step 4 Per-Position Breakdown (P0-P49)
 
 Profile mode: `-- Profile 1000n (50 pos)`, same node cap per position (`max_nodes=1000`).
@@ -168,6 +220,8 @@ Current kept eval parameters: **Round1 1M Texel**.
 | castle_skip    | 314 B     | 14 B     | 3 B      |
 | check_pin      | 314 B     | 14 B     | 3 B      |
 | bishop_count   | 316 B     | 14 B     | 3 B      |
+| zhash_t        | 314 B     | 14 B     | 3 B      |
+| sentinel       | 442 B     | 14 B     | 3 B      |
 
 ## Movegen (avg cy/call, 5 positions x 1000 iters)
 
