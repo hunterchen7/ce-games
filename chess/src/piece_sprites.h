@@ -9,6 +9,7 @@
 #define PIECE_SPR_YOFF 3
 
 /* Sprite pixel values: 0=transparent, 1=fill, 2=outline */
+#ifndef SPRITES_EXTERNAL
 static const uint8_t piece_sprites[6][PIECE_SPR_H][PIECE_SPR_W] = {
     {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -143,5 +144,6 @@ static const uint8_t piece_sprites[6][PIECE_SPR_H][PIECE_SPR_W] = {
         {0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0, 0, 0},
     }
 };
+#endif /* !SPRITES_EXTERNAL */
 
 #endif /* PIECE_SPRITES_H */

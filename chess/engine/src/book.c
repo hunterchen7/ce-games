@@ -3,6 +3,7 @@
 #ifndef NO_BOOK
 
 #include "movegen.h"
+#include "chdata.h"
 #include <fileioc.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,8 +13,8 @@
  *
  * TI-OS limits AppVars to ~65KB, so books are split across files:
  *
- * CHBKRN (shared, all tiers):
- *   [6,248 bytes] 781 Polyglot random uint64s (little-endian)
+ * CHDATA (shared data, see chdata.h):
+ *   Polyglot random uint64s at CHDATA_RND_OFFSET (6,248 bytes, LE)
  *
  * Book data AppVars (tier-specific, CHxBnn where x=tier, nn=01..99):
  *   [4 bytes]      uint32_t entry_count (little-endian)
@@ -34,7 +35,7 @@
 #define TIER_S   4
 #define TIER_NONE 5
 
-#define BOOK_RANDOMS_APPVAR "CHBKRN"
+/* Randoms now loaded from CHDATA appvar at CHDATA_RND_OFFSET */
 #define POLY_RANDOM_COUNT   781
 #define POLY_RANDOM_BYTES   (POLY_RANDOM_COUNT * 8)  /* 6,248 */
 #define POLY_ENTRY_SIZE     16
@@ -367,12 +368,12 @@ uint8_t book_init(void)
     book_ready = 0;
     detected_tier = TIER_NONE;
 
-    /* Open randoms AppVar */
-    handle = ti_Open(BOOK_RANDOMS_APPVAR, "r");
+    /* Load randoms from CHDATA appvar */
+    handle = ti_Open(CHDATA_APPVAR, "r");
     if (!handle)
         return 0;
     data_ptr = (uint8_t *)ti_GetDataPtr(handle);
-    poly_randoms = (const uint64_t *)data_ptr;
+    poly_randoms = (const uint64_t *)(data_ptr + CHDATA_RND_OFFSET);
     ti_Close(handle);
 
     /* Try each tier from largest to smallest.

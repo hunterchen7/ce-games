@@ -79,11 +79,12 @@ def get_appvar_args(book_ply: int) -> list[str]:
     # Always need libs
     for f in sorted(LIBS_DIR.glob("*.8xv")):
         args.append(str(f))
+    # CHDATA (book randoms + sprites) — always needed
+    chdata = SCRIPT_DIR / "assets" / "CHDATA.8xv"
+    if chdata.exists():
+        args.append(str(chdata))
     # Book files only if book is used
     if book_ply > 0:
-        rn = BOOK_DIR / "CHBKRN.8xv"
-        if rn.exists():
-            args.append(str(rn))
         # Use Small tier (CHBS) for tournament
         for f in sorted(BOOK_DIR.glob("CHBS*.8xv")):
             args.append(str(f))

@@ -7,7 +7,7 @@ ICON = icon.png
 DESCRIPTION = "Chess for TI-84 Plus CE"
 COMPRESSED = NO
 
-CFLAGS = -Wall -Wextra -Oz -I engine/src -DPAWN_CACHE_SIZE=16
+CFLAGS = -Wall -Wextra -Oz -I engine/src -DPAWN_CACHE_SIZE=16 -DSPRITES_EXTERNAL
 CXXFLAGS = -Wall -Wextra -Oz
 
 EXTRA_C_SOURCES = \
@@ -40,3 +40,12 @@ book: tools/gen_book_appvar.py
 	python3 tools/gen_book_appvar.py $(BOOK_BIN_$(TIER)) books/ $(TIER)
 
 .PHONY: book
+
+# ----------------------------
+# CHDATA AppVar (sprites + book randoms)
+# ----------------------------
+
+assets: tools/gen_data_appvar.py
+	python3 tools/gen_data_appvar.py
+
+.PHONY: assets

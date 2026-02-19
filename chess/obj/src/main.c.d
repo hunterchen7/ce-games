@@ -14,4 +14,4 @@ obj/src/main.c.bc: src/main.c /Users/hunterchen/CEdev/include/graphx.h \
   /Users/hunterchen/CEdev/include/ti/vars.h \
   /Users/hunterchen/CEdev/include/ti/real.h engine/src/engine.h \
   engine/src/book.h engine/src/board.h engine/src/types.h \
-  src/piece_sprites.h
+  engine/src/chdata.h src/piece_sprites.h

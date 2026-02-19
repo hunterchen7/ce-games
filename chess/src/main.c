@@ -8,6 +8,7 @@
 #include <fileioc.h>
 #include "engine.h"
 #include "book.h"
+#include "chdata.h"
 #include "piece_sprites.h"
 
 #define VERSION "0.4"
@@ -151,6 +152,9 @@ static uint8_t prev_g1, prev_g6, prev_g7;
 /* dirty flag — skip redraw when nothing changed */
 static int screen_dirty;
 
+/* sprite data pointer (from CHSPR appvar or embedded fallback) */
+static const uint8_t *sprite_data;
+
 /* legal move targets (engine integration) */
 static engine_move_t legal_targets[64];
 static uint8_t legal_target_count;
@@ -249,7 +253,7 @@ static void prerender_pieces(void)
             {
                 for (col = 0; col < PIECE_SPR_W; col++)
                 {
-                    uint8_t v = piece_sprites[type][row][col];
+                    uint8_t v = sprite_data[type * (PIECE_SPR_W * PIECE_SPR_H) + row * PIECE_SPR_W + col];
                     uint8_t *px = &spr->data[row * PIECE_SPR_W + col];
                     if (v == 1)       *px = fill;
                     else if (v == 2)  *px = PAL_PIECE_OL;
@@ -263,10 +267,13 @@ static void prerender_pieces(void)
                 for (col = 0; col < PIECE_SPR_W; col++)
                 {
                     int up_open, down_open;
-                    if (piece_sprites[type][row][col] != 1) continue;
+                    uint8_t v = sprite_data[type * (PIECE_SPR_W * PIECE_SPR_H) + row * PIECE_SPR_W + col];
+                    if (v != 1) continue;
 
-                    up_open = (row == 0) || (piece_sprites[type][row - 1][col] == 0);
-                    down_open = (row + 1 >= PIECE_SPR_H) || (piece_sprites[type][row + 1][col] == 0);
+                    up_open = (row == 0) ||
+                              (sprite_data[type * (PIECE_SPR_W * PIECE_SPR_H) + (row - 1) * PIECE_SPR_W + col] == 0);
+                    down_open = (row + 1 >= PIECE_SPR_H) ||
+                                (sprite_data[type * (PIECE_SPR_W * PIECE_SPR_H) + (row + 1) * PIECE_SPR_W + col] == 0);
 
                     if (up_open || down_open)
                     {
@@ -1459,6 +1466,28 @@ int main(void)
     gfx_Begin();
     gfx_SetDrawBuffer();
     setup_palette();
+
+    /* Load piece sprites from CHDATA appvar */
+#ifdef SPRITES_EXTERNAL
+    {
+        uint8_t data_h = ti_Open(CHDATA_APPVAR, "r");
+        if (!data_h) {
+            gfx_FillScreen(0);
+            gfx_SetTextFGColor(PAL_TEXT);
+            gfx_SetTextScale(1, 1);
+            gfx_PrintStringXY("Missing CHDATA appvar", 76, 110);
+            gfx_PrintStringXY("Press any key to exit", 76, 125);
+            gfx_SwapDraw();
+            while (!kb_AnyKey()) kb_Scan();
+            gfx_End();
+            return 1;
+        }
+        sprite_data = (const uint8_t *)ti_GetDataPtr(data_h) + CHDATA_SPR_OFFSET;
+        ti_Close(data_h);
+    }
+#else
+    sprite_data = &piece_sprites[0][0][0];
+#endif
     prerender_pieces();
 
     srand(clock());
