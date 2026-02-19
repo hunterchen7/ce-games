@@ -1037,3 +1037,24 @@ non-root nodes and when variance = 0.
 - variance=5 shows **zero Elo loss** vs SF-2600 while still providing move variety
 - Cost scales roughly with variance value (wider root PVS window = less pruning)
 - variance=0 baseline is consistent with prior measurements (-47 to -70 range vs SF-2700)
+
+## Emulator Tournament Elo Estimation (2026-02-18)
+
+30 games per difficulty level against Stockfish (UCI_LimitStrength), run via
+`emu_tournament.py` on the cycle-accurate eZ80 emulator. No opening book
+(`book_ply=0`), `variance=0` except Easy. Node limit 30,000 for all levels.
+
+| Difficulty | Time   | Variance | SF Elo | W-D-L    | Score | Emu Errors | Est. Engine Elo |
+|------------|--------|----------|--------|----------|-------|------------|-----------------|
+| Easy       | 900ms  | 10 cp    | 1320   | 15-0-15  | 50.0% | 0          | **1320**        |
+| Medium     | 3s     | 0        | 1500   | 11-3-16  | 41.7% | 0          | **1442**        |
+| Hard       | 9s     | 0        | 1700   | 15-1-14  | 51.7% | 1          | **1712**        |
+| Expert     | 13.5s  | 0        | 1900   | 17-1-12  | 58.3% | 1          | **1958**        |
+| Master     | 27s    | 0        | 2100   | 13-2-15  | 46.7% | 1          | **2077**        |
+
+Elo estimated via `engine_elo = sf_elo - 400 * log10(1/score - 1)`.
+
+- 3 emu_errors (2%) across 150 games, all in late endgames with few pieces — caused
+  by the emulator timeout being shorter than the worst-case node-limited search time.
+  Fixed by adding `search_node_deadline` (node-based timer fallback) in search.c and
+  increasing the emulator timeout to account for `max_nodes`.

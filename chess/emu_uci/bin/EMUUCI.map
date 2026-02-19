@@ -1,0 +1,225 @@
+Section          Base   Top    High   Length
+---------------- ------ ------ ------ -------
+.icon            D1A882 D1A9AA           128h
+.init.libs       D1A9AA D1A9AA             0h
+.libs            D1A9AA D1A9AA             0h
+.init.clock      D1A9AA D1A9AA             0h
+.init.reruncheck D1A9AA D1A9AA             0h
+.init            D1A9AA D1A9D6            2Ch
+.fini            D1A9D6 D1AA0A            34h
+.text            D1AA0A D228A6          7E9Ch
+.data            D228A6 D22AA6           200h
+.rodata          D22AA6 D2335A           8B4h
+.init_array      000000 000000             0h
+.ctors           000000 000000             0h
+.dtors           000000 000000             0h
+.fini_array      000000 000000             0h
+.bss             D052C6 D1259F D13FD8   D2D9h
+.header          D1A87F D1A882             3h
+
+Label                        Value
+--------------------------   ------
+___low_bss                 = D052C6
+___len_bss                 = 00D2D9
+___heaptop                 = D13FD8
+___heapbot                 = D1259F
+___libs                    = D1A9AA
+___init_array_count        = 000000
+___ctors_count             = 000000
+___dtors_count             = 000000
+___fini_array_count        = 000000
+__stack                    = D1A87E
+__land                     = D1AA0A
+__iand                     = D1AA0E
+__bshl                     = D1AA25
+__bshru                    = D1AA2E
+__frameset                 = D1AA38
+__frameset0                = D1AA46
+__idivs                    = D1AA51
+__idvrms                   = D1AA58
+__idvrmu                   = D1AA86
+__imulu                    = D1AA9E
+__indcallhl                = D1AACE
+__ineg                     = D1AACF
+__inot                     = D1AAD8
+__ishl                     = D1AAE2
+__ishru                    = D1AB08
+__ladd                     = D1AB49
+__lcmpu                    = D1AB4F
+__lcmpzero                 = D1AB57
+__ldivu                    = D1AB62
+__ldvrmu                   = D1AB6C
+__lladd                    = D1AB94
+__lland                    = D1ABB8
+__llcmpu                   = D1ABF5
+__llcmpzero                = D1AC1F
+__llctlz                   = D1AC34
+__lldivs                   = D1AC4C
+__lldivu                   = D1AC9C
+__lldvrmu                  = D1ACB0
+__lldvrmu.hijack           = D1ACB7
+__llmulu                   = D1AD0E
+__llneg                    = D1AD63
+__llshl                    = D1AD7C
+__llshrs.hijack_llshru     = D1ADAA
+__llshrs.finish            = D1ADC9
+__llshru                   = D1ADCD
+__llsub                    = D1ADE7
+__lmulu                    = D1AE09
+__lremu                    = D1AE65
+__lshl                     = D1AE71
+__lshrs.hijack_lshru       = D1AE8A
+__lshru                    = D1AE99
+__ior                      = D1AEA9
+__fcmp                     = 000274
+__ftol                     = 00027C
+__ftoul                    = 00027C
+__indcall                  = 00015C
+__ltof                     = 000284
+__setflag                  = 000218
+__ultof                    = 000280
+__sand                     = D1AEC0
+__sor                      = D1AEC9
+__sshl                     = D1AAE2
+__sshru                    = D1AED2
+__sxor                     = D1AEDF
+__lxor                     = D1AEE8
+__ixor                     = D1AEEC
+_atomic_load_increasing_32 = D1AF03
+_os_DisableHomeTextBuffer  = D1AF28
+_os_EnableHomeTextBuffer   = D1AF3A
+_npf_vpprintf              = D1AF4C
+JTI0_0                     = D22AA6
+JTI0_1                     = D22AC4
+JTI0_2                     = D22B09
+JTI0_3                     = D22B2A
+JTI0_4                     = D22B42
+JTI0_5                     = D22B5A
+_npf_utoa_rev              = D1C6B6
+__printf_c                 = D1C77E
+__vsnprintf_c              = D1C79D
+_npf_bufputc               = D1C823
+_npf_bufputc_nop           = D1C848
+__snprintf_c               = D1C84F
+__vsprintf_c               = D1C877
+__vprintf_c                = D1C896
+_npf_putc_std              = D1C8B6
+__sprintf_c                = D1C8C6
+_.str                      = D22B72
+_.str.1                    = D22B76
+_.str.2                    = D22B7A
+_outchar                   = D1C8EF
+_sprintf                   = D1C8C6
+_vprintf                   = D1C896
+_vsnprintf                 = D1C79D
+__start                    = D1A9AA
+___exithl                  = D1A9D6
+skip._exit                 = D1A9D6
+skip.__Exit                = D1A9D6
+skip._abort                = D1A9D6
+_exit.sp                   = D1A9D7
+_exit.flash_wait_states    = D1A9E1
+_board_init                = D1C905
+_board_set_from_ui         = D1C99E
+_board_startpos            = D1CDAF
+_board_make                = D1CDD8
+_plist_remove              = D1DA26
+_plist_move                = D1DAC4
+_board_unmake              = D1DB2B
+_engine_init               = D1E20C
+_engine_new_game           = D1E24D
+_engine_set_position       = D1E266
+_engine_think              = D1E2BC
+_evaluate                  = D1E35B
+_generate_moves            = D1F1BB
+_gen_piece_moves           = D1F260
+JTI34_0                    = D22B7E
+_gen_sliding_moves         = D1F9C1
+_is_square_attacked        = D1FA7D
+_search_history_push       = D1FC41
+_search_init               = D1FC80
+_search_go                 = D1FD5D
+_negamax                   = D20271
+_check_time                = D21181
+_quiescence                = D2121F
+_compute_legal_info        = D2198F
+_score_moves               = D21BE6
+_pick_move                 = D21DBB
+_is_evasion_candidate      = D21E97
+_move_needs_legality_check = D21F7A
+_board_is_legal.25         = D21FC6
+_add_checker               = D22001
+_tt_probe                  = D2202D
+_tt_pack_move              = D220CC
+_tt_unpack_move            = D2213D
+_zobrist_init              = D221B1
+_prng_next                 = D223A3
+_prng_next16               = D22402
+_main                      = D22412
+JTI64_0                    = D22B90
+JTI64_1                    = D22BA8
+_skip_ws                   = D227C3
+_parse_uint                = D227DB
+_time_ms                   = D2282F
+_board_startpos.start      = D22BC0
+_castling_mask             = D22C00
+_engine_hooks              = D052C6
+_engine_board              = D052C9
+_engine_max_nodes          = D05486
+_engine_eval_noise         = D0548A
+_engine_move_variance      = D0548D
+_phase_weight              = D22C80
+_mg_table                  = D22C86
+_eg_table                  = D22F86
+_pawn_cache                = D05490
+_pawn_cache_victim         = D05E00
+_knight_mob_mg             = D23286
+_knight_mob_eg             = D23298
+_bishop_offsets            = D232AA
+_bishop_mob_mg             = D232AE
+_bishop_mob_eg             = D232CA
+_connected_bonus_eg        = D232E6
+_passed_mg                 = D232F2
+_passed_eg                 = D232FE
+_rook_offsets              = D2330A
+_pos_history_count         = D05E04
+_pos_history               = D05E06
+_pos_history_irreversible  = D06406
+_move_sp                   = D06408
+_killers                   = D0640A
+_history                   = D0658A
+_search_nodes              = D0678A
+_search_stopped            = D0678E
+_search_best_root_move     = D0678F
+_search_time_fn            = D06792
+_search_deadline           = D06795
+_search_max_nodes          = D06799
+_search_node_deadline      = D0679D
+_search_eval_noise         = D067A1
+_search_move_variance      = D067A4
+_search_rng_state          = D067A7
+_root_count                = D067AB
+_root_scores               = D067AC
+_root_moves                = D067CC
+_raw_moves_buf             = D067FC
+_move_pool                 = D06AFC
+_mvv_lva                   = D2330E
+_atk_knight_offsets        = D23332
+_atk_ray_offsets           = D2333A
+_tt                        = D092FC
+_zobrist_initialized       = D112FC
+_prng_state                = D112FD
+_zobrist_piece             = D11301
+_zobrist_castle            = D11F01
+_zobrist_ep_file           = D11F41
+_zobrist_side              = D11F61
+_lock_piece                = D11F65
+_lock_castle               = D12565
+_lock_ep_file              = D12585
+_lock_side                 = D12595
+_cmd_slot                  = D228A6
+_.str                      = D23342
+_.str.1                    = D2334D
+_time_base                 = D12597
+_last_raw                  = D1259B
+_switch.table.main         = D23356
