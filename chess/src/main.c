@@ -713,18 +713,20 @@ static void draw_menu(void)
         }
     }
 
-    /* version + detected book tier (probe directly since engine may not be init'd) */
+    /* version + detected book tier (probe once and cache) */
     {
-        char ver_buf[20];
-        const char *tag = "";
-        uint8_t h;
-        h = ti_Open("CHBY01", "r"); if (h) { ti_Close(h); tag = " XXL"; }
-        if (!tag[0]) { h = ti_Open("CHBX01", "r"); if (h) { ti_Close(h); tag = " XL"; } }
-        if (!tag[0]) { h = ti_Open("CHBL01", "r"); if (h) { ti_Close(h); tag = " L"; } }
-        if (!tag[0]) { h = ti_Open("CHBM01", "r"); if (h) { ti_Close(h); tag = " M"; } }
-        if (!tag[0]) { h = ti_Open("CHBS01", "r"); if (h) { ti_Close(h); tag = " S"; } }
-        strcpy(ver_buf, "v" VERSION);
-        strcat(ver_buf, tag);
+        static char ver_buf[20] = {0};
+        if (!ver_buf[0]) {
+            const char *tag = "";
+            uint8_t h;
+            h = ti_Open("CHBY01", "r"); if (h) { ti_Close(h); tag = " XXL"; }
+            if (!tag[0]) { h = ti_Open("CHBX01", "r"); if (h) { ti_Close(h); tag = " XL"; } }
+            if (!tag[0]) { h = ti_Open("CHBL01", "r"); if (h) { ti_Close(h); tag = " L"; } }
+            if (!tag[0]) { h = ti_Open("CHBM01", "r"); if (h) { ti_Close(h); tag = " M"; } }
+            if (!tag[0]) { h = ti_Open("CHBS01", "r"); if (h) { ti_Close(h); tag = " S"; } }
+            strcpy(ver_buf, "v" VERSION);
+            strcat(ver_buf, tag);
+        }
         gfx_SetTextScale(1, 1);
         gfx_SetTextFGColor(PAL_PIECE_OL);
         text_w = gfx_GetStringWidth(ver_buf);
