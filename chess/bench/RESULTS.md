@@ -19,12 +19,12 @@ Benchmarked on eZ80 @ 48 MHz (cycle-accurate emulator).
 50-position profile benchmark (`-- Profile 1000n (50 pos) --`) using the calc debug harness.
 All comparisons below are full P0-P49 passes (same node total).
 
-| Step | Commit    | Change                                     | Nodes  | Total Cycles | Cy/Node | Eval Cycles  | Build Pawns Cycles | NPS (`n/ms`) |
-| ---- | --------- | ------------------------------------------ | ------ | ------------ | ------- | ------------ | ------------------ | ------------ |
-| 2    | `2ae29bf` | Streamline pawn-cache miss path            | 28,558 | 264,225,312  | 9,252   | 1,292,096,501 | 397,162,101        | 300.743      |
-| 3    | `e0f1ebc` | 2-way set-associative pawn cache probing   | 28,558 | 226,390,038  | 7,927   | 1,254,261,218 | 353,252,767        | 303.263      |
-| 4    | `7495104` | 4-way set-associative pawn cache probing   | 28,558 | 211,513,722  | 7,406   | 1,239,384,911 | 334,779,550        | 304.278      |
-| 5    | `(this step)` | Qsearch capture-only scoring fast path      | 28,558 | 201,429,178  | 7,053   | 1,239,368,670 | 334,779,582        | 304.941      |
+| Step | Commit        | Change                                   | Nodes  | Total Cycles | Cy/Node | Eval Cycles   | Build Pawns Cycles | NPS (`n/ms`) |
+| ---- | ------------- | ---------------------------------------- | ------ | ------------ | ------- | ------------- | ------------------ | ------------ |
+| 2    | `2ae29bf`     | Streamline pawn-cache miss path          | 28,558 | 264,225,312  | 9,252   | 1,292,096,501 | 397,162,101        | 300.743      |
+| 3    | `e0f1ebc`     | 2-way set-associative pawn cache probing | 28,558 | 226,390,038  | 7,927   | 1,254,261,218 | 353,252,767        | 303.263      |
+| 4    | `7495104`     | 4-way set-associative pawn cache probing | 28,558 | 211,513,722  | 7,406   | 1,239,384,911 | 334,779,550        | 304.278      |
+| 5    | `(this step)` | Qsearch capture-only scoring fast path   | 28,558 | 201,429,178  | 7,053   | 1,239,368,670 | 334,779,582        | 304.941      |
 
 Step 3 vs Step 2 deltas:
 
@@ -55,13 +55,13 @@ Step 5 vs Step 4 deltas:
 Full-profile benchmark (`total_cy` = real wall-clock cycles, all categories included).
 Baseline re-measured after Steps 2-5 with the updated bench harness.
 
-| Step | Commit    | Change                                     | Nodes  | Total Cy     | Cy/Node | Eval Cy/call | Mobility Cy/call | Binary |
-| ---- | --------- | ------------------------------------------ | ------ | ------------ | ------- | ------------ | ---------------- | ------ |
-| 5*   | `28dfa17` | Baseline (re-measured)                     | 28,011 | 4,375,049,454 | 156,189 | 36,372       | —                | 54,322 |
-| 6    | `200ac0f` | Native 24-bit zhash_t for hash state       | 28,011 | 4,371,506,454 | 156,134 | —            | —                | 53,408 |
-| 7    | `227982a` | Sentinel-based sliding ray optimization    | 28,558 | 4,401,505,600 | 154,125 | 37,968       | 12,097           | 53,474 |
+| Step | Commit    | Change                                  | Nodes  | Total Cy      | Cy/Node | Eval Cy/call | Mobility Cy/call | Binary |
+| ---- | --------- | --------------------------------------- | ------ | ------------- | ------- | ------------ | ---------------- | ------ |
+| 5\*  | `28dfa17` | Baseline (re-measured)                  | 28,011 | 4,375,049,454 | 156,189 | 36,372       | —                | 54,322 |
+| 6    | `200ac0f` | Native 24-bit zhash_t for hash state    | 28,011 | 4,371,506,454 | 156,134 | —            | —                | 53,408 |
+| 7    | `227982a` | Sentinel-based sliding ray optimization | 28,558 | 4,401,505,600 | 154,125 | 37,968       | 12,097           | 53,474 |
 
-Step 6 vs Step 5* deltas:
+Step 6 vs Step 5\* deltas:
 
 - `cy/node`: **-0.04%** (re-measured baseline; commit message reports -0.81% vs initial measurement)
 - `make/unmake cy/call`: 21,218 → 20,412 (**-3.8%**)
@@ -74,6 +74,7 @@ Step 7 vs Step 6 deltas:
 - `eval` cy/call: 37,968 (mobility 12,097 cy/call, 31% of eval)
 
 Step 7 details:
+
 - Expanded `board_t.squares` from 128 to 256 bytes, off-board filled with `OFFBOARD` (0xFF) sentinel
 - Sliding ray inner loops simplified: `while (squares[target] == PIECE_NONE) target += dir;`
 - Updated: `is_square_attacked`, `gen_sliding_moves`, `compute_legal_info`, bishop mobility in `evaluate`
@@ -81,24 +82,24 @@ Step 7 details:
 
 #### Optimizations Tried and Rejected
 
-| Optimization | Result | Reason |
-| --- | --- | --- |
-| Division-free tapered eval (lookup table for `/24`) | 0% | LLVM already uses multiply-by-reciprocal |
-| 24-bit PRNG (replace xoshiro128) | Skipped | Both PRNGs called <2000 times total |
-| Eval deduplication (parameterized white/black loops) | **-2.3% regression** | Prevents compiler BIT instruction for constant checks |
-| Local pointer caching (`const uint8_t *squares = b->squares`) | 0% | LTO optimizer sees through the alias; identical assembly |
-| `int` promotion for loop-invariant direction | 0% | Same — LTO generates identical code |
+| Optimization                                                  | Result               | Reason                                                   |
+| ------------------------------------------------------------- | -------------------- | -------------------------------------------------------- |
+| Division-free tapered eval (lookup table for `/24`)           | 0%                   | LLVM already uses multiply-by-reciprocal                 |
+| 24-bit PRNG (replace xoshiro128)                              | Skipped              | Both PRNGs called <2000 times total                      |
+| Eval deduplication (parameterized white/black loops)          | **-2.3% regression** | Prevents compiler BIT instruction for constant checks    |
+| Local pointer caching (`const uint8_t *squares = b->squares`) | 0%                   | LTO optimizer sees through the alias; identical assembly |
+| `int` promotion for loop-invariant direction                  | 0%                   | Same — LTO generates identical code                      |
 
 #### Generated Assembly Analysis
 
 Inner loop overhead in compiler-generated eZ80 assembly (all sentinel loops):
 
-| Waste pattern | Cycles/iter | Notes |
-| --- | --- | --- |
-| Board pointer reload from stack (`ld hl, (ix+6)`) | 3 | Loop-invariant; only fixable via inline asm |
-| 24-bit zero-extension (`ld de, 0; ld e, b`) | 3-6 | Inherent to architecture (uint8_t → 24-bit addr) |
-| Direction/invariant reload from stack | 3 | Loop-invariant; only fixable via inline asm |
-| **Total overhead per iteration** | **9-18** | On loops that should be ~7-9 cy optimal |
+| Waste pattern                                     | Cycles/iter | Notes                                            |
+| ------------------------------------------------- | ----------- | ------------------------------------------------ |
+| Board pointer reload from stack (`ld hl, (ix+6)`) | 3           | Loop-invariant; only fixable via inline asm      |
+| 24-bit zero-extension (`ld de, 0; ld e, b`)       | 3-6         | Inherent to architecture (uint8_t → 24-bit addr) |
+| Direction/invariant reload from stack             | 3           | Loop-invariant; only fixable via inline asm      |
+| **Total overhead per iteration**                  | **9-18**    | On loops that should be ~7-9 cy optimal          |
 
 Estimated remaining gain from inline asm for all sentinel loops: **<0.5%** total (loops average only 2-3 iterations per ray).
 
@@ -108,19 +109,19 @@ Built and benchmarked the engine natively (gcc -O2, Apple Silicon M5) to measure
 
 **Component micro-benchmarks** (1000 iterations/position, avg across 50 positions):
 
-| Component | Baseline (ns) | Optimized (ns) | Change |
-|-----------|--------------|----------------|--------|
-| Movegen | 53 | 97 | **+83% slower** |
-| is_square_attacked | 11 | 23 | **+109% slower** |
-| Eval | 25 | 44 | **+76% slower** |
-| Make/Unmake | 10 | 24 | **+140% slower** |
-| board_t size | 320 B | 448 B | +128 B |
+| Component          | Baseline (ns) | Optimized (ns) | Change           |
+| ------------------ | ------------- | -------------- | ---------------- |
+| Movegen            | 53            | 97             | **+83% slower**  |
+| is_square_attacked | 11            | 23             | **+109% slower** |
+| Eval               | 25            | 44             | **+76% slower**  |
+| Make/Unmake        | 10            | 24             | **+140% slower** |
+| board_t size       | 320 B         | 448 B          | +128 B           |
 
 **Search benchmarks** (deterministic node counts — same search tree):
 
-| Metric | Baseline | Optimized | Change |
-|--------|----------|-----------|--------|
-| Depth 5, 50 pos (ms) | 109.2 | 104.5 | -4.3% |
+| Metric                         | Baseline   | Optimized  | Change    |
+| ------------------------------ | ---------- | ---------- | --------- |
+| Depth 5, 50 pos (ms)           | 109.2      | 104.5      | -4.3%     |
 | Time-limited 100ms total nodes | 24,062,543 | 22,046,856 | **-8.4%** |
 
 **Conclusion**: The sentinel optimization is a **net negative on desktop**. Modern x86/ARM CPUs have excellent branch predictors that handle `SQ_VALID()` checks essentially for free, so eliminating those branches provides no benefit. Meanwhile, the 128-byte increase to `board_t` (256 vs 128 byte squares array) worsens cache line utilization in tight loops. The time-limited search confirms an ~8% throughput regression.
@@ -132,58 +133,58 @@ This validates that the sentinel approach is specifically an **eZ80 microarchite
 Profile mode: `-- Profile 1000n (50 pos)`, same node cap per position (`max_nodes=1000`).
 
 | Pos | Step4 Nodes | Step4 ms | Step5 Nodes | Step5 ms | Delta ms (S5-S4) | Delta % |
-| --- | ----------: | -------: | ----------: | -------: | ----------------: | ------: |
-| P0 | 680 | 2909 | 680 | 2906 | -3 | -0.10% |
-| P1 | 738 | 3504 | 738 | 3496 | -8 | -0.23% |
-| P2 | 502 | 1559 | 502 | 1554 | -5 | -0.32% |
-| P3 | 1000 | 2820 | 1000 | 2814 | -6 | -0.21% |
-| P4 | 398 | 2625 | 398 | 2621 | -4 | -0.15% |
-| P5 | 864 | 3158 | 864 | 3150 | -8 | -0.25% |
-| P6 | 523 | 1334 | 523 | 1331 | -3 | -0.22% |
-| P7 | 645 | 1257 | 645 | 1254 | -3 | -0.24% |
-| P8 | 279 | 1225 | 279 | 1223 | -2 | -0.16% |
-| P9 | 606 | 1042 | 606 | 1040 | -2 | -0.19% |
-| P10 | 392 | 1036 | 392 | 1035 | -1 | -0.10% |
-| P11 | 293 | 1878 | 293 | 1874 | -4 | -0.21% |
-| P12 | 437 | 2163 | 437 | 2160 | -3 | -0.14% |
-| P13 | 54 | 1103 | 54 | 1101 | -2 | -0.18% |
-| P14 | 140 | 1315 | 140 | 1312 | -3 | -0.23% |
-| P15 | 223 | 1209 | 223 | 1207 | -2 | -0.17% |
-| P16 | 815 | 1299 | 815 | 1297 | -2 | -0.15% |
-| P17 | 970 | 1619 | 970 | 1617 | -2 | -0.12% |
-| P18 | 607 | 1368 | 607 | 1366 | -2 | -0.15% |
-| P19 | 931 | 2070 | 931 | 2066 | -4 | -0.19% |
-| P20 | 257 | 1299 | 257 | 1297 | -2 | -0.15% |
-| P21 | 307 | 3071 | 307 | 3064 | -7 | -0.23% |
-| P22 | 807 | 1268 | 807 | 1265 | -3 | -0.24% |
-| P23 | 419 | 1105 | 419 | 1103 | -2 | -0.18% |
-| P24 | 490 | 1245 | 490 | 1243 | -2 | -0.16% |
-| P25 | 1000 | 2644 | 1000 | 2638 | -6 | -0.23% |
-| P26 | 172 | 2542 | 172 | 2534 | -8 | -0.31% |
-| P27 | 970 | 2782 | 970 | 2774 | -8 | -0.29% |
-| P28 | 155 | 2943 | 155 | 2935 | -8 | -0.27% |
-| P29 | 705 | 2609 | 705 | 2602 | -7 | -0.27% |
-| P30 | 686 | 1611 | 686 | 1608 | -3 | -0.19% |
-| P31 | 590 | 1479 | 590 | 1477 | -2 | -0.14% |
-| P32 | 708 | 1676 | 708 | 1674 | -2 | -0.12% |
-| P33 | 785 | 2099 | 785 | 2094 | -5 | -0.24% |
-| P34 | 570 | 1404 | 570 | 1400 | -4 | -0.28% |
-| P35 | 330 | 1481 | 330 | 1477 | -4 | -0.27% |
-| P36 | 628 | 2366 | 628 | 2361 | -5 | -0.21% |
-| P37 | 436 | 1929 | 436 | 1923 | -6 | -0.31% |
-| P38 | 293 | 2101 | 293 | 2093 | -8 | -0.38% |
-| P39 | 1000 | 2869 | 1000 | 2862 | -7 | -0.24% |
-| P40 | 373 | 2303 | 373 | 2300 | -3 | -0.13% |
-| P41 | 351 | 1879 | 351 | 1875 | -4 | -0.21% |
-| P42 | 875 | 1932 | 875 | 1928 | -4 | -0.21% |
-| P43 | 888 | 1252 | 888 | 1250 | -2 | -0.16% |
-| P44 | 562 | 1523 | 562 | 1520 | -3 | -0.20% |
-| P45 | 656 | 1912 | 656 | 1907 | -5 | -0.26% |
-| P46 | 586 | 1347 | 586 | 1344 | -3 | -0.22% |
-| P47 | 699 | 1273 | 699 | 1271 | -2 | -0.16% |
-| P48 | 285 | 2329 | 285 | 2321 | -8 | -0.34% |
-| P49 | 878 | 1089 | 878 | 1087 | -2 | -0.18% |
-| Tot | 28558 | 93855 | 28558 | 93651 | -204 | -0.22% |
+| --- | ----------: | -------: | ----------: | -------: | ---------------: | ------: |
+| P0  |         680 |     2909 |         680 |     2906 |               -3 |  -0.10% |
+| P1  |         738 |     3504 |         738 |     3496 |               -8 |  -0.23% |
+| P2  |         502 |     1559 |         502 |     1554 |               -5 |  -0.32% |
+| P3  |        1000 |     2820 |        1000 |     2814 |               -6 |  -0.21% |
+| P4  |         398 |     2625 |         398 |     2621 |               -4 |  -0.15% |
+| P5  |         864 |     3158 |         864 |     3150 |               -8 |  -0.25% |
+| P6  |         523 |     1334 |         523 |     1331 |               -3 |  -0.22% |
+| P7  |         645 |     1257 |         645 |     1254 |               -3 |  -0.24% |
+| P8  |         279 |     1225 |         279 |     1223 |               -2 |  -0.16% |
+| P9  |         606 |     1042 |         606 |     1040 |               -2 |  -0.19% |
+| P10 |         392 |     1036 |         392 |     1035 |               -1 |  -0.10% |
+| P11 |         293 |     1878 |         293 |     1874 |               -4 |  -0.21% |
+| P12 |         437 |     2163 |         437 |     2160 |               -3 |  -0.14% |
+| P13 |          54 |     1103 |          54 |     1101 |               -2 |  -0.18% |
+| P14 |         140 |     1315 |         140 |     1312 |               -3 |  -0.23% |
+| P15 |         223 |     1209 |         223 |     1207 |               -2 |  -0.17% |
+| P16 |         815 |     1299 |         815 |     1297 |               -2 |  -0.15% |
+| P17 |         970 |     1619 |         970 |     1617 |               -2 |  -0.12% |
+| P18 |         607 |     1368 |         607 |     1366 |               -2 |  -0.15% |
+| P19 |         931 |     2070 |         931 |     2066 |               -4 |  -0.19% |
+| P20 |         257 |     1299 |         257 |     1297 |               -2 |  -0.15% |
+| P21 |         307 |     3071 |         307 |     3064 |               -7 |  -0.23% |
+| P22 |         807 |     1268 |         807 |     1265 |               -3 |  -0.24% |
+| P23 |         419 |     1105 |         419 |     1103 |               -2 |  -0.18% |
+| P24 |         490 |     1245 |         490 |     1243 |               -2 |  -0.16% |
+| P25 |        1000 |     2644 |        1000 |     2638 |               -6 |  -0.23% |
+| P26 |         172 |     2542 |         172 |     2534 |               -8 |  -0.31% |
+| P27 |         970 |     2782 |         970 |     2774 |               -8 |  -0.29% |
+| P28 |         155 |     2943 |         155 |     2935 |               -8 |  -0.27% |
+| P29 |         705 |     2609 |         705 |     2602 |               -7 |  -0.27% |
+| P30 |         686 |     1611 |         686 |     1608 |               -3 |  -0.19% |
+| P31 |         590 |     1479 |         590 |     1477 |               -2 |  -0.14% |
+| P32 |         708 |     1676 |         708 |     1674 |               -2 |  -0.12% |
+| P33 |         785 |     2099 |         785 |     2094 |               -5 |  -0.24% |
+| P34 |         570 |     1404 |         570 |     1400 |               -4 |  -0.28% |
+| P35 |         330 |     1481 |         330 |     1477 |               -4 |  -0.27% |
+| P36 |         628 |     2366 |         628 |     2361 |               -5 |  -0.21% |
+| P37 |         436 |     1929 |         436 |     1923 |               -6 |  -0.31% |
+| P38 |         293 |     2101 |         293 |     2093 |               -8 |  -0.38% |
+| P39 |        1000 |     2869 |        1000 |     2862 |               -7 |  -0.24% |
+| P40 |         373 |     2303 |         373 |     2300 |               -3 |  -0.13% |
+| P41 |         351 |     1879 |         351 |     1875 |               -4 |  -0.21% |
+| P42 |         875 |     1932 |         875 |     1928 |               -4 |  -0.21% |
+| P43 |         888 |     1252 |         888 |     1250 |               -2 |  -0.16% |
+| P44 |         562 |     1523 |         562 |     1520 |               -3 |  -0.20% |
+| P45 |         656 |     1912 |         656 |     1907 |               -5 |  -0.26% |
+| P46 |         586 |     1347 |         586 |     1344 |               -3 |  -0.22% |
+| P47 |         699 |     1273 |         699 |     1271 |               -2 |  -0.16% |
+| P48 |         285 |     2329 |         285 |     2321 |               -8 |  -0.34% |
+| P49 |         878 |     1089 |         878 |     1087 |               -2 |  -0.18% |
+| Tot |       28558 |    93855 |       28558 |    93651 |             -204 |  -0.22% |
 
 ### Desktop Cross-Check (Step 3 vs Step 4, 2026-02-17)
 
@@ -195,29 +196,29 @@ Stockfish tournament settings:
 - no opening book (`--no-book`)
 - 30 games per engine version
 
-| Variant | Commit    | W-D-L | Score | Est. Elo vs SF-2700 | PGN |
-| ------- | --------- | ----- | ----- | ------------------- | --- |
-| Step 3  | `e0f1ebc` | 12-11-7 | 17.5/30 | +58.5 | `chess/engine/pgn/2026-02-17/tournament_step3_vs_sf2700_0p1_nolimit_30g.pgn` |
-| Step 4  | `7495104` | 10-10-10 | 15.0/30 | +0.0  | `chess/engine/pgn/2026-02-17/tournament_step4_vs_sf2700_0p1_nolimit_30g.pgn` |
-| Step 5  | `(this step)` | 8-14-8  | 15.0/30 | +0.0  | `chess/engine/pgn/2026-02-17/tournament_step5_vs_sf2700_0p1_nolimit_30g.pgn` |
+| Variant | Commit        | W-D-L    | Score   | Est. Elo vs SF-2700 | PGN                                                                          |
+| ------- | ------------- | -------- | ------- | ------------------- | ---------------------------------------------------------------------------- |
+| Step 3  | `e0f1ebc`     | 12-11-7  | 17.5/30 | +58.5               | `chess/engine/pgn/2026-02-17/tournament_step3_vs_sf2700_0p1_nolimit_30g.pgn` |
+| Step 4  | `7495104`     | 10-10-10 | 15.0/30 | +0.0                | `chess/engine/pgn/2026-02-17/tournament_step4_vs_sf2700_0p1_nolimit_30g.pgn` |
+| Step 5  | `(this step)` | 8-14-8   | 15.0/30 | +0.0                | `chess/engine/pgn/2026-02-17/tournament_step5_vs_sf2700_0p1_nolimit_30g.pgn` |
 
 Desktop runtime spot-check (`build/bench`, 5 runs each, Avg row from "Time-Limited Search (50 pos)"):
 
 | Metric (nodes, 50-pos avg) | Step 3 mean | Step 4 mean | Delta (Step4 vs Step3) |
-| --------------------------- | ----------: | ----------: | ----------------------: |
-| 10ms                        |      52,949 |      51,193 |                -3.32%   |
-| 50ms                        |     254,503 |     239,578 |                -5.86%   |
-| 100ms                       |     480,615 |     484,347 |                +0.78%   |
+| -------------------------- | ----------: | ----------: | ---------------------: |
+| 10ms                       |      52,949 |      51,193 |                 -3.32% |
+| 50ms                       |     254,503 |     239,578 |                 -5.86% |
+| 100ms                      |     480,615 |     484,347 |                 +0.78% |
 
 Observed variance is non-trivial on desktop timing runs, but tournament strength in this sample favored Step 3.
 
 Step 5 desktop runtime spot-check (`build/bench`, 3 runs, compared vs Step 4 5-run mean):
 
 | Metric (nodes, 50-pos avg) | Step 4 mean | Step 5 mean | Delta (Step5 vs Step4) |
-| --------------------------- | ----------: | ----------: | ----------------------: |
-| 10ms                        |      51,193 |      53,071 |                +3.67%   |
-| 50ms                        |     239,578 |     255,223 |                +6.53%   |
-| 100ms                       |     484,347 |     486,720 |                +0.49%   |
+| -------------------------- | ----------: | ----------: | ---------------------: |
+| 10ms                       |      51,193 |      53,071 |                 +3.67% |
+| 50ms                       |     239,578 |     255,223 |                 +6.53% |
+| 100ms                      |     484,347 |     486,720 |                 +0.49% |
 
 ## Texel Tuning Elo (Desktop Paired H2H)
 
@@ -1019,20 +1020,20 @@ non-root nodes and when variance = 0.
 
 ### Approach comparison (variance=15 vs SF-2600)
 
-| Approach | W-D-L | Score | Elo diff |
-|----------|-------|-------|----------|
-| Original bug (all moves score identical) | — | — | queen hangs possible |
-| Full-window root (disabled PVS + aspiration) | +0=0-30 | 0% | **-708** |
-| Wider PVS window at root | +3=9-18 | 25% | **-191** |
+| Approach                                     | W-D-L   | Score | Elo diff             |
+| -------------------------------------------- | ------- | ----- | -------------------- |
+| Original bug (all moves score identical)     | —       | —     | queen hangs possible |
+| Full-window root (disabled PVS + aspiration) | +0=0-30 | 0%    | **-708**             |
+| Wider PVS window at root                     | +3=9-18 | 25%   | **-191**             |
 
 ### Variance sweep (wider PVS, vs SF-2600)
 
-| Variance | W-D-L | Score | Elo diff |
-|----------|-------|-------|----------|
-| 0 (baseline, vs SF-2700) | +8=8-14 | 40% | -70 |
-| 5 | +10=10-10 | 50% | **0** |
-| 10 | +4=10-16 | 30% | **-147** |
-| 15 | +3=9-18 | 25% | **-191** |
+| Variance                 | W-D-L     | Score | Elo diff |
+| ------------------------ | --------- | ----- | -------- |
+| 0 (baseline, vs SF-2700) | +8=8-14   | 40%   | -70      |
+| 5                        | +10=10-10 | 50%   | **0**    |
+| 10                       | +4=10-16  | 30%   | **-147** |
+| 15                       | +3=9-18   | 25%   | **-191** |
 
 - variance=5 shows **zero Elo loss** vs SF-2600 while still providing move variety
 - Cost scales roughly with variance value (wider root PVS window = less pruning)
@@ -1043,18 +1044,19 @@ non-root nodes and when variance = 0.
 30 games per difficulty level against Stockfish (UCI_LimitStrength), run via
 `emu_tournament.py` on the cycle-accurate eZ80 emulator. No opening book
 (`book_ply=0`), `variance=0` except Easy. Node limit 30,000 for all levels.
+Master level extended to 100 games.
 
-| Difficulty | Time   | Variance | SF Elo | W-D-L    | Score | Emu Errors | Est. Engine Elo |
-|------------|--------|----------|--------|----------|-------|------------|-----------------|
-| Easy       | 900ms  | 10 cp    | 1320   | 15-0-15  | 50.0% | 0          | **1320**        |
-| Medium     | 3s     | 0        | 1500   | 11-3-16  | 41.7% | 0          | **1442**        |
-| Hard       | 9s     | 0        | 1700   | 15-1-14  | 51.7% | 1          | **1712**        |
-| Expert     | 13.5s  | 0        | 1900   | 17-1-12  | 58.3% | 1          | **1958**        |
-| Master     | 27s    | 0        | 2100   | 13-2-15  | 46.7% | 1          | **2077**        |
+| Difficulty | Time  | Variance | SF Elo | Games | W-D-L   | Score | Est. Engine Elo |
+| ---------- | ----- | -------- | ------ | ----- | ------- | ----- | --------------- |
+| Easy       | 900ms | 10 cp    | 1320   | 30    | 15-0-15 | 50.0% | **1320**        |
+| Medium     | 3s    | 0        | 1500   | 30    | 11-3-16 | 41.7% | **1442**        |
+| Hard       | 9s    | 0        | 1700   | 30    | 15-1-14 | 51.7% | **1712**        |
+| Expert     | 13.5s | 0        | 1900   | 30    | 17-1-12 | 58.3% | **1958**        |
+| Master     | 27s   | 0        | 2100   | 100   | 44-7-49 | 47.5% | **2083**        |
 
 Elo estimated via `engine_elo = sf_elo - 400 * log10(1/score - 1)`.
 
-- 3 emu_errors (2%) across 150 games, all in late endgames with few pieces — caused
-  by the emulator timeout being shorter than the worst-case node-limited search time.
-  Fixed by adding `search_node_deadline` (node-based timer fallback) in search.c and
-  increasing the emulator timeout to account for `max_nodes`.
+- Early tournaments had 3 emu_errors caused by the emulator timeout being shorter than
+  the worst-case node-limited search time. Fixed by adding `search_node_deadline`
+  (node-based timer fallback) in search.c. Master results above are error-free (100
+  clean games after removing and replaying the affected game).
