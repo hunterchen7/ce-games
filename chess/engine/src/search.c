@@ -3,6 +3,7 @@
 #include "movegen.h"
 #include "tt.h"
 #include "zobrist.h"
+#include "directions.h"
 
 /* ========== Search Profiling ========== */
 
@@ -343,9 +344,6 @@ typedef struct {
     uint8_t pinned_sq[8];
 } legal_info_t;
 
-static const int8_t atk_knight_offsets[8] = { -33, -31, -18, -14, 14, 18, 31, 33 };
-static const int8_t atk_king_offsets[8]   = { -17, -16, -15, -1, 1, 15, 16, 17 };
-static const int8_t atk_ray_offsets[8]    = { -17, -16, -15, -1, 1, 15, 16, 17 };
 
 static inline void add_checker(legal_info_t *li, uint8_t sq)
 {
@@ -380,7 +378,7 @@ static void compute_legal_info(const board_t *b, legal_info_t *li)
 
     /* Knight checkers */
     for (i = 0; i < 8; i++) {
-        target = king_sq + atk_knight_offsets[i];
+        target = king_sq + knight_offsets[i];
         if (SQ_VALID(target)) {
             uint8_t p = b->squares[target];
             if (p != PIECE_NONE &&
@@ -406,7 +404,7 @@ static void compute_legal_info(const board_t *b, legal_info_t *li)
 
     /* Adjacent king checker (illegal positions, but keep robust) */
     for (i = 0; i < 8; i++) {
-        target = king_sq + atk_king_offsets[i];
+        target = king_sq + king_offsets[i];
         if (SQ_VALID(target)) {
             uint8_t p = b->squares[target];
             if (p != PIECE_NONE &&
@@ -419,7 +417,7 @@ static void compute_legal_info(const board_t *b, legal_info_t *li)
 
     /* Sliding checkers and pinned friendly pieces */
     for (i = 0; i < 8; i++) {
-        int8_t dir = atk_ray_offsets[i];
+        int8_t dir = king_offsets[i];
         uint8_t pinned_sq = SQ_NONE;
         uint8_t is_orth = (dir == -16 || dir == -1 || dir == 1 || dir == 16);
         uint8_t p;
@@ -478,7 +476,7 @@ static int8_t ray_dir_between(uint8_t from, uint8_t to)
 {
     uint8_t i;
     for (i = 0; i < 8; i++) {
-        int8_t dir = atk_ray_offsets[i];
+        int8_t dir = king_offsets[i];
         uint8_t sq = from + dir;
         while (SQ_VALID(sq)) {
             if (sq == to) return dir;

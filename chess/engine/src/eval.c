@@ -1,5 +1,6 @@
 #include "eval.h"
 #include "movegen.h"
+#include "directions.h"
 #include <string.h>
 
 /* ========== Eval Sub-Profiling ========== */
@@ -220,12 +221,6 @@ static const int16_t knight_mob_eg[] = { -61, -43, -24, -2, 13, 26, 41, 45, 50 }
 /* Bishop mobility bonus table (0..13 safe squares) */
 static const int16_t bishop_mob_mg[] = { -12, -6, 2, 9, 11, 16, 18, 21, 25, 27, 29, 30, 32, 37 };
 static const int16_t bishop_mob_eg[] = { -17, -9, -1, 7, 12, 17, 23, 27, 32, 35, 37, 39, 41, 40 };
-
-/* Knight move offsets (0x88) */
-static const int8_t knight_offsets[] = { -33, -31, -18, -14, 14, 18, 31, 33 };
-
-/* Bishop (diagonal) ray offsets */
-static const int8_t bishop_offsets[] = { -17, -15, 15, 17 };
 
 /* ========== Evaluation Helpers ========== */
 
