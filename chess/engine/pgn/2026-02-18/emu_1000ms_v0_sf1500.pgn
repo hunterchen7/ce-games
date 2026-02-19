@@ -1,0 +1,11 @@
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "1"]
+[White "CE-eZ80-1000ms"]
+[Black "Stockfish-1500"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 Nf6 2. Nf3 e6 3. Nc3 d5 4. Bf4 Ne4 5. Nxe4 Bb4+ 6. Nc3 e5 7. Nxe5 Bxc3+ 8. bxc3 Qf6 9. e3 Bf5 10. Rb1 Be4 11. Rxb7 O-O 12. Rxc7 Qd8 13. Rb7 g5 14. Qg4 Qa5 15. Rxb8 Raxb8 16. Nxf7 Qxc3+ 17. Ke2 Rb1 18. Qxg5+ Kxf7 19. Qh5+ Ke6 20. Qh6+ Rf6 21. Qh3+ Rf5 22. Qh6+ Rf6 23. Qh3+ Bf5 24. Qh5 Qxc2+ 25. Kf3 Qe4+ 26. Kg3 Rg6+ 27. Qxg6+ Bxg6 28. Be5 Rb2 29. a4 Qc2 30. f4 Bd3 31. f5+ Bxf5 32. a5 Qf2# 0-1
+

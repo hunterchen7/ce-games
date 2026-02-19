@@ -1,0 +1,330 @@
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "1"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 d5 2. Nf3 e6 3. Bd2 Nd7 4. c3 Bd6 5. g3 a6 6. e3 Ngf6 7. Bg2 O-O 8. Rf1 c6 9. b4 a5 10. Qa4 Re8 11. Bc1 h6 12. Bb2 e5 13. c4 Bxb4+ 14. Qxb4 axb4 15. cxd5 exd4 16. dxc6 Nb8 17. Nxd4 Nd5 18. Bxd5 Nxc6 19. Bxc6 bxc6 20. Nxc6 Qd3 21. Nxb4 Qb5 22. f3 Rxe3+ 23. Kd2 Re8 24. Nd3 Rd8 25. g4 Qxd3+ 26. Kc1 Qxf1+ 27. Kc2 Qd3+ 28. Kc1 Qd1# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "2"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. e3 d5 2. d4 Nh6 3. a3 Na6 4. Nf3 Bg4 5. c4 c6 6. Nc3 f6 7. Qb3 Bxf3 8. Qxb7 Kf7 9. Qxa6 Ng8 10. gxf3 g5 11. Rg1 dxc4 12. h4 Qxd4 13. hxg5 Ke6 14. Qa4 Rb8 15. Qxc6+ Qd6 16. Bxc4+ Ke5 17. Qe4# 1-0
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "3"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 e6 2. c4 d6 3. g4 d5 4. Bg2 dxc4 5. Nf3 h5 6. Bg5 Bb4+ 7. Nc3 Be7 8. Be3 hxg4 9. Ne5 c6 10. Nxf7 Qa5 11. Nd6+ Bxd6 12. Rc1 Qh5 13. Ne4 Be7 14. Rxc4 Qf7 15. O-O Nf6 16. Re1 Qh5 17. Bf4 O-O 18. Nd6 Nd5 19. Qa1 Nxf4 20. Be4 Nh3+ 21. Kg2 Bxd6 22. Rh1 Rxf2# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "4"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. e3 d5 2. c4 e6 3. Nf3 Qh4 4. Nxh4 h6 5. cxd5 Bd6 6. dxe6 fxe6 7. Nc3 Nf6 8. a3 Bxa3 9. f3 Bd6 10. Bb5+ Bd7 11. b3 Kd8 12. Be2 Kc8 13. Bb5 Ng8 14. Ba4 Bf8 15. Ba3 Bxa3 16. Rxa3 Nf6 17. Qb1 g5 18. Bxd7+ Nbxd7 19. Ra4 Nf8 20. g3 Rb8 21. Ra2 gxh4 22. gxh4 Nh5 23. Rb2 Nf6 24. Rf1 c6 25. Rc2 Ng6 26. Qa2 Ng8 27. Rg1 Nxh4 28. Kf2 Nf6 29. b4 b6 30. Qa6+ Kc7 31. Rg7+ Kd8 32. Qd3+ Ke8 33. Qd6 Rd8 34. Qe7# 1-0
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "5"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 e6 2. c4 Nf6 3. Na3 d5 4. c5 b6 5. Nf3 bxc5 6. e3 Nbd7 7. Nb5 a6 8. Kd2 axb5 9. Bxb5 Ba6 10. Bxd7+ Kxd7 11. Ke1 c6 12. Ne5+ Ke8 13. Nxc6 Qb6 14. Ne5 Bd6 15. Kd2 Qb5 16. Ke1 h5 17. a4 Qb8 18. f4 cxd4 19. exd4 Bb4+ 20. Kf2 Bd6 21. Ke1 Ne4 22. a5 Qb4+ 23. Bd2 Qb5 24. Qxh5 Rf8 25. f5 exf5 26. b3 Bb4 27. Qxf5 Bxd2+ 28. Kd1 Qxb3# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "6"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. d4 d5 2. Nf3 Nf6 3. Bf4 Na6 4. Nc3 Rb8 5. e3 Nb4 6. Nb5 Bg4 7. Nxc7+ Qxc7 8. Bb5+ Bd7 9. Bxd7+ Qxd7 10. Bxb8 Qf5 11. Rc1 Ng8 12. Be5 Qxf3 13. Qxf3 Nf6 14. O-O Ne4 15. Qd1 e6 16. c4 Nxa2 17. Qa4+ Ke7 18. cxd5 Nxf2 19. Rc7+ Kd8 20. Qd7# 1-0
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "7"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 d5 2. Nf3 e6 3. Bd2 Be7 4. h3 Nc6 5. b3 a6 6. Rh2 Nf6 7. e4 Nxe4 8. Rh1 O-O 9. Bd3 Re8 10. Bxe4 dxe4 11. Rh2 exf3 12. c3 Rb8 13. gxf3 Kh8 14. Qc1 e5 15. Be3 Bf5 16. Bg5 Bxg5 17. dxe5 Nb4 18. c4 Nc2+ 19. Qxc2 Rxe5+ 20. Qe2 Rxe2+ 21. Kxe2 Qd3+ 22. Ke1 Re8# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "8"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. e4 Nh6 2. d4 f5 3. Be2 fxe4 4. Bxh6 gxh6 5. Bh5# 1-0
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "9"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 e6 2. c4 d5 3. Nf3 dxc4 4. e4 b5 5. Bf4 Nf6 6. Bxc4 Bb4+ 7. Nc3 Bxc3+ 8. bxc3 bxc4 9. Qc2 Qd7 10. O-O O-O 11. Rab1 Nc6 12. h3 a6 13. Rfd1 Ne7 14. Ne5 Qe8 15. Nxf7 h6 16. Ne5 Bd7 17. Nxc4 Ba4 18. Kh2 Bxc2 19. g3 Nh5 20. Re1 Nxf4 21. gxf4 Bxe4 22. Ne5 Bd5 23. Kg3 Rb8 24. c4 Bxc4 25. Rxb8 Nf5+ 26. Kg4 h5+ 27. Kg5 Qe7+ 28. Kxh5 Qh4+ 29. Kg6 Ne7# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "10"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. e4 Nh6 2. d4 f5 3. Nc3 g6 4. exf5 a5 5. h4 Kf7 6. Nf3 Ra6 7. fxg6+ hxg6 8. Bxa6 bxa6 9. a3 e5 10. Nxe5+ Kg8 11. Bd2 Nf7 12. Nd5 Bb7 13. h5 Nxe5 14. dxe5 Bxd5 15. Qg4 Qg5 16. Qxg5 Bf3 17. gxf3 c5 18. Qxg6+ Bg7 19. h6 Rh7 20. Qe8+ Bf8 21. Rg1+ Rg7 22. Rxg7+ Kh8 23. Qxf8# 1-0
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "11"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 c6 2. d5 Nf6 3. c4 cxd5 4. a4 e5 5. Be3 dxc4 6. Qxd7+ Qxd7 7. Nf3 Nc6 8. Nxe5 Qe6 9. Bxa7 Rxa7 10. Nxc6 Ra6 11. Nd4 Qb6 12. Nb5 Qxb5 13. b3 Bb4+ 14. Nd2 Qf5 15. bxc4 Ne4 16. g4 Qxf2+ 17. Kd1 Bxd2 18. Bh3 Bb4 19. Kc1 f6 20. Rd1 Qe3+ 21. Rd2 Qc3+ 22. Rc2 Qxa1# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "12"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. e3 d5 2. Be2 Nh6 3. Nf3 Qd7 4. d4 Ng8 5. O-O Nh6 6. Ne5 Ng4 7. Bxg4 Qd8 8. Re1 Bxg4 9. Qxg4 Qd7 10. Nxd7 Nxd7 11. Nc3 e6 12. Qe2 Ne5 13. e4 Nc6 14. Be3 Bb4 15. exd5 Bxc3 16. f3 exd5 17. Bf4+ Ne5 18. bxc3 f6 19. dxe5 f5 20. Qb5+ c6 21. Qc5 Rc8 22. Qb4 Kf7 23. Rad1 h6 24. Qxb7+ Rc7 25. e6+ Ke8 26. Qb8+ Rc8 27. Qxc8+ Ke7 28. Qd7+ Kf8 29. Qd8# 1-0
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "13"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 c6 2. d5 e5 3. Nf3 d6 4. Nxe5 Nf6 5. Nf3 cxd5 6. Nc3 Be6 7. Qxd5 Bxd5 8. e3 Be6 9. b3 a6 10. Bd3 Nc6 11. Bxh7 Rxh7 12. a4 Nb8 13. Kd1 Nc6 14. Ke2 Nb4 15. Ng5 Bxb3 16. cxb3 Rb8 17. Rg1 Rh8 18. Ba3 Nc2 19. Kf1 b6 20. Nb5 Rc8 21. Nxf7 axb5 22. Ke2 Nd4+ 23. exd4 Kxf7 24. axb5 Qd7 25. Ra2 Qe8+ 26. Kd3 Qe4+ 27. Kd2 Qe6 28. Re1 Qxe1+ 29. Kxe1 Ra8 30. h3 Be7 31. Ke2 d5 32. b4 Bxb4 33. Bxb4 Rhe8+ 34. Kd3 Rxa2 35. Bd2 Ra3+ 36. Bc3 Re4 37. g4 g6 38. Kc2 g5 39. Kd3 Rf4 40. h4 Rf3+ 41. Kc2 Rxf2+ 42. Kc1 Kg8 43. Bb4 Ra1# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "14"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. e3 d5 2. Nf3 Nf6 3. a3 Bf5 4. d4 c6 5. Nbd2 Na6 6. Bxa6 bxa6 7. c4 Rb8 8. b4 dxc4 9. Nxc4 Qxd4 10. exd4 h6 11. Nfe5 Be4 12. f3 Bd5 13. Qe2 Rd8 14. Rg1 Bxf3 15. Nd6+ exd6 16. Qxa6 dxe5 17. gxf3 Rxd4 18. h4 Rxh4 19. Qb7 Rxb4 20. Qa8+ Rb8 21. Qxb8+ Kd7 22. Qb7+ Kd8 23. Qxc6 a5 24. Be3 h5 25. Rd1+ Ke7 26. Bc5# 1-0
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "15"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 e6 2. c4 Bb4+ 3. Nc3 Bxc3+ 4. bxc3 f5 5. d5 d6 6. Nf3 e5 7. a4 Na6 8. c5 e4 9. Bg5 Ne7 10. cxd6 cxd6 11. Nd4 h6 12. g4 hxg5 13. e3 Nc5 14. Qb3 f4 15. Bb5+ Bd7 16. Nf3 a5 17. Bxd7+ Qxd7 18. Kf1 O-O 19. Ra3 Qd8 20. Ne5 Qe8 21. Nd7 Nxb3 22. Nxf8 Qxf8 23. f3 Nc5 24. fxe4 fxe3+ 25. Ke2 Qf2+ 26. Kd1 Qd2# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "16"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. c4 e5 2. e3 Ba3 3. bxa3 Qg5 4. d4 Qxg2 5. Qf3 Qxg1 6. Rxg1 b6 7. Qxa8 g5 8. f3 d6 9. Bb2 f6 10. Qxb8 f5 11. c5 exd4 12. exd4 dxc5 13. Nd2 Ne7 14. Bb5+ Kf8 15. Qxc7 h6 16. dxc5 Rg8 17. Qd8+ Kf7 18. Qxg8+ Nxg8 19. cxb6 axb6 20. Nb3 Kg6 21. Be8+ Kh7 22. Rc1 Ne7 23. Bb5 Kg8 24. Rc7 Kf7 25. Nd4 f4 26. a4 Kf8 27. Ba3 Bd7 28. Rxd7 Kg7 29. Bxe7 Kg6 30. Bc4 Kh5 31. Rd6 b5 32. Bf7+ Kh4 33. Rg4+ Kh3 34. Rxh6# 1-0
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "17"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 c6 2. d5 cxd5 3. b3 e6 4. Nf3 a6 5. a3 Nc6 6. Nc3 d6 7. Nxd5 h6 8. Nc3 d5 9. Nxd5 exd5 10. Qxd5 Qxd5 11. Bf4 Be6 12. Rd1 Qa5+ 13. Rd2 Rd8 14. c4 Nf6 15. e3 Bxa3 16. Be2 Bb4 17. g4 Bxg4 18. O-O Bxd2 19. Rd1 Rg8 20. Nh4 Bxe2 21. Rb1 Bg4 22. Rf1 Ne4 23. Bg3 f5 24. Ng6 Nxg3 25. Ne5 Ne7 26. fxg3 Bxe3+ 27. Kh1 Qxe5 28. Re1 Qe4# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "18"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. c4 e5 2. g3 Na6 3. Nc3 Qg5 4. Nf3 Qh5 5. d3 Qxh2 6. Nxh2 Nh6 7. Bg2 Nb8 8. e3 b5 9. cxb5 c6 10. g4 Be7 11. Qe2 O-O 12. e4 cxb5 13. g5 b4 14. Nd5 Bc5 15. Be3 Nc6 16. gxh6 f6 17. Ng4 Bxe3 18. hxg7 Bc5 19. gxf8=N Kxf8 20. Kd1 Nd4 21. Bh3 Ke8 22. Ndxf6+ Kd8 23. Qe3 Bb6 24. Qe1 Nc6 25. Rh2 d6 26. f3 Kc7 27. Nd5+ Kb8 28. d4 exd4 29. Nxb6 Nd8 30. Rb1 axb6 31. Qg3 h6 32. Qf2 Nc6 33. Rg2 Rxa2 34. Qf1 Bxg4 35. fxg4 b3 36. Rc1 Ne5 37. g5 hxg5 38. Qf8+ Ka7 39. Rc7+ Ka6 40. Qa8+ Kb5 41. Qd5+ Ka6 42. Bc8# 1-0
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "19"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 e6 2. c4 Nf6 3. Na3 d5 4. c5 b6 5. Nf3 bxc5 6. e3 Be7 7. Bb5+ c6 8. Nd2 O-O 9. Nf3 cxb5 10. Nxb5 c4 11. O-O h6 12. Bd2 Bb7 13. Rc1 Nc6 14. Nxa7 Nb8 15. Nb5 Nc6 16. Na7 Nb4 17. Re1 Nxa2 18. Nb5 Nxc1 19. Qxc1 Nh7 20. Ne5 Nf6 21. Nf3 Qc8 22. Ne5 Bd8 23. Nxc4 Qxc4 24. Nd6 Qc7 25. Qxc7 Bxc7 26. Nxb7 Rfb8 27. Bb4 Kh8 28. Nd6 Ne4 29. Nxf7+ Kh7 30. Bc3 g5 31. Rc1 Bb6 32. Ne5 Rb7 33. b4 Nxc3 34. Rxc3 Ra1+ 35. Rc1 Rxc1# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "20"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. e3 d5 2. c4 e6 3. d4 Nf6 4. a3 Bxa3 5. bxa3 O-O 6. Nf3 Nc6 7. Nbd2 Nxd4 8. Nxd4 e5 9. Nc2 Bg4 10. Be2 h5 11. f3 g6 12. O-O c5 13. fxg4 b5 14. Bb2 bxc4 15. gxh5 Rc8 16. hxg6 Qb6 17. Bxe5 fxg6 18. Bf3 Rcd8 19. a4 Rb8 20. Bc3 Rbd8 21. Rb1 Ne8 22. Rxb6 Rc8 23. Nxc4 dxc4 24. Rf6 a6 25. Rxf8+ Kxf8 26. Be2+ Ke7 27. h4 g5 28. Qb1 gxh4 29. Rf2 Nd6 30. Bg4 Nb5 31. Bf6+ Ke8 32. Bxc8 h3 33. axb5 hxg2 34. Na1 c3 35. Nc2 c4 36. bxa6 Kf8 37. Bh3 Ke8 38. Qb8+ Kf7 39. Qb7+ Ke8 40. Qe7# 1-0
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "21"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 Nf6 2. g3 c6 3. Nc3 d5 4. Ne4 Nxe4 5. a4 e5 6. dxe5 Bc5 7. Be3 a5 8. Bg5 Bxf2# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "22"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. e3 d5 2. d4 Nh6 3. c4 Bg4 4. Nf3 e6 5. Be2 Nc6 6. cxd5 Qd6 7. dxe6 Kd8 8. Nc3 Bxe6 9. O-O Nxd4 10. exd4 Kc8 11. h3 Nf5 12. Re1 Nxd4 13. Qxd4 Bxh3 14. Qxd6 Bxd6 15. Rd1 Bf5 16. Bc4 Rf8 17. Be3 Kb8 18. Rac1 h6 19. Ra1 a6 20. Bd5 g5 21. Nd4 Bg6 22. Ne4 Be5 23. Nc5 Bc2 24. Nxc2 Bxb2 25. Bf3 Bxa1 26. Nd7+ Kc8 27. Nxa1 Rd8 28. Bg4 b5 29. Nc5+ Rd7 30. Bxd7+ Kb8 31. Bc6 Ra7 32. Rd8# 1-0
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "23"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 d5 2. Nf3 Nf6 3. Nc3 Bg4 4. Bf4 e6 5. e3 Bb4 6. Bd3 c5 7. dxc5 Nbd7 8. Ng1 Bxd1 9. a3 Bxc2 10. g3 Bxc3+ 11. bxc3 Bxd3 12. f3 Qb8 13. Bxb8 Bc4 14. Bd6 a6 15. Bb8 Rxb8 16. Ne2 h5 17. Rd1 g6 18. e4 a5 19. f4 Nxe4 20. Nc1 Ndxc5 21. a4 Nd7 22. Nb3 Ba6 23. Rf1 f6 24. Rxd5 Bxf1 25. Nxa5 Bh3 26. Rxd7 Kxd7 27. Nb3 Ra8 28. a5 Rab8 29. Nd4 Bg4 30. f5 Rhc8 31. fxg6 Rxc3 32. g7 Rc1# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "24"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. e4 Nh6 2. Qh5 Rg8 3. Be2 Nc6 4. Nf3 e6 5. d4 d5 6. e5 Be7 7. c3 a6 8. Bxh6 gxh6 9. O-O Bb4 10. cxb4 Qg5 11. Ne1 Qxh5 12. Bxh5 Nxe5 13. g3 Nc6 14. Nc2 Nxd4 15. Nxd4 Bd7 16. Nd2 Rd8 17. Be2 Rg5 18. Nc2 e5 19. f4 Rc8 20. fxg5 Rb8 21. Rf2 Bc6 22. gxh6 Rc8 23. Bh5 d4 24. Bf3 Bxf3 25. Raf1 b6 26. Rxf3 b5 27. Ne4 f5 28. Nf6+ Kd8 29. Kf2 Ra8 30. Nxh7 f4 31. Ng5 Rb8 32. Re1 Rb6 33. Rxe5 Rxh6 34. Ne6+ Rxe6 35. gxf4 Rd6 36. h4 d3 37. Ne3 Rh6 38. h5 d2 39. Rd5+ Rd6 40. Re5 Rd7 41. Nd1 Rh7 42. Rd5+ Rd7 43. Rfd3 Rxd5 44. Rxd5+ Ke7 45. Rxd2 Ke6 46. Kg2 Kf5 47. Kf2 Ke6 48. Kg2 c5 49. bxc5 Kf5 50. c6 b4 51. c7 Kxf4 52. Rd4+ Ke5 53. Rh4 b3 54. axb3 Ke6 55. Rc4 Kf7 56. Rg4 a5 57. Kf3 Ke7 58. c8=Q Kf6 59. Rc4 Kf7 60. Rf4+ Ke7 61. h6 Kd6 62. Qe8 Kc5 63. Rc4+ Kb6 64. Qe7 Kb5 65. Qb7# 1-0
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "25"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 d5 2. Nf3 e6 3. Bd2 c6 4. b3 Bd6 5. Ba5 b6 6. Bc3 Bb7 7. Ba5 bxa5 8. c3 Nf6 9. c4 O-O 10. e3 c5 11. Ne5 Qb6 12. Be2 Be7 13. O-O Qd8 14. cxd5 Nxd5 15. e4 Nf6 16. f3 Nfd7 17. dxc5 Bf6 18. Bd3 Nxc5 19. Bc4 h5 20. a4 a6 21. Rf2 Re8 22. Rd2 Qe7 23. Nd3 Bd4+ 24. Nf2 Be3 25. Bxe6 Bxd2 26. Bxf7+ Qxf7 27. Nxd2 Ne6 28. Nc4 Nf4 29. Rc1 Nc6 30. Nd6 Qg6 31. Rc3 Qxg2# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "26"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. c4 e5 2. Nc3 Qg5 3. g3 Qxg3 4. Nf3 Qxf2+ 5. Kxf2 Ke7 6. e3 b5 7. cxb5 Ke8 8. Rg1 d6 9. d3 Bb7 10. Be2 Nf6 11. Rg5 Nbd7 12. a4 Nc5 13. h4 Rd8 14. e4 Nxa4 15. Rxa4 Rd7 16. Ke1 Rd8 17. Rg2 Rd7 18. Nxe5 dxe5 19. Rxa7 Bxe4 20. dxe4 Rxd1+ 21. Bxd1 Kd8 22. Rg1 Bc5 23. b6 Bxg1 24. Ra8+ Ke7 25. Nd5+ Nxd5 26. Rxh8 Nxb6 27. Bg5+ f6 28. Rxh7 Nd5 29. Bh6 Bc5 30. Rxg7+ Kd6 31. Ba4 Nf4 32. Kf1 Ke6 33. Rh7 Kd6 34. Bf8+ Ke6 35. Bd7# 1-0
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "27"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 d5 2. Nf3 c6 3. h4 Nf6 4. b3 Qc7 5. Rh3 Bxh3 6. Ba3 Bd7 7. e3 Bg4 8. Nc3 a5 9. Bd3 Nbd7 10. Rc1 e6 11. Rb1 Bxa3 12. e4 e5 13. dxe5 Nxe5 14. Nxe5 Be6 15. exd5 Nxd5 16. Nxd5 Qxe5+ 17. Be4 Qxe4+ 18. Kd2 Qd4+ 19. Ke2 Qxd5 20. Rc1 Qh5+ 21. Kd3 Qxh4 22. g3 Qh6 23. Rb1 Qg5 24. c4 Qe5 25. Kc2 Bf5+ 26. Qd3 Qe2+ 27. Kc3 Bb2+ 28. Rxb2 Qxd3# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "28"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. d4 d5 2. c4 dxc4 3. e4 Nf6 4. e5 Bg4 5. Qc2 Kd7 6. exf6 Ke8 7. h3 e5 8. fxg7 h6 9. hxg4 Qe7 10. gxh8=R exd4+ 11. Be2 f5 12. Rxf8+ Qxf8 13. Bd2 d3 14. Qc3 dxe2 15. Qxc4 fxg4 16. Qe6+ Qe7 17. Qxe7+ Kxe7 18. f3 gxf3 19. gxf3 Nc6 20. Nc3 Nd4 21. Kf2 a5 22. Ne4 Nc2 23. Rc1 e1=Q+ 24. Rxe1 c6 25. Re2 Nd4 26. Rxh6 Rc8 27. Bg5+ Ke8 28. Rd6 Nxe2 29. Kxe2 a4 30. Nh3 b5 31. Rd3 Kf7 32. Nc5 Re8+ 33. Re3 Rg8 34. Nd3 Kg6 35. Ne5+ Kf5 36. Nd3 Kg6 37. Re6+ Kf7 38. Nc5 Rg6 39. Re7+ Kf8 40. Nd7+ Kg8 41. a3 Rd6 42. Nf4 Rd4 43. Kf2 Rxd7 44. Rxd7 Kf8 45. Ne6+ Kg8 46. Ke2 Kh8 47. Bf6+ Kg8 48. Kf2 c5 49. Nc7 b4 50. Ke1 b3 51. Kd1 c4 52. Ke2 Kf8 53. Bd4 Kg8 54. Ne6 c3 55. Ng5 Kf8 56. Nh7+ Ke8 57. Nf6+ Kf8 58. Bc5# 1-0
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "29"]
+[White "CE-eZ80-900ms"]
+[Black "Stockfish-1320"]
+[Result "0-1"]
+[Termination "CHECKMATE"]
+
+1. d4 c6 2. d5 e5 3. Nf3 e4 4. Bg5 Qa5+ 5. b4 Bxb4+ 6. c3 Bc5 7. e3 cxd5 8. Ne5 Bf8 9. Be2 Ne7 10. Bxe7 Kxe7 11. O-O f6 12. Ng4 h5 13. Nxf6 Kxf6 14. Bxh5 d6 15. Qd4+ Kg5 16. Qxa7 Rxa7 17. Bf7 Nc6 18. Rd1 Qd8 19. Bxd5 Kf6 20. Bxc6 Kg6 21. Bxe4+ Kh6 22. Bxb7 Bxb7 23. Nd2 Qe8 24. Rab1 Be7 25. Rb6 Bc8 26. Nc4 Bd7 27. Nxd6 Qf8 28. Rd4 Rh7 29. Kf1 g6 30. Rd2 Bxd6 31. Rbxd6 Rf7 32. f3 Rxf3+ 33. gxf3 Bb5+ 34. c4 Bxc4+ 35. R2d3 Bxd3+ 36. Rxd3 Ra3 37. Rxa3 Qxf3+ 38. Kg1 Qg4+ 39. Kf2 Qf5+ 40. Kg3 Qe5+ 41. Kf2 Kh5 42. h3 Qb2+ 43. Kf3 Qxa3 44. Ke4 g5 45. Kd4 Qa7+ 46. Ke4 Qc7 47. Kf5 Qg7 48. a3 Qd7+ 49. Kf6 Qc6+ 50. Kf7 Qc7+ 51. Kf8 Kh4 52. Kg8 Kxh3 53. Kh8 Qb7 54. a4 Qa6 55. Kg7 g4 56. Kh8 Qe6 57. a5 Qe8+ 58. Kg7 Qa8 59. Kg6 Qc8 60. e4 Qe6+ 61. Kg5 Kg2 62. a6 Qg8+ 63. Kf6 Kf3 64. a7 Qf8+ 65. Kg6 Qg8+ 66. Kf5 g3 67. Kf6 Qe8 68. e5 g2 69. a8=Q+ Qxa8 70. e6 Qf8+ 71. Ke5 Qf4+ 72. Kd5 Qe4+ 73. Kd6 Qd4+ 74. Kc7 Qe4 75. Kd6 Qg6 76. Kc6 Qf5 77. e7 Qe6+ 78. Kb7 Qxe7+ 79. Kc8 Qe8+ 80. Kb7 Qe6 81. Kc7 Qe7+ 82. Kc8 Qc5+ 83. Kb7 Qg5 84. Kc6 g1=Q 85. Kc7 Qe7+ 86. Kb8 Qea7+ 87. Kc8 Qg8# 0-1
+
+[Event "Emu Tournament"]
+[Site "Emulator"]
+[Date "2026-02-18"]
+[Round "30"]
+[White "Stockfish-1320"]
+[Black "CE-eZ80-900ms"]
+[Result "1-0"]
+[Termination "CHECKMATE"]
+
+1. d4 d5 2. c4 dxc4 3. e3 Be6 4. Nf3 Nf6 5. Nbd2 b5 6. Qc2 Nc6 7. Ne5 Nxd4 8. exd4 Qxd4 9. Nc6 Bg4 10. Nxd4 a6 11. Bxc4 bxc4 12. Qxc4 Rd8 13. Nc6 Be6 14. Qxa6 Rd6 15. Qa8+ Bc8 16. Qxc8+ Rd8 17. Qxd8# 1-0
+

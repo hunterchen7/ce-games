@@ -84,6 +84,7 @@ static uint32_t search_nodes;
 static volatile uint8_t  search_stopped;
 static uint32_t search_deadline;
 static uint32_t search_max_nodes;
+static uint32_t search_node_deadline; /* timer-failure fallback */
 static time_ms_fn search_time_fn;
 static move_t   search_best_root_move;
 static int      search_eval_noise;     /* max random noise added at root (0 = off) */
@@ -173,6 +174,14 @@ static void check_time(void)
         }
     }
     if (search_max_nodes && search_nodes >= search_max_nodes) {
+        search_stopped = 1;
+    }
+    /* Hard fallback: if a time limit was set, stop after a generous
+       node count even if the timer hardware is broken.  At 48 MHz
+       with ~160K cy/node the engine does ~300 nodes/sec, so 1 node/ms
+       gives ~3x headroom.  This never fires when the timer works
+       (timer stops the search well before this limit). */
+    if (search_node_deadline && search_nodes >= search_node_deadline) {
         search_stopped = 1;
     }
 }
@@ -1013,6 +1022,11 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
         search_deadline = 0;
     }
     search_max_nodes = limits->max_nodes;
+
+    /* Node-based timer fallback: if the hardware timer fails (returns 0
+       forever), this hard cap stops the search at roughly the right time.
+       ~300 nodes/sec at 48 MHz, so 1 node per ms gives ~3x headroom. */
+    search_node_deadline = limits->max_time_ms ? limits->max_time_ms : 0;
     search_eval_noise = limits->eval_noise;
     search_move_variance = limits->move_variance;
     search_rng_state = b->hash ^ 0xDEAD;

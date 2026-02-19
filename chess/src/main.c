@@ -1222,9 +1222,11 @@ static void update_playing(void)
 
             ai_move = engine_think(0, think_time_ms);
 
-            if (ai_move.from_row == ENGINE_SQ_NONE)
+            if (ai_move.from_row == ENGINE_SQ_NONE ||
+                ai_move.from_row > 7 || ai_move.from_col > 7 ||
+                ai_move.to_row > 7 || ai_move.to_col > 7)
             {
-                /* no legal move — game should be over */
+                /* no legal move or corrupted coordinates */
                 uint8_t status = engine_get_status();
                 if (status == ENGINE_STATUS_CHECKMATE)
                     winner = player_color;
