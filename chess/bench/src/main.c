@@ -396,12 +396,15 @@ static const char *fens[] = {
 
 /* ========== Main ========== */
 
+/* Large locals moved to static to reduce main()'s stack frame.
+   TI-OS only provides ~4KB of stack; board_t + moves[] alone were 1.2KB. */
+static board_t b;
+static move_t moves[256];
+static undo_t undo;
+static char buf[50];
+
 int main(void)
 {
-    board_t b;
-    move_t moves[256];
-    undo_t undo;
-    char buf[50];
     uint32_t cycles, total_cycles, ms, nodes;
     uint8_t nmoves;
     int i, j;

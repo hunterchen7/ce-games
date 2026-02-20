@@ -80,6 +80,26 @@ static zhash_t pos_history[MAX_GAME_PLY];
 static uint16_t pos_history_count;
 static uint16_t pos_history_irreversible;
 
+/* Stack overflow guard: TI-OS only provides ~4KB of stack.
+   negamax uses ~200 bytes per frame, quiescence ~100 bytes.
+   We read the frame pointer at runtime and bail to evaluate()
+   if too close to the OS stack limit, so the engine adapts to
+   whatever stack is actually available (game vs bench vs emu_uci). */
+#ifdef __ez80__
+#define STACK_RESERVE 400  /* bytes of headroom above OS limit */
+static unsigned int stack_floor;  /* set once at search start */
+
+static inline uint8_t stack_low(void)
+{
+    unsigned int fp;
+    __asm__ volatile("lea %0, ix+0" : "=r"(fp));
+    return fp <= stack_floor;
+}
+#else
+/* Native builds have ample stack — guard is a no-op */
+static inline uint8_t stack_low(void) { return 0; }
+#endif
+
 /* Search globals */
 static uint32_t search_nodes;
 static volatile uint8_t  search_stopped;
@@ -555,10 +575,11 @@ static int quiescence(board_t *b, int alpha, int beta,
 
     if (search_stopped) return 0;
     search_nodes++;
+
     check_time();
     if (search_stopped) return 0;
 
-    if (ply >= MAX_PLY || qs_depth >= QS_MAX_DEPTH) {
+    if (ply >= MAX_PLY || qs_depth >= QS_MAX_DEPTH || stack_low()) {
         PROF_B(); stand_pat = evaluate(b); PROF_E(eval_cy); PROF_C(eval_cnt);
         return stand_pat;
     }
@@ -713,6 +734,7 @@ static int negamax(board_t *b, int8_t depth, int alpha, int beta,
 
     if (search_stopped) return 0;
     search_nodes++;
+
     check_time();
     if (search_stopped) return 0;
 
@@ -724,7 +746,7 @@ static int negamax(board_t *b, int8_t depth, int alpha, int beta,
     if (depth <= 0)
         return quiescence(b, alpha, beta, ply, 0);
 
-    if (ply >= MAX_PLY)
+    if (ply >= MAX_PLY || stack_low())
         return evaluate(b);
 
     /* TT probe */
@@ -1005,6 +1027,14 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
     int8_t d;
     int score;
 
+    /* Set stack floor from OS stack limit register (eZ80 only) */
+#ifdef __ez80__
+    {
+        unsigned int limit = *(volatile unsigned int *)0xE0003A;
+        stack_floor = limit + STACK_RESERVE;
+    }
+#endif
+
     /* Reset search state */
     search_nodes = 0;
     search_stopped = 0;
@@ -1020,10 +1050,16 @@ search_result_t search_go(board_t *b, const search_limits_t *limits)
     }
     search_max_nodes = limits->max_nodes;
 
-    /* Node-based timer fallback: if the hardware timer fails (returns 0
-       forever), this hard cap stops the search at roughly the right time.
-       ~300 nodes/sec at 48 MHz, so 1 node per ms gives ~3x headroom. */
+    /* Node-based timer fallback (eZ80 only): if the hardware timer fails
+       (returns 0 forever), this hard cap stops the search at roughly the
+       right time.  ~300 nodes/sec at 48 MHz, so 1 node per ms gives ~3x
+       headroom.  Disabled on native builds where timers are reliable and
+       the engine processes 100K+ nodes/sec (the cap would kill search). */
+#ifdef __ez80__
     search_node_deadline = limits->max_time_ms ? limits->max_time_ms : 0;
+#else
+    search_node_deadline = 0;
+#endif
     search_eval_noise = limits->eval_noise;
     search_move_variance = limits->move_variance;
     search_rng_state = b->hash ^ 0xDEAD;
