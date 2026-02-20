@@ -1237,3 +1237,68 @@ inlining both. Left in for documentation with a note.
 
 This is, quantifiably, the smallest optimization in the history of this engine.
 We measured it anyway.
+
+## Inline ASM Zobrist XOR (2026-02-19)
+
+**Commit**: c7750a9
+
+Replaced eZ80 CRT `__ixor` library calls with inline assembly for 24-bit hash
+XOR operations in `board_make` and `board_compute_hash`. The CRT `__ixor` (~45 cy)
+uses expensive stack pointer manipulation to extract the upper byte of 24-bit
+registers. The inline version uses memory-to-memory byte XOR:
+`ld a,(de); xor a,(hl); ld (hl),a` × 3 bytes (~24 cy).
+
+### What didn't work first
+
+- **ZHASH cast** (`*(const zhash_t *)&entry`): eliminated 32-bit `__lxor` widening
+  but `__ixor` (24-bit XOR) is still called by the compiler for all `unsigned int`
+  XOR operations. No speedup.
+- **Byte-wise C macro** (`uint8_t *` cast + 3 byte XORs): **+20% worse** — compiler
+  generated terrible pointer arithmetic through struct fields, recomputing the board
+  field address per byte. Slower than the library call.
+- **Inline asm with `"r"` constraints**: crashed — compiler assigned arbitrary
+  registers but asm hardcoded HL/DE. Needed push/pop to safely move values.
+
+### What worked
+
+Inline asm with push/pop register marshaling:
+```c
+push hl / push de       // save caller's registers
+push %1 / push %0       // push compiler-chosen src/dest regs
+pop hl / pop de          // HL=dest, DE=src
+ld a,(de); xor a,(hl); ld (hl),a  // byte 0
+inc de; inc hl
+ld a,(de); xor a,(hl); ld (hl),a  // byte 1
+inc de; inc hl
+ld a,(de); xor a,(hl); ld (hl),a  // byte 2
+pop de / pop hl          // restore
+```
+
+Eliminated 34 of 38 `__ixor` calls (all in `board_make` / `board_compute_hash`).
+
+### Impact
+
+- **make/unmake**: 1,296M → 1,259M cycles (**-37M, -2.8%**)
+- **cy/node**: 206,079 → 205,246 (**-0.4%**)
+- All other categories unchanged (improvement isolated to hash XOR)
+- **Binary**: 55,288 → 55,593 bytes (+305 bytes from inlined asm)
+
+## Runtime Stack Guard (2026-02-19)
+
+**Commit**: b0ee6e5
+
+TI-OS provides only ~4KB of stack (hardware limit at port `0xE0003A`). With
+`negamax` at ~200 bytes/frame, deep endgame searches could overflow and crash.
+Added a runtime guard that reads the eZ80 frame pointer (IX) via `lea` and bails
+to `evaluate()` when approaching the OS limit + 400-byte reserve.
+
+Also fixed a pre-existing bug: `search_node_deadline` was set to `max_time_ms`
+on all platforms. At 0.1s/move on native x86, this capped search at 100 nodes
+(the fallback was designed for eZ80's ~300 nodes/sec). Now eZ80-only via `#ifdef`.
+
+### Verification
+
+- Emu tournament: **+13=3-14 (48%) vs SF-1700** at 9s/move — no regression
+- Native tournament: **+3=3-4 (45%) vs SF-2700** at 0.1s/move — restored from
+  broken 3% (node_deadline bug) to expected ~45%
+- Bench stable at 10,000 nodes/position (previously crashed at 3,000)

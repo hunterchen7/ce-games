@@ -82,23 +82,23 @@ static void board_compute_hash(board_t *b)
         if (piece == PIECE_NONE) continue;
         pidx = zobrist_piece_index(piece);
         sq64 = SQ_TO_SQ64(sq);
-        h ^= zobrist_piece[pidx][sq64];
+        ZHASH_XOR(h, zobrist_piece[pidx][sq64]);
         if (PIECE_TYPE(piece) == PIECE_PAWN)
-            ph ^= zobrist_piece[pidx][sq64];
+            ZHASH_XOR(ph, zobrist_piece[pidx][sq64]);
         l ^= lock_piece[pidx][sq64];
     }
 
-    h ^= zobrist_castle[b->castling];
+    ZHASH_XOR(h, zobrist_castle[b->castling]);
     l ^= lock_castle[b->castling];
 
     if (b->ep_square != SQ_NONE) {
         uint8_t file = SQ_TO_COL(b->ep_square);
-        h ^= zobrist_ep_file[file];
+        ZHASH_XOR(h, zobrist_ep_file[file]);
         l ^= lock_ep_file[file];
     }
 
     if (b->side == BLACK) {
-        h ^= zobrist_side;
+        ZHASH_XOR(h, zobrist_side);
         l ^= lock_side;
     }
 
@@ -278,13 +278,10 @@ void board_make(board_t *b, move_t m, undo_t *u)
         b->halfmove++;
 
     /* Remove piece from origin (hash + eval) */
-    {
-        zhash_t zh = zobrist_piece[pidx][from64];
-        b->hash ^= zh;
-        b->lock ^= lock_piece[pidx][from64];
-        if (type == PIECE_PAWN)
-            b->pawn_hash ^= zh;
-    }
+    ZHASH_XOR(b->hash, zobrist_piece[pidx][from64]);
+    b->lock ^= lock_piece[pidx][from64];
+    if (type == PIECE_PAWN)
+        ZHASH_XOR(b->pawn_hash, zobrist_piece[pidx][from64]);
     b->mg[side] -= mg_table[eidx][pst_from];
     b->eg[side] -= eg_table[eidx][pst_from];
 
@@ -300,13 +297,10 @@ void board_make(board_t *b, move_t m, undo_t *u)
             uint8_t cap_eidx = EVAL_INDEX(PIECE_TYPE(cap_piece));
             uint8_t cap_pst = (opp == WHITE) ? cap64 : PST_FLIP(cap64);
 
-            {
-                zhash_t zh = zobrist_piece[cap_pidx][cap64];
-                b->hash ^= zh;
-                b->lock ^= lock_piece[cap_pidx][cap64];
-                if (PIECE_TYPE(cap_piece) == PIECE_PAWN)
-                    b->pawn_hash ^= zh;
-            }
+            ZHASH_XOR(b->hash, zobrist_piece[cap_pidx][cap64]);
+            b->lock ^= lock_piece[cap_pidx][cap64];
+            if (PIECE_TYPE(cap_piece) == PIECE_PAWN)
+                ZHASH_XOR(b->pawn_hash, zobrist_piece[cap_pidx][cap64]);
             b->mg[opp] -= mg_table[cap_eidx][cap_pst];
             b->eg[opp] -= eg_table[cap_eidx][cap_pst];
             b->phase -= phase_weight[cap_eidx];
@@ -326,13 +320,10 @@ void board_make(board_t *b, move_t m, undo_t *u)
         uint8_t cap_eidx = EVAL_INDEX(PIECE_TYPE(captured));
         uint8_t cap_pst = (opp == WHITE) ? to64 : PST_FLIP(to64);
 
-        {
-            zhash_t zh = zobrist_piece[cap_pidx][to64];
-            b->hash ^= zh;
-            b->lock ^= lock_piece[cap_pidx][to64];
-            if (PIECE_TYPE(captured) == PIECE_PAWN)
-                b->pawn_hash ^= zh;
-        }
+        ZHASH_XOR(b->hash, zobrist_piece[cap_pidx][to64]);
+        b->lock ^= lock_piece[cap_pidx][to64];
+        if (PIECE_TYPE(captured) == PIECE_PAWN)
+            ZHASH_XOR(b->pawn_hash, zobrist_piece[cap_pidx][to64]);
         b->mg[opp] -= mg_table[cap_eidx][cap_pst];
         b->eg[opp] -= eg_table[cap_eidx][cap_pst];
         b->phase -= phase_weight[cap_eidx];
@@ -350,13 +341,10 @@ void board_make(board_t *b, move_t m, undo_t *u)
     plist_move(b, side, from, to);
 
     /* Place piece at destination (hash + eval) */
-    {
-        zhash_t zh = zobrist_piece[pidx][to64];
-        b->hash ^= zh;
-        b->lock ^= lock_piece[pidx][to64];
-        if (type == PIECE_PAWN)
-            b->pawn_hash ^= zh;
-    }
+    ZHASH_XOR(b->hash, zobrist_piece[pidx][to64]);
+    b->lock ^= lock_piece[pidx][to64];
+    if (type == PIECE_PAWN)
+        ZHASH_XOR(b->pawn_hash, zobrist_piece[pidx][to64]);
     b->mg[side] += mg_table[eidx][pst_to];
     b->eg[side] += eg_table[eidx][pst_to];
 
@@ -379,12 +367,10 @@ void board_make(board_t *b, move_t m, undo_t *u)
 
         /* Remove pawn hash at destination, add promoted piece hash */
         {
-            zhash_t pawn_zh = zobrist_piece[pidx][to64];
-            zhash_t promo_zh = zobrist_piece[promo_pidx][to64];
-            b->hash ^= pawn_zh;
+            ZHASH_XOR(b->hash, zobrist_piece[pidx][to64]);
             b->lock ^= lock_piece[pidx][to64];
-            b->pawn_hash ^= pawn_zh;
-            b->hash ^= promo_zh;
+            ZHASH_XOR(b->pawn_hash, zobrist_piece[pidx][to64]);
+            ZHASH_XOR(b->hash, zobrist_piece[promo_pidx][to64]);
             b->lock ^= lock_piece[promo_pidx][to64];
         }
 
@@ -423,8 +409,8 @@ void board_make(board_t *b, move_t m, undo_t *u)
         rook_pst_from = (side == WHITE) ? rf64 : PST_FLIP(rf64);
         rook_pst_to   = (side == WHITE) ? rt64 : PST_FLIP(rt64);
 
-        b->hash ^= zobrist_piece[rook_pidx][rf64];
-        b->hash ^= zobrist_piece[rook_pidx][rt64];
+        ZHASH_XOR(b->hash, zobrist_piece[rook_pidx][rf64]);
+        ZHASH_XOR(b->hash, zobrist_piece[rook_pidx][rt64]);
         b->lock ^= lock_piece[rook_pidx][rf64];
         b->lock ^= lock_piece[rook_pidx][rt64];
 
@@ -450,8 +436,8 @@ void board_make(board_t *b, move_t m, undo_t *u)
         b->castling &= castling_mask[from];
         b->castling &= castling_mask[to];
         if (old_castling != b->castling) {
-            b->hash ^= zobrist_castle[old_castling];
-            b->hash ^= zobrist_castle[b->castling];
+            ZHASH_XOR(b->hash, zobrist_castle[old_castling]);
+            ZHASH_XOR(b->hash, zobrist_castle[b->castling]);
             b->lock ^= lock_castle[old_castling];
             b->lock ^= lock_castle[b->castling];
         }
@@ -467,18 +453,18 @@ void board_make(board_t *b, move_t m, undo_t *u)
         }
         /* Hash out old EP, hash in new EP */
         if (old_ep != SQ_NONE) {
-            b->hash ^= zobrist_ep_file[SQ_TO_COL(old_ep)];
+            ZHASH_XOR(b->hash, zobrist_ep_file[SQ_TO_COL(old_ep)]);
             b->lock ^= lock_ep_file[SQ_TO_COL(old_ep)];
         }
         if (b->ep_square != SQ_NONE) {
-            b->hash ^= zobrist_ep_file[SQ_TO_COL(b->ep_square)];
+            ZHASH_XOR(b->hash, zobrist_ep_file[SQ_TO_COL(b->ep_square)]);
             b->lock ^= lock_ep_file[SQ_TO_COL(b->ep_square)];
         }
     }
 
     /* Flip side to move */
     b->side ^= 1;
-    b->hash ^= zobrist_side;
+    ZHASH_XOR(b->hash, zobrist_side);
     b->lock ^= lock_side;
 
     /* Update fullmove counter (increments after black moves) */
