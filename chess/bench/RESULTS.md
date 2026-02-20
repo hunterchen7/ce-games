@@ -1305,7 +1305,7 @@ on all platforms. At 0.1s/move on native x86, this capped search at 100 nodes
 
 ## Hand-Written ASM pick_best_score (2026-02-19)
 
-**Commit**: TBD
+**Commit**: c78d4a7
 
 Replaced the compiler-generated inner loop of `pick_move()` (selection sort scan)
 with hand-written eZ80 assembly (`pick_best.asm`). The C compiler generated
@@ -1378,14 +1378,14 @@ nodes:               53793
 
 Run after hand-written asm optimizations (pick_best_score -11.8%, Zobrist XOR -2.8%).
 No opening book (`book_ply=0`), `variance=0` except Easy. Node limit 30,000.
-Expert extended to 50 games, Master extended to 100 games. Hard uses first batch only.
+Master extended to 100 games, as per last tournament. Hard and Expert use first batch of 30 only.
 
 | Difficulty | Time  | Variance | SF Elo | Games | W-D-L   | Score | Est. Engine Elo |
 | ---------- | ----- | -------- | ------ | ----- | ------- | ----- | --------------- |
 | Easy       | 900ms | 10 cp    | 1320   | 30    | 15-2-13 | 53.3% | **1343** (+23)  |
 | Medium     | 3s    | 0        | 1500   | 30    | 17-2-11 | 60.0% | **1570** (+128) |
 | Hard       | 9s    | 0        | 1700   | 30    | 16-3-11 | 58.3% | **1758** (+46)  |
-| Expert     | 13.5s | 0        | 1900   | 50    | 24-7-19 | 55.0% | **1935** (-23)  |
+| Expert     | 13.5s | 0        | 1900   | 30    | 14-6-10 | 56.7% | **1947** (-11)  |
 | Master     | 27s   | 0        | 2100   | 100   | 55-9-36 | 59.5% | **2167** (+84)  |
 
 Elo estimated via `engine_elo = sf_elo - 400 * log10(1/score - 1)`.

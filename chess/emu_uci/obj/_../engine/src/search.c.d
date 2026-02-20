@@ -3,7 +3,4 @@ obj/_../engine/src/search.c.bc: ../engine/src/search.c \
   /Users/hunterchen/CEdev/include/stdint.h \
   /Users/hunterchen/CEdev/include/cdefs.h ../engine/src/eval.h \
   ../engine/src/movegen.h ../engine/src/tt.h ../engine/src/zobrist.h \
-  ../engine/src/directions.h \
-  /Users/hunterchen/CEdev/include/sys/timers.h \
-  /Users/hunterchen/CEdev/include/sys/util.h \
-  /Users/hunterchen/CEdev/include/string.h
+  ../engine/src/directions.h
