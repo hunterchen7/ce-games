@@ -616,6 +616,7 @@ int main(void)
         uint64_t agg_eval = 0, agg_movegen = 0, agg_make = 0, agg_legal = 0;
         uint64_t agg_linfo = 0, agg_morder = 0, agg_tt = 0;
         uint64_t agg_null = 0, agg_pool = 0;
+        uint64_t agg_score = 0, agg_pick = 0;
         uint64_t agg_build = 0, agg_pieces = 0, agg_mob = 0, agg_shield = 0;
         uint32_t agg_eval_cnt = 0;
 
@@ -663,6 +664,8 @@ int main(void)
             agg_legal += prof->is_legal_cy;
             agg_linfo += prof->legal_info_cy;
             agg_morder += prof->moveorder_cy;
+            agg_score += prof->score_cy;
+            agg_pick += prof->pick_cy;
             agg_tt += prof->tt_cy;
             agg_null += prof->null_move_cy;
             agg_pool += prof->pool_copy_cy;
@@ -721,6 +724,8 @@ int main(void)
         AGG_ROW("is_legal",    agg_legal);
         AGG_ROW("legal_info",  agg_linfo);
         AGG_ROW("moveorder",   agg_morder);
+        AGG_ROW("  score",     agg_score);
+        AGG_ROW("  pick",      agg_pick);
         AGG_ROW("tt",          agg_tt);
         AGG_ROW("null_move",   agg_null);
         AGG_ROW("pool_copy",   agg_pool);

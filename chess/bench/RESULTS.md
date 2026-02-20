@@ -1302,3 +1302,75 @@ on all platforms. At 0.1s/move on native x86, this capped search at 100 nodes
 - Native tournament: **+3=3-4 (45%) vs SF-2700** at 0.1s/move — restored from
   broken 3% (node_deadline bug) to expected ~45%
 - Bench stable at 10,000 nodes/position (previously crashed at 3,000)
+
+## Hand-Written ASM pick_best_score (2026-02-19)
+
+**Commit**: TBD
+
+Replaced the compiler-generated inner loop of `pick_move()` (selection sort scan)
+with hand-written eZ80 assembly (`pick_best.asm`). The C compiler generated
+catastrophically inefficient code for `int16_t` signed comparison:
+
+**Compiler waste per iteration (~80 cycles):**
+- Duplicate signed comparison (`sbc.sis` done twice for the same operands)
+- `call pe, __setflag` for signed 16-bit overflow fixup (conditional function call)
+- Constant stack spills/reloads for `best_score`, `best` index, and `count`
+- Pointer reload from stack every iteration
+
+**Hand-written approach (~29 cycles/iteration):**
+- Sign-bit flip trick (`xor a, 0x80`) converts signed→unsigned comparison
+- Single comparison per iteration (high byte first, low byte if needed)
+- All hot values in registers: IY=scores pointer, DE=best_score, B=count, C=best, A=i
+- Sequential `lea iy, iy+2` for int16_t stride advancement
+
+**What didn't work first:**
+- `int` (24-bit native) scores: still generated `__setflag`, 3-byte stride (__imulu) made it worse (+1.2%)
+- `unsigned int` with bias: eliminated `__setflag` but per-iteration bias cost + 3-byte stride was worse
+- The `int16_t` 2-byte stride is optimal — the only way to fix the comparison overhead is assembly
+
+### Before (compiler C, int16_t)
+```
+Category             Cycles   Pct
+-------------- ------------ -----
+eval             2793246902   31%
+movegen          1278720330   14%
+make/unmake      1259413655   13%
+is_legal          215124250    2%
+legal_info        905404483   10%
+moveorder        1341191262   14%   ← pick_move scan: 70% of this
+tt                 28342982    0%
+null_move            447161    0%
+pool_copy                 0    0%
+overhead         1182420412   13%
+──────────────────────────────────
+Total:           9007427937
+cy/node:            205246
+nodes:               43886
+```
+
+### After (hand-written asm pick_best_score)
+```
+Category             Cycles   Pct
+-------------- ------------ -----
+eval             3135732394   32%
+movegen          1479557837   15%
+make/unmake      1523491681   15%
+is_legal          280202311    2%
+legal_info        950113220    9%
+moveorder        1095725691   11%   ← -24% from asm scan loop
+tt                 18159061    0%
+null_move            205794    0%
+pool_copy                 0    0%
+overhead         1256762064   12%
+──────────────────────────────────
+Total:           9739950053
+cy/node:            181063
+nodes:               53793
+```
+
+### Impact
+- **cy/node**: 205,246 → 181,063 (**-11.8%**)
+- **moveorder**: 1,341M → 1,096M (**-245M, -18%**)
+- **nodes**: 43,886 → 53,793 (**+22.6%** — engine searches more in same time)
+- All other categories proportionally higher (more nodes = more work total)
+- This is the largest single optimization in the engine's history

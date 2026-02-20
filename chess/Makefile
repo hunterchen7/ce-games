@@ -20,6 +20,8 @@ EXTRA_C_SOURCES = \
     engine/src/engine.c \
     engine/src/book.c
 
+EXTRA_ASM_SOURCES = engine/src/pick_best.asm
+
 # ----------------------------
 
 include $(shell cedev-config --makefile)

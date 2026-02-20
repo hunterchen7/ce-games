@@ -24,7 +24,8 @@ extern uint32_t zobrist_side;
 static inline void zhash_xor_asm(void *dest, const void *src)
 {
     /* Memory-to-memory 24-bit XOR: *dest ^= *src (3 bytes).
-       Saves/restores HL and DE to avoid register pressure issues. */
+       Saves/restores HL and DE to avoid register pressure issues.
+       4 push/pop for save/restore, 2 push/pop to marshal args into HL/DE. */
     (void)dest; (void)src;
     __asm__ volatile(
         "push hl\n\t"

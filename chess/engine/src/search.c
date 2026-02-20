@@ -310,19 +310,30 @@ static void score_capture_moves(const board_t *b, const move_t *moves,
     }
 }
 
-/* Selection sort: swap best move to position 'index' */
-static void pick_move(move_t *moves, int16_t *scores, uint8_t count, uint8_t index)
+/* Hand-written eZ80 asm scan: find index of highest score in scores[start..count-1].
+   Eliminates compiler's duplicate comparison + __setflag overhead (~2.8x faster). */
+#ifdef __ez80__
+extern uint8_t pick_best_score(const int16_t *scores, uint8_t count, uint8_t start);
+#else
+static uint8_t pick_best_score(const int16_t *scores, uint8_t count, uint8_t start)
 {
-    uint8_t best = index;
-    int16_t best_score = scores[index];
+    uint8_t best = start;
+    int16_t best_score = scores[start];
     uint8_t i;
-
-    for (i = index + 1; i < count; i++) {
+    for (i = start + 1; i < count; i++) {
         if (scores[i] > best_score) {
             best = i;
             best_score = scores[i];
         }
     }
+    return best;
+}
+#endif
+
+/* Selection sort: swap best move to position 'index' */
+static void pick_move(move_t *moves, int16_t *scores, uint8_t count, uint8_t index)
+{
+    uint8_t best = pick_best_score(scores, count, index);
 
     if (best != index) {
         move_t tmp_m = moves[index];

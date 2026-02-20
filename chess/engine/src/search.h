@@ -51,6 +51,8 @@ typedef struct {
     uint32_t movegen_cy;
     uint32_t legal_info_cy;
     uint32_t moveorder_cy;
+    uint32_t score_cy;       /* scoring subset of moveorder */
+    uint32_t pick_cy;        /* pick_move subset of moveorder */
     uint32_t make_unmake_cy;
     uint32_t is_legal_cy;
     uint32_t tt_cy;
