@@ -459,7 +459,9 @@ static void draw_sidebar(void)
         gfx_PrintStringXY("vs. Human", SIDEBAR_X + 4, 6);
     } else {
         char cpu_buf[12];
-        sprintf(cpu_buf, "vs. CPU %d", difficulty_cursor + 1);
+        strcpy(cpu_buf, "vs. CPU ");
+        cpu_buf[8] = '1' + difficulty_cursor;
+        cpu_buf[9] = '\0';
         gfx_PrintStringXY(cpu_buf, SIDEBAR_X + 4, 6);
     }
 
@@ -535,7 +537,6 @@ static void draw_playing(void)
 
 static const int8_t promo_pieces_white[4] = { W_QUEEN, W_ROOK, W_BISHOP, W_KNIGHT };
 static const int8_t promo_pieces_black[4] = { B_QUEEN, B_ROOK, B_BISHOP, B_KNIGHT };
-static const char *promo_labels[4] = { "Q", "R", "B", "N" };
 
 static void draw_promotion(void)
 {
@@ -585,9 +586,6 @@ static void draw_promotion(void)
 
         /* draw the piece */
         draw_piece(pieces[i], px, by + 2);
-
-        /* label below (unused, piece is self-explanatory) */
-        (void)promo_labels;
     }
 }
 
@@ -715,17 +713,20 @@ static void draw_menu(void)
         }
     }
 
-    /* version + detected book tier (probe directly since engine may not be init'd) */
+    /* version + detected book tier (probe once and cache) */
     {
-        char ver_buf[20];
-        const char *tag = "";
-        uint8_t h;
-        h = ti_Open("CHBY01", "r"); if (h) { ti_Close(h); tag = " XXL"; }
-        if (!tag[0]) { h = ti_Open("CHBX01", "r"); if (h) { ti_Close(h); tag = " XL"; } }
-        if (!tag[0]) { h = ti_Open("CHBL01", "r"); if (h) { ti_Close(h); tag = " L"; } }
-        if (!tag[0]) { h = ti_Open("CHBM01", "r"); if (h) { ti_Close(h); tag = " M"; } }
-        if (!tag[0]) { h = ti_Open("CHBS01", "r"); if (h) { ti_Close(h); tag = " S"; } }
-        sprintf(ver_buf, "v%s%s", VERSION, tag);
+        static char ver_buf[20] = {0};
+        if (!ver_buf[0]) {
+            const char *tag = "";
+            uint8_t h;
+            h = ti_Open("CHBY01", "r"); if (h) { ti_Close(h); tag = " XXL"; }
+            if (!tag[0]) { h = ti_Open("CHBX01", "r"); if (h) { ti_Close(h); tag = " XL"; } }
+            if (!tag[0]) { h = ti_Open("CHBL01", "r"); if (h) { ti_Close(h); tag = " L"; } }
+            if (!tag[0]) { h = ti_Open("CHBM01", "r"); if (h) { ti_Close(h); tag = " M"; } }
+            if (!tag[0]) { h = ti_Open("CHBS01", "r"); if (h) { ti_Close(h); tag = " S"; } }
+            strcpy(ver_buf, "v" VERSION);
+            strcat(ver_buf, tag);
+        }
         gfx_SetTextScale(1, 1);
         gfx_SetTextFGColor(PAL_PIECE_OL);
         text_w = gfx_GetStringWidth(ver_buf);

@@ -54,6 +54,8 @@ typedef struct {
     uint32_t make_unmake_cy;
     uint32_t is_legal_cy;
     uint32_t tt_cy;
+    uint32_t null_move_cy;
+    uint32_t pool_copy_cy;
     uint32_t eval_cnt;
     uint32_t movegen_cnt;
     uint32_t make_cnt;     /* make/unmake pairs for legal moves */
