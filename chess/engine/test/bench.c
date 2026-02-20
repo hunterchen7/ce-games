@@ -312,8 +312,120 @@ static const char *fens[] = {
     "r3k2r/pb3p2/5npp/n2p4/1p1PPB2/6P1/P2N1PBP/R3K2R w KQkq - 0 1",
     /* 49: Double check position */
     "8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1",
+
+    /* ===== Tactical middlegames (positions 50-69) ===== */
+    /* WAC (Win At Chess), Nolot, Bratko-Kopec, ERET */
+
+    /* 50: WAC.001 — Qg6, knight sacrifice + queen attack */
+    "2rr3k/pp3pp1/1nnqbN1p/3pN3/2pP4/2P3Q1/PPB4P/R4RK1 w - - 0 1",
+    /* 51: WAC.003 — Rg3, tactical middlegame */
+    "5rk1/1ppb3p/p1pb4/6q1/3P1p1r/2P1R2P/PP1BQ1P1/5RKN w - - 0 1",
+    /* 52: WAC.004 — Qxh7+, Greek gift sacrifice */
+    "r1bq2rk/pp3pbp/2p1p1pQ/7P/3P4/2PB1N2/PP3PPR/2KR4 w - - 0 1",
+    /* 53: WAC.008 — Rf7, rook penetration */
+    "r4q1k/p2bR1rp/2p2Q1N/5p2/5p2/2P5/PP3PPP/R5K1 w - - 0 1",
+    /* 54: WAC.010 — Rxh7, rook sac to expose king */
+    "2br2k1/2q3rn/p2NppQ1/2p1P3/Pp5R/4P3/1P3PPP/3R2K1 w - - 0 1",
+    /* 55: WAC.014 — Qxh7+, attack with bishop pair */
+    "r2rb1k1/pp1q1p1p/2n1p1p1/2bp4/5P2/PP1BPR1Q/1BPN2PP/R5K1 w - - 0 1",
+    /* 56: WAC.021 — Nxf7, knight fork */
+    "r1bqk2r/ppp1nppp/4p3/n5N1/2BPp3/P1P5/2P2PPP/R1BQK2R w KQkq - 0 1",
+    /* 57: WAC.022 — g4, pawn thrust trapping queen */
+    "r3nrk1/2p2p1p/p1p1b1p1/2NpPq2/3R4/P1N1Q3/1PP2PPP/4R1K1 w - - 0 1",
+    /* 58: WAC.029 — Nxd6, knight fork winning material */
+    "1r3r2/4q1kp/b1pp2p1/5p2/pPn1N3/6P1/P3PPBP/2QRR1K1 w - - 0 1",
+    /* 59: Nolot 1 (Kasparov-Karpov 1990) — Nxh6!! */
+    "r3qb1k/1b4p1/p2pr2p/3n4/Pnp1N1N1/6RP/1B3PP1/1B1QR1K1 w - - 0 1",
+    /* 60: Nolot 2 (Bronstein-Ljubojevic 1973) — Rxc5!! */
+    "r4rk1/pp1n1p1p/1nqP2p1/2b1P1B1/4NQ2/1B3P2/PP2K2P/2R5 w - - 0 1",
+    /* 61: Nolot 4 (Keres-Kotov 1950) — Nxe6!! */
+    "r1b1kb1r/1p1n1ppp/p2ppn2/6BB/2qNP3/2N5/PPP2PPP/R2Q1RK1 w kq - 0 1",
+    /* 62: Nolot 5 (Spassky-Petrosian 1969) — e5!! */
+    "r2qrb1k/1p1b2p1/p2ppn1p/8/3NP3/1BN5/PPP3QP/1K3RR1 w - - 0 1",
+    /* 63: Nolot 9 — Ng5!! piece sac for attack */
+    "r4r1k/4bppb/2n1p2p/p1n1P3/1p1p1BNP/3P1NP1/qP2QPB1/2RR2K1 w - - 0 1",
+    /* 64: Nolot 10 (Van der Wiel-Ribli 1980) — Rxf7!! */
+    "r1b2rk1/1p1nbppp/pq1p4/3B4/P2NP3/2N1p3/1PP3PP/R2Q1R1K w - - 0 15",
+    /* 65: BK.03 — closed KID, f5 pawn break */
+    "2q1rr1k/3bbnnp/p2p1pp1/2pPp3/PpP1P1P1/1P2BNNP/2BQ1PRK/7R b - - 0 1",
+    /* 66: BK.05 — central knight outpost Nd5 */
+    "r1b2rk1/2q1b1pp/p2ppn2/1p6/3QP3/1BN1B3/PPP3PP/R4RK1 w - - 0 1",
+    /* 67: BK.09 — opposite-side castling, f5 attack */
+    "2kr1bnr/pbpq4/2n1pp2/3p3p/3P1P1B/2N2N1Q/PPP3PP/2KR1B1R w - - 0 1",
+    /* 68: ERET 1 — tactical relief, piece tension */
+    "r1bqk1r1/1p1p1n2/p1n2pN1/2p1b2Q/2P1Pp2/1PN5/PB4PP/R4RK1 w q - 0 1",
+    /* 69: ERET 3 — open line attack, queen + rook battery */
+    "r1b1r1k1/1pqn1pbp/p2pp1p1/P7/1n1NPP1Q/2NBBR2/1PP3PP/R6K w - - 0 1",
+
+    /* ===== Positional middlegames (positions 70-89) ===== */
+    /* SBD (Silent but Deadly), LCT II, Bratko-Kopec, Kaufman, STS */
+
+    /* 70: SBD.039 — QGD structure */
+    "r1b2rk1/1pqn1pp1/p2bpn1p/8/3P4/2NB1N2/PPQB1PPP/3R1RK1 w - - 0 1",
+    /* 71: LCTII.POS.08 — KID pawn chain, bishop maneuver */
+    "r2qrnk1/pp3ppb/3b1n1p/1Pp1p3/2P1P2N/P5P1/1B1NQPBP/R4RK1 w - - 0 1",
+    /* 72: SBD.078 — Sicilian middlegame */
+    "r1r3k1/1bq2pbp/pp1pp1p1/2n5/P3PP2/R2B4/1PPBQ1PP/3N1R1K w - - 0 1",
+    /* 73: SBD.083 — Catalan structure, e4 break */
+    "r2q1rk1/pb2bppp/npp1pn2/3pN3/2PP4/1PB3P1/P2NPPBP/R2Q1RK1 w - - 0 1",
+    /* 74: SBD.014 — piece pressure, Nd4 */
+    "3q1rk1/3rbppp/ppbppn2/1N6/2P1P3/BP6/P1B1QPPP/R3R1K1 w - - 0 1",
+    /* 75: SBD.106 — central bind */
+    "r3r1k1/1pqn1pbp/p2p2p1/2nP2B1/P1P1P3/2NB3P/5PP1/R2QR1K1 w - - 0 1",
+    /* 76: SBD.008 — piece redeployment */
+    "2r1r1k1/pbpp1npp/1p1b3q/3P4/4RN1P/1P4P1/PB1Q1PB1/2R3K1 w - - 0 1",
+    /* 77: SBD.111 — maneuvering */
+    "r4rk1/1bqp1ppp/pp2pn2/4b3/P1P1P3/2N2BP1/1PQB1P1P/2R2RK1 w - - 0 1",
+    /* 78: SBD.079 — French structure */
+    "r1rn2k1/pp1qppbp/6p1/3pP3/3P4/1P3N1P/PB1Q1PP1/R3R1K1 w - - 0 1",
+    /* 79: SBD.095 — IQP position */
+    "r2r2k1/p1pnqpp1/4p2p/3b4/3P4/3BPN2/PP3PPP/2RQR1K1 b - - 0 1",
+    /* 80: SBD.017 — piece coordination */
+    "3r2k1/p1q1npp1/3r1n1p/2p1p3/4P2B/P1P2Q1P/B4PP1/1R2R1K1 w - - 0 1",
+    /* 81: SBD.005 — Sicilian middlegame, prophylactic */
+    "2brr1k1/ppq2ppp/2pb1n2/8/3NP3/2P2P2/P1Q2BPP/1R1R1BK1 w - - 0 1",
+    /* 82: SF bench — minor piece battle */
+    "3q2k1/pb3p1p/4pbp1/2r5/PpN2N2/1P2P2P/5PP1/Q2R2K1 b - - 4 26",
+    /* 83: LCTII.POS.05 — pawn structure play */
+    "2r2rk1/1p1bq3/p3p2p/3pPpp1/1P1Q4/P7/2P2PPP/2R1RBK1 b - - 0 1",
+    /* 84: BK.11 — KID maneuvering, f4 prep */
+    "2r1nrk1/p2q1ppp/bp1p4/n1pPp3/P1P1P3/2PBB1N1/4QPPP/R4RK1 w - - 0 1",
+    /* 85: BK.17 — KID structure, h5 expansion */
+    "r2q1rk1/1ppnbppp/p2p1nb1/3Pp3/2P1P1P1/2N2N1P/PPB1QP2/R1B2RK1 b - - 0 1",
+    /* 86: KAU.23 — French structure */
+    "rn1q1rk1/1b2bppp/1pn1p3/p2pP3/3P4/P2BBN1P/1P1N1PP1/R2Q1RK1 b - - 0 1",
+    /* 87: STS 3.003 — knight outpost */
+    "1r1q1rk1/1b1n1p1p/p2b1np1/3pN3/3P1P2/P1N5/3BB1PP/1R1Q1RK1 b - - 0 1",
+    /* 88: SBD.015 — prophylactic Bh6 */
+    "3r1rk1/p1q44p/1pP1ppp1/2n1b1B1/2P5/6P1/P1Q2PBP/1R3RK1 w - - 0 1",
+    /* 89: SBD.042 — knight redeployment */
+    "r1b2rk1/pp4pp/1q1Nppn1/2n4B/1P3P2/2B2RP1/P6P/R2Q3K b - - 0 1",
+
+    /* ===== Complex endgames (positions 90-99) ===== */
+    /* EET (Eigenmann Endgame Test), PET (Peter's Endgame Test) */
+
+    /* 90: EET 075 — R+B vs R+B, minority attack */
+    "6k1/p6p/1p1p2p1/2bP4/P1P5/2B3P1/4r2P/1R5K w - - 0 1",
+    /* 91: EET 098 — 2R+B vs 2R+B, central pawns */
+    "3r2k1/p1R2ppp/1p6/P1b1PP2/3p4/3R2B1/5PKP/1r6 w - - 0 1",
+    /* 92: EET 017 — Q+R+B vs Q+2B, positional */
+    "6k1/1p2p1bp/p5p1/4pb2/1q6/4Q3/1P2BPPP/2R3K1 w - - 0 1",
+    /* 93: PET 044 — 2R+N vs 2R+N, locked center */
+    "1r6/Rp2rp2/1Pp2kp1/N1Pp3p/3Pp1nP/4P1P1/R4P2/6K1 w - - 0 1",
+    /* 94: PET 028 — R vs R, outside passed pawn */
+    "8/4kp2/4p1p1/2p1r3/PpP5/3R4/1P1K1PP1/8 w - - 0 1",
+    /* 95: EET 083 — R+B+N vs R+B+N, tactical */
+    "8/1B4k1/5pn1/6N1/1P3rb1/P1K4p/3R4/8 w - - 0 1",
+    /* 96: EET 062 — R vs R, passed pawn race */
+    "2r3k1/6pp/3pp1P1/1pP5/1P6/P4R2/5K2/8 w - - 0 1",
+    /* 97: EET 051 — R vs B, pawn structure */
+    "8/5p2/3pp2p/p5p1/4Pk2/2p2P1P/P1Kb2P1/1R6 w - - 0 1",
+    /* 98: EET 074 — R+B vs R+pawns, advanced pawns */
+    "5k2/1p6/1P1p4/1K1p2p1/PB1P2P1/3pR2p/1P2p1pr/8 w - - 0 1",
+    /* 99: PET 038 — RB vs RB endgame */
+    "4k3/2p1b3/4p1p1/1pp1P3/5PP1/1PBK4/r1P2R2/8 b - - 0 1",
 };
-#define NUM_POS 50
+#define NUM_POS 100
 #define ITERS   1000
 
 /* ========== Main ========== */

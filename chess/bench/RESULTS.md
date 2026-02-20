@@ -360,6 +360,59 @@ Positions drawn from well-known chess engine test suites.
 | P47 | K+P endgame — distant pawns        | TalkChess movegen tests   |
 | P48 | Realistic middlegame — both castle | TalkChess movegen tests   |
 | P49 | Double check position              | TalkChess movegen tests   |
+|     | **Tactical Middlegames**           |                           |
+| P50 | WAC.001 — Qg6, knight sac + queen  | Win At Chess              |
+| P51 | WAC.003 — Rg3, tactical            | Win At Chess              |
+| P52 | WAC.004 — Qxh7+, Greek gift        | Win At Chess              |
+| P53 | WAC.008 — Rf7, rook penetration    | Win At Chess              |
+| P54 | WAC.010 — Rxh7, rook sac           | Win At Chess              |
+| P55 | WAC.014 — Qxh7+, bishop pair       | Win At Chess              |
+| P56 | WAC.021 — Nxf7, knight fork        | Win At Chess              |
+| P57 | WAC.022 — g4, queen trap           | Win At Chess              |
+| P58 | WAC.029 — Nxd6, knight fork        | Win At Chess              |
+| P59 | Nolot 1 — Nxh6!! (Kasparov-Karpov) | The Nolot Suite           |
+| P60 | Nolot 2 — Rxc5!! (Bronstein)       | The Nolot Suite           |
+| P61 | Nolot 4 — Nxe6!! (Keres-Kotov)     | The Nolot Suite           |
+| P62 | Nolot 5 — e5!! (Spassky-Petrosian) | The Nolot Suite           |
+| P63 | Nolot 9 — Ng5!! piece sac          | The Nolot Suite           |
+| P64 | Nolot 10 — Rxf7!! (Van der Wiel)   | The Nolot Suite           |
+| P65 | BK.03 — closed KID, f5 break       | Bratko-Kopec Test         |
+| P66 | BK.05 — central knight outpost     | Bratko-Kopec Test         |
+| P67 | BK.09 — opposite-side castling     | Bratko-Kopec Test         |
+| P68 | ERET 1 — piece tension             | Eigenmann Rapid Test      |
+| P69 | ERET 3 — queen + rook battery      | Eigenmann Rapid Test      |
+|     | **Positional Middlegames**         |                           |
+| P70 | SBD.039 — QGD structure            | Silent but Deadly         |
+| P71 | LCTII.POS.08 — KID pawn chain      | LCT II                    |
+| P72 | SBD.078 — Sicilian middlegame      | Silent but Deadly         |
+| P73 | SBD.083 — Catalan structure        | Silent but Deadly         |
+| P74 | SBD.014 — piece pressure           | Silent but Deadly         |
+| P75 | SBD.106 — central bind             | Silent but Deadly         |
+| P76 | SBD.008 — piece redeployment       | Silent but Deadly         |
+| P77 | SBD.111 — maneuvering              | Silent but Deadly         |
+| P78 | SBD.079 — French structure         | Silent but Deadly         |
+| P79 | SBD.095 — IQP position             | Silent but Deadly         |
+| P80 | SBD.017 — piece coordination       | Silent but Deadly         |
+| P81 | SBD.005 — Sicilian prophylactic    | Silent but Deadly         |
+| P82 | SF bench — minor piece battle      | Stockfish benchmark.cpp   |
+| P83 | LCTII.POS.05 — pawn structure      | LCT II                    |
+| P84 | BK.11 — KID maneuvering            | Bratko-Kopec Test         |
+| P85 | BK.17 — KID structure              | Bratko-Kopec Test         |
+| P86 | KAU.23 — French structure          | Kaufman Test              |
+| P87 | STS 3.003 — knight outpost         | Strategic Test Suite      |
+| P88 | SBD.015 — prophylactic Bh6         | Silent but Deadly         |
+| P89 | SBD.042 — knight redeployment      | Silent but Deadly         |
+|     | **Complex Endgames**               |                           |
+| P90 | EET 075 — R+B vs R+B               | Eigenmann Endgame Test    |
+| P91 | EET 098 — 2R+B vs 2R+B             | Eigenmann Endgame Test    |
+| P92 | EET 017 — Q+R+B vs Q+2B            | Eigenmann Endgame Test    |
+| P93 | PET 044 — 2R+N vs 2R+N             | Peter's Endgame Test      |
+| P94 | PET 028 — R vs R, passed pawn      | Peter's Endgame Test      |
+| P95 | EET 083 — R+B+N vs R+B+N           | Eigenmann Endgame Test    |
+| P96 | EET 062 — R vs R, pawn race        | Eigenmann Endgame Test    |
+| P97 | EET 051 — R vs B, pawn structure   | Eigenmann Endgame Test    |
+| P98 | EET 074 — R+B vs R+pawns           | Eigenmann Endgame Test    |
+| P99 | PET 038 — RB vs RB endgame         | Peter's Endgame Test      |
 
 ## 5s Search on eZ80 (50 positions)
 
@@ -1060,3 +1113,45 @@ Elo estimated via `engine_elo = sf_elo - 400 * log10(1/score - 1)`.
   the worst-case node-limited search time. Fixed by adding `search_node_deadline`
   (node-based timer fallback) in search.c. Master results above are error-free (100
   clean games after removing and replaying the affected game).
+
+## Per-Position Cycle Allocation (2026-02-19)
+
+Profiled 100 positions x 1000 nodes on eZ80 emulator (48 MHz, cycle-accurate).
+Positions split across 6 categories: original edge cases/endgames/middlegames (P0-P49),
+tactical middlegames (P50-P69, from WAC/Nolot/BK/ERET), positional middlegames
+(P70-P89, from SBD/LCTII/BK/Kaufman/STS), and complex endgames (P90-P99, from EET/PET).
+
+Aggregate: 52,078 nodes, cy/node = 199,746.
+
+### Cycle breakdown by category
+
+| Category               | Positions     |     cy/node |  eval% | mgen% | make% | mord% | ovhd% | mob cy | bld cy | pcs cy | shd cy |
+| ---------------------- | ------------- | ----------: | -----: | ----: | ----: | ----: | ----: | -----: | -----: | -----: | -----: |
+| Positional middlegames | P70-P89       | **470,211** | **38** |    21 |    13 |     7 |     9 | 21,861 | 18,991 |  9,362 |  2,450 |
+| Tactical middlegames   | P50-P69       |     337,437 |     34 |    19 |    14 |    11 |    10 | 21,424 | 17,084 |  9,098 |  2,401 |
+| Original middlegames   | P0-5,25-29,48 |     312,875 |     36 |    19 |    13 |     9 |    10 | 23,388 | 19,631 |  9,375 |  2,463 |
+| Complex endgames       | P90-P99       |     272,686 |     29 |    16 |    16 |    10 |    14 | 10,046 | 14,739 |  6,156 |  2,453 |
+| Original endgames      | P2,30-37,etc  |     133,155 |     23 |    14 |    17 |     9 |    17 |  7,167 |  7,948 |  4,843 |  2,430 |
+| Original edge cases    | P6-24,38-49   |     210,988 |     19 |    11 |    18 |    11 |    19 |  7,252 |  5,328 |  3,596 |  2,393 |
+
+Column key: eval% through ovhd% = % of total cy/node. mob/bld/pcs/shd cy = cycles per
+evaluate() call for mobility, build_pawns, pieces (rook files), pawn shield sub-components.
+
+### Key observations
+
+- **Eval dominates middlegames** (34-38% of total cycles). Mobility (~22K cy/eval) and
+  build_pawns (~18K cy/eval) are the two largest sub-costs. Pieces (~9K) is third.
+  Shield (~2.4K) is constant and negligible.
+- **Movegen scales with piece count** — 21% in positional middlegames (most pieces) vs
+  11% in edge cases (sparse boards). Second-biggest cost in middlegames.
+- **Make/unmake is inversely correlated** — 13% in middlegames vs 17-18% in endgames.
+  Fixed cost per node; appears larger when eval shrinks.
+- **Moveorder spikes in tactical positions** (11%) vs positional (7%) — more captures
+  trigger MVV-LVA sorting, plus more killer move hits.
+- **Overhead is 7-9% in middlegames, 17-19% in simple positions** — fixed framework cost
+  (function calls, loop control, stack setup) dominates when individual operations are cheap.
+- **Positional middlegames are the most expensive** — 470K cy/node avg, with P73 (Catalan,
+  1.18M) and P71 (KID chain, 1.05M) as extreme outliers. These positions have the most
+  pieces and complex pawn structures.
+- **build_pawns has huge variance** — 3.8K to 48K cy/eval depending on pawn cache hit rate.
+  Complex middlegames with many pawn structures thrash the 16-entry cache.
