@@ -775,7 +775,19 @@ static int negamax(board_t *b, int8_t depth, int alpha, int beta,
     if (ply >= MAX_PLY || stack_low())
         return evaluate(b);
 
-    /* TT probe */
+    /* Compute check info and apply check extension BEFORE TT probe,
+       so the TT depth comparison uses the effective (extended) depth.
+       Without this, check extensions inflate stored TT depths, causing
+       later iterations to cut off prematurely via stale TT entries. */
+    PROF_B();
+    compute_legal_info(b, &linfo);
+    PROF_E(legal_info_cy);
+    in_check = linfo.in_check;
+
+    /* Check extension — limited to 2 per search path */
+    if (in_check && ext < 2) { depth++; ext++; }
+
+    /* TT probe (depth now includes check extension) */
     tt_move = MOVE_NONE;
     PROF_B();
     if (tt_probe(b->hash, b->lock, &tt_score, &tt_best_packed, &tt_depth, &tt_flag)) {
@@ -794,14 +806,6 @@ static int negamax(board_t *b, int8_t depth, int alpha, int beta,
             tt_move = tt_unpack_move(tt_best_packed);
     }
     PROF_E(tt_cy); PROF_C(tt_cnt);
-
-    PROF_B();
-    compute_legal_info(b, &linfo);
-    PROF_E(legal_info_cy);
-    in_check = linfo.in_check;
-
-    /* Check extension — limited to 2 per search path */
-    if (in_check && ext < 2) { depth++; ext++; }
 
     /* Futility pruning setup: at low depths, skip quiet moves
        that have no chance of raising alpha */
@@ -858,7 +862,9 @@ static int negamax(board_t *b, int8_t depth, int alpha, int beta,
             PROF_E(null_move_cy);
 
             if (search_stopped) return 0;
-            if (score >= beta) return beta;
+            if (score >= beta) {
+                return beta;
+            }
         }
     }
 
