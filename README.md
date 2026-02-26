@@ -76,7 +76,7 @@ Each game is a standalone CE C project with its own Makefile that includes the t
 
 ## Chess
 
-A chess engine written in C for the TI-84 Plus CE's eZ80 processor (48 MHz, 256 KB RAM). Plays a full game of chess with an opening book, animated piece movement, and legal move highlighting.
+A chess engine written in C for the TI-84 Plus CE's eZ80 processor (48 MHz, 256 KB RAM). Plays a full game of chess with an opening book, animated piece movement, and legal move highlighting. To the best of our knowledge, this is the strongest chess engine available for the TI-84 Plus CE — estimated at ~2100 Elo on the 30-second time control, compared to ~1200-1500 for [ChessCE](https://github.com/mateoconlechuga/chess) (Micro-Max port) and ~800-1200 for [Chess84](https://github.com/thewarrenjames/Chess84).
 
 ### Estimated Elo Ratings
 
